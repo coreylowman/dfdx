@@ -90,13 +90,23 @@ impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: us
 where
     E: Dtype,
     D: Device<E>,
-    Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> + HasErr<Err = D::Err>,
+    (Img, Tensor<Rank4<O, C, K, K>, E, D>): TryConv2D<Const<S>, Const<P>, Const<1>, Const<1>>,
 {
-    type Output = Img::Output;
-    type Error = D::Err;
+    type Output = <(Img, Tensor<Rank4<O, C, K, K>, E, D>) as TryConv2D<
+        Const<S>,
+        Const<P>,
+        Const<1>,
+        Const<1>,
+    >>::Convolved;
+    type Error = <(Img, Tensor<Rank4<O, C, K, K>, E, D>) as TryConv2D<
+        Const<S>,
+        Const<P>,
+        Const<1>,
+        Const<1>,
+    >>::Error;
 
-    fn try_forward(&self, x: Img) -> Result<Self::Output, D::Err> {
-        x.try_conv2d_to(self.weight.clone())
+    fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
+        (x, self.weight.clone()).try_conv2d(Const, Const, Const, Const)
     }
 }
 

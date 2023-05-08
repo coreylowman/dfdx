@@ -52,7 +52,7 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-pub trait TryConv2d<Stride, Padding, Dilation, Groups>: Sized {
+pub trait TryConv2D<Stride, Padding, Dilation, Groups>: Sized {
     type Convolved;
     type Error: std::fmt::Debug;
 
@@ -82,7 +82,7 @@ impl<
         const DILATION: usize,
         Groups: Dim,
         const DIM: usize,
-    > TryConv2d<Const<STRIDE>, Const<PADDING>, Const<DILATION>, Groups>
+    > TryConv2D<Const<STRIDE>, Const<PADDING>, Const<DILATION>, Groups>
     for (Const<DIM>, Const<KERNEL>)
 where
     Const<{ (DIM + 2 * PADDING - DILATION * (KERNEL - 1) - 1) / STRIDE + 1 }>: Sized,
@@ -101,7 +101,7 @@ where
 }
 
 impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
-    TryConv2d<Stride, Padding, Dilation, Groups> for (usize, Kernel)
+    TryConv2D<Stride, Padding, Dilation, Groups> for (usize, Kernel)
 {
     type Convolved = usize;
     type Error = std::convert::Infallible;
@@ -120,8 +120,9 @@ impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
             + 1)
     }
 }
+
 impl<InpChan, OutChan, Kernel, Stride, Padding, Dilation, Groups, H, W, E, D, T>
-    TryConv2d<Stride, Padding, Dilation, Groups>
+    TryConv2D<Stride, Padding, Dilation, Groups>
     for (
         Tensor<(<InpChan as std::ops::Mul<Groups>>::Output, H, W), E, D, T>,
         Tensor<(OutChan, InpChan, Kernel, Kernel), E, D>,
@@ -141,16 +142,16 @@ where
     T: Tape<E, D>,
     InpChan: std::ops::Mul<Groups>,
     <InpChan as std::ops::Mul<Groups>>::Output: Dim,
-    (H, Kernel): TryConv2d<Stride, Padding, Dilation, Groups>,
-    (W, Kernel): TryConv2d<Stride, Padding, Dilation, Groups>,
-    <(H, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
-    <(W, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    (H, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
+    (W, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
+    <(H, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    <(W, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
 {
     type Convolved = Tensor<
         (
             OutChan,
-            <(H, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved,
-            <(W, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(H, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(W, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved,
         ),
         E,
         D,
@@ -175,7 +176,7 @@ where
 }
 
 impl<InpChan, OutChan, Kernel, Stride, Padding, Dilation, Groups, Batch, H, W, E, D, T>
-    TryConv2d<Stride, Padding, Dilation, Groups>
+    TryConv2D<Stride, Padding, Dilation, Groups>
     for (
         Tensor<(Batch, <InpChan as std::ops::Mul<Groups>>::Output, H, W), E, D, T>,
         Tensor<(OutChan, InpChan, Kernel, Kernel), E, D>,
@@ -196,17 +197,17 @@ where
     T: Tape<E, D>,
     InpChan: std::ops::Mul<Groups>,
     <InpChan as std::ops::Mul<Groups>>::Output: Dim,
-    (H, Kernel): TryConv2d<Stride, Padding, Dilation, Groups>,
-    (W, Kernel): TryConv2d<Stride, Padding, Dilation, Groups>,
-    <(H, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
-    <(W, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    (H, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
+    (W, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
+    <(H, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    <(W, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
 {
     type Convolved = Tensor<
         (
             Batch,
             OutChan,
-            <(H, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved,
-            <(W, Kernel) as TryConv2d<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(H, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(W, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved,
         ),
         E,
         D,

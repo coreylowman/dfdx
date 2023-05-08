@@ -1,5 +1,8 @@
 #[cfg(feature = "nightly")]
-use crate::tensor_ops::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
+use crate::{
+    shapes::Const,
+    tensor_ops::{Pool2DKind, TryPool2D},
+};
 
 #[allow(unused)]
 use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
@@ -35,27 +38,27 @@ pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 pub struct MinPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
 
 macro_rules! impl_pools {
-    ($PoolTy:tt, $Trait:ident) => {
+    ($PoolTy:tt, $Op:expr) => {
         impl<const K: usize, const S: usize, const P: usize> ZeroSizedModule for $PoolTy<K, S, P> {}
         impl<const K: usize, const S: usize, const P: usize> NonMutableModule for $PoolTy<K, S, P> {}
 
         #[cfg(feature = "nightly")]
-        impl<const K: usize, const S: usize, const P: usize, Img: $Trait<K, S, P>> Module<Img>
+        impl<const K: usize, const S: usize, const P: usize, Img: TryPool2D<Const<K>, Const<S>, Const<P>, Const<1>>> Module<Img>
             for $PoolTy<K, S, P>
         {
-            type Output = Img::Output;
-            type Error = Img::Err;
+            type Output = Img::Pooled;
+            type Error = Img::Error;
 
-            fn try_forward(&self, x: Img) -> Result<Self::Output, Img::Err> {
-                x.try_pool2d()
+            fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
+                x.try_pool2d($Op, Const, Const, Const, Const)
             }
         }
     };
 }
 
-impl_pools!(AvgPool2D, ConstAvgPool2D);
-impl_pools!(MaxPool2D, ConstMaxPool2D);
-impl_pools!(MinPool2D, ConstMinPool2D);
+impl_pools!(AvgPool2D, Pool2DKind::Avg);
+impl_pools!(MaxPool2D, Pool2DKind::Max);
+impl_pools!(MinPool2D, Pool2DKind::Min);
 
 #[cfg(feature = "nightly")]
 #[cfg(test)]

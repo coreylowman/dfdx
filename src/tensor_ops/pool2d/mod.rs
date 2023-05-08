@@ -3,19 +3,26 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use crate::{
-    shapes::*,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
-};
+use crate::{shapes::*, tensor::*};
 
-use super::conv2d::ConvAlgebra;
+use super::ReshapeTo;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub enum Pool2DKind {
+    Avg,
+    Min,
+    Max,
+}
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Pool2DOp {
+    pub kind: Pool2DKind,
     pub kernel: usize,
     pub stride: usize,
     pub padding: usize,
+    pub dilation: usize,
     pub batch: usize,
     pub chan: usize,
     pub h_in: usize,
@@ -24,179 +31,201 @@ pub struct Pool2DOp {
     pub w_out: usize,
 }
 
-impl Pool2DOp {
-    fn new(k: usize, s: usize, p: usize, [b, c, h_in, w_in]: [usize; 4]) -> Self {
-        Self {
-            kernel: k,
-            stride: s,
-            padding: p,
-            batch: b,
-            chan: c,
-            h_in,
-            h_out: (h_in + 2 * p - k) / s + 1,
-            w_in,
-            w_out: (w_in + 2 * p - k) / s + 1,
-        }
+pub(super) trait Pool2DKernel<E: Dtype>: DeviceStorage {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
+
+    fn forward<I: Shape, O: Shape>(
+        &self,
+        op: Pool2DOp,
+        inp: &Tensor<I, E, Self>,
+        out: &mut Tensor<O, E, Self>,
+    ) -> Result<(), Self::Err>;
+
+    #[allow(clippy::too_many_arguments)]
+    fn backward<I: Shape, O: Shape>(
+        &self,
+        op: Pool2DOp,
+        inp: &Tensor<I, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<O, E, Self>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
+}
+
+pub trait TryPool2D<Kernel, Stride, Padding, Dilation>: Sized {
+    type Pooled;
+    type Error: std::fmt::Debug;
+
+    fn pool2d(
+        self,
+        kind: Pool2DKind,
+        kernel: Kernel,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+    ) -> Self::Pooled {
+        self.try_pool2d(kind, kernel, stride, padding, dilation)
+            .unwrap()
+    }
+
+    fn try_pool2d(
+        self,
+        kind: Pool2DKind,
+        kernel: Kernel,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+    ) -> Result<Self::Pooled, Self::Error>;
+}
+
+impl<
+        const KERNEL: usize,
+        const STRIDE: usize,
+        const PADDING: usize,
+        const DILATION: usize,
+        const DIM: usize,
+    > TryPool2D<Const<KERNEL>, Const<STRIDE>, Const<PADDING>, Const<DILATION>> for Const<DIM>
+where
+    Const<{ (DIM + 2 * PADDING - DILATION * (KERNEL - 1) - 1) / STRIDE + 1 }>: Sized,
+{
+    type Pooled = Const<{ (DIM + 2 * PADDING - DILATION * (KERNEL - 1) - 1) / STRIDE + 1 }>;
+    type Error = std::convert::Infallible;
+    fn try_pool2d(
+        self,
+        _: Pool2DKind,
+        _: Const<KERNEL>,
+        _: Const<STRIDE>,
+        _: Const<PADDING>,
+        _: Const<DILATION>,
+    ) -> Result<Self::Pooled, Self::Error> {
+        Ok(Const)
     }
 }
 
-macro_rules! pool2d {
-    (Kernel=$Kernel:ident, ConstTrait=$ConstTrait:ident, TryTrait=$TryTrait:ident, Meth=$Meth:ident, TryMeth=$TryMeth:ident) => {
-        pub trait $Kernel<E: Unit>: DeviceStorage {
-            fn forward<I: Shape, O: Shape>(
-                &self,
-                op: Pool2DOp,
-                inp: &Tensor<I, E, Self>,
-                out: &mut Tensor<O, E, Self>,
-            ) -> Result<(), Self::Err>;
-
-            fn backward<I: Shape, O: Shape>(
-                &self,
-                op: Pool2DOp,
-                inp: &Tensor<I, E, Self>,
-                grad_inp: &mut Self::Vec<E>,
-                out: &Tensor<O, E, Self>,
-                grad_out: &Self::Vec<E>,
-            ) -> Result<(), Self::Err>;
-        }
-
-        pub trait $ConstTrait<const K: usize, const S: usize, const P: usize>: HasErr {
-            type Output;
-            fn try_pool2d(self) -> Result<Self::Output, Self::Err>;
-        }
-
-        pub trait $TryTrait {
-            fn $Meth<const K: usize, const S: usize, const P: usize>(self) -> Self::Output
-            where
-                Self: $ConstTrait<K, S, P>,
-            {
-                self.try_pool2d().unwrap()
-            }
-            fn $TryMeth<const K: usize, const S: usize, const P: usize>(
-                self,
-            ) -> Result<Self::Output, Self::Err>
-            where
-                Self: $ConstTrait<K, S, P>,
-            {
-                self.try_pool2d()
-            }
-        }
-        impl<S: Shape, E: Dtype, D: DeviceStorage, T> $TryTrait for Tensor<S, E, D, T> {}
-
-        impl<
-                C: Dim,
-                H: Dim + ConvAlgebra<K, S, P>,
-                W: Dim + ConvAlgebra<K, S, P>,
-                E: Dtype,
-                D: $Kernel<E> + ZerosTensor<E>,
-                T: 'static + Tape<E, D>,
-                const K: usize,
-                const S: usize,
-                const P: usize,
-            > $ConstTrait<K, S, P> for Tensor<(C, H, W), E, D, T>
-        {
-            type Output = Tensor<(C, H::Convolved, W::Convolved), E, D, T>;
-
-            fn try_pool2d(self) -> Result<Self::Output, Self::Err> {
-                let h = self.shape.1;
-                let w = self.shape.2;
-
-                let &(chan, _, _) = self.shape();
-                let op = Pool2DOp::new(K, S, P, [1, chan.size(), h.size(), w.size()]);
-                let (inp, mut tape) = self.split_tape();
-                let mut out =
-                    inp.device
-                        .try_zeros_like(&(chan, h.convolve_dim(), w.convolve_dim()))?;
-                inp.device.forward(op, &inp, &mut out)?;
-                let inp_ghost = inp.ghost();
-                let out_ghost = out.ghost();
-                let out_clone = out.clone();
-                tape.add_backward_op(move |grads| {
-                    grads.try_alloc_for(&inp_ghost)?;
-                    grads.try_alloc_for(&out_ghost)?;
-                    let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-                    inp_ghost
-                        .dev
-                        .backward(op, &inp, grad_inp, &out_clone, grad_out)
-                });
-                Ok(out.put_tape(tape))
-            }
-        }
-
-        impl<
-                B: Dim,
-                C: Dim,
-                H: Dim + ConvAlgebra<K, S, P>,
-                W: Dim + ConvAlgebra<K, S, P>,
-                E: Dtype,
-                D: $Kernel<E> + ZerosTensor<E>,
-                T: 'static + Tape<E, D>,
-                const K: usize,
-                const S: usize,
-                const P: usize,
-            > $ConstTrait<K, S, P> for Tensor<(B, C, H, W), E, D, T>
-        {
-            type Output = Tensor<(B, C, H::Convolved, W::Convolved), E, D, T>;
-
-            fn try_pool2d(self) -> Result<Self::Output, Self::Err> {
-                let h = self.shape.2;
-                let w = self.shape.3;
-
-                let &(batch, chan, _, _) = self.shape();
-                let op = Pool2DOp::new(K, S, P, [batch.size(), chan.size(), h.size(), w.size()]);
-                let (inp, mut tape) = self.split_tape();
-                let mut out = inp.device.try_zeros_like(&(
-                    batch,
-                    chan,
-                    h.convolve_dim(),
-                    w.convolve_dim(),
-                ))?;
-                inp.device.forward(op, &inp, &mut out)?;
-                let inp_ghost = inp.ghost();
-                let out_ghost = out.ghost();
-                let out_clone = out.clone();
-                tape.add_backward_op(move |grads| {
-                    grads.try_alloc_for(&inp_ghost)?;
-                    grads.try_alloc_for(&out_ghost)?;
-                    let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-                    inp_ghost
-                        .dev
-                        .backward(op, &inp, grad_inp, &out_clone, grad_out)
-                });
-                Ok(out.put_tape(tape))
-            }
-        }
-    };
+impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim>
+    TryPool2D<Kernel, Stride, Padding, Dilation> for usize
+{
+    type Pooled = usize;
+    type Error = std::convert::Infallible;
+    fn try_pool2d(
+        self,
+        _: Pool2DKind,
+        kernel: Kernel,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+    ) -> Result<Self::Pooled, Self::Error> {
+        Ok((self + 2 * padding.size() - 1)
+            .checked_sub(dilation.size() * (kernel.size() - 1))
+            .unwrap()
+            / stride.size()
+            + 1)
+    }
 }
 
-pool2d!(
-    Kernel = AvgPool2DKernel,
-    ConstTrait = ConstAvgPool2D,
-    TryTrait = TryAvgPool2D,
-    Meth = avg_pool2d,
-    TryMeth = try_avg_pool2d
-);
+impl<Chan, Kernel, Stride, Padding, Dilation, H, W, E, D, T>
+    TryPool2D<Kernel, Stride, Padding, Dilation> for Tensor<(Chan, H, W), E, D, T>
+where
+    Chan: Dim,
+    Kernel: Dim,
+    Stride: Dim,
+    Padding: Dim,
+    Dilation: Dim,
+    H: Dim + TryPool2D<Kernel, Stride, Padding, Dilation>,
+    H::Pooled: Dim,
+    W: Dim + TryPool2D<Kernel, Stride, Padding, Dilation>,
+    W::Pooled: Dim,
+    E: Dtype,
+    D: Pool2DKernel<E> + crate::tensor_ops::reshape_to::ReshapeKernel<E>,
+    T: Tape<E, D>,
+{
+    type Pooled = Tensor<(Chan, H::Pooled, W::Pooled), E, D, T>;
+    type Error = D::Err;
 
-pool2d!(
-    Kernel = MaxPool2DKernel,
-    ConstTrait = ConstMaxPool2D,
-    TryTrait = TryMaxPool2D,
-    Meth = max_pool2d,
-    TryMeth = try_max_pool2d
-);
+    fn try_pool2d(
+        self,
+        kind: Pool2DKind,
+        kernel: Kernel,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+    ) -> Result<Self::Pooled, Self::Error> {
+        let (chan, h, w) = self.shape;
+        let img = self.try_reshape_like(&(Const::<1>, chan, h, w))?;
+        let out = img.try_pool2d(kind, kernel, stride, padding, dilation)?;
+        let (_, _, out_h, out_w) = out.shape;
+        out.try_reshape_like(&(chan, out_h, out_w))
+    }
+}
 
-pool2d!(
-    Kernel = MinPool2DKernel,
-    ConstTrait = ConstMinPool2D,
-    TryTrait = TryMinPool2D,
-    Meth = min_pool2d,
-    TryMeth = try_min_pool2d
-);
+impl<Chan, Kernel, Stride, Padding, Dilation, Batch, H, W, E, D, T>
+    TryPool2D<Kernel, Stride, Padding, Dilation> for Tensor<(Batch, Chan, H, W), E, D, T>
+where
+    Chan: Dim,
+    Kernel: Dim,
+    Stride: Dim,
+    Padding: Dim,
+    Dilation: Dim,
+    Batch: Dim,
+    H: Dim + TryPool2D<Kernel, Stride, Padding, Dilation>,
+    H::Pooled: Dim,
+    W: Dim + TryPool2D<Kernel, Stride, Padding, Dilation>,
+    W::Pooled: Dim,
+    E: Dtype,
+    D: Pool2DKernel<E>,
+    T: Tape<E, D>,
+{
+    type Pooled = Tensor<(Batch, Chan, H::Pooled, W::Pooled), E, D, T>;
+    type Error = D::Err;
+
+    fn try_pool2d(
+        self,
+        kind: Pool2DKind,
+        kernel: Kernel,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+    ) -> Result<Self::Pooled, Self::Error> {
+        let (batch, chan, h, w) = self.shape;
+        if self.strides != self.shape.strides() {
+            panic!("Image input to pool2d must be contiguous");
+        }
+        let h_out = h.pool2d(kind, kernel, stride, padding, dilation);
+        let w_out = w.pool2d(kind, kernel, stride, padding, dilation);
+        let op = Pool2DOp {
+            kind,
+            stride: stride.size(),
+            padding: padding.size(),
+            kernel: kernel.size(),
+            dilation: dilation.size(),
+            batch: batch.size(),
+            chan: chan.size(),
+            h_in: h.size(),
+            h_out: h_out.size(),
+            w_in: w.size(),
+            w_out: w_out.size(),
+        };
+        let (img, mut tape) = self.split_tape();
+        let mut out = img.device.alloc((batch, chan, h_out, w_out))?;
+        img.device.forward(op, &img, &mut out)?;
+        let img_ghost = img.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
+        tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&img_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_img, grad_out) = grads.mut_and_ref(&img_ghost, &out_ghost);
+            img.device
+                .backward(op, &img, grad_img, &out_clone, grad_out)
+        });
+        Ok(out.put_tape(tape))
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tensor::*, tensor_ops::*, tests::*};
+    use crate::{tensor_ops::*, tests::*};
 
     #[test]
     fn test_pool2d_3d_max2d_eq_grads() {
@@ -204,7 +233,13 @@ mod tests {
         let x = dev
             .tensor([[[1.0, 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]])
             .to_dtype::<TestDtype>();
-        let r = x.leaky_trace().max_pool2d::<2, 1, 0>();
+        let r = x.leaky_trace().pool2d(
+            Pool2DKind::Max,
+            Const::<2>,
+            Const::<1>,
+            Const::<0>,
+            Const::<1>,
+        );
         assert_close_to_literal!(r, [[[1., 1., 1.2]]]);
         let g = r.sum().backward();
         assert_close_to_literal!(g.get(&x), [[[1., 2., 0., 0.], [0., 0., 0., 1.]]]);
@@ -216,7 +251,13 @@ mod tests {
         let x = dev
             .tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]])
             .to_dtype::<TestDtype>();
-        let r = x.leaky_trace().min_pool2d::<2, 1, 0>();
+        let r = x.leaky_trace().pool2d(
+            Pool2DKind::Min,
+            Const::<2>,
+            Const::<1>,
+            Const::<0>,
+            Const::<1>,
+        );
         assert_close_to_literal!(r, [[[0.2, 0.2, 0.2]]]);
         let g = r.sum().backward();
         assert_close_to_literal!(g.get(&x), [[[0., 0., 0., 1.], [1., 2., 0., 0.]]]);
@@ -226,7 +267,13 @@ mod tests {
     fn test_pool2d_3d_max2d() {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = x.leaky_trace().max_pool2d::<2, 2, 0>();
+        let r = x.leaky_trace().pool2d(
+            Pool2DKind::Max,
+            Const::<2>,
+            Const::<2>,
+            Const::<0>,
+            Const::<1>,
+        );
         assert_close_to_literal!(r, [[[1.79155397, 1.10126066]], [[1.14464748, 2.26301837]]]);
         let g = r.exp().mean().backward();
         #[rustfmt::skip]
@@ -243,7 +290,13 @@ mod tests {
     fn test_pool2d_3d_min2d() {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = x.leaky_trace().min_pool2d::<2, 2, 0>();
+        let r = x.leaky_trace().pool2d(
+            Pool2DKind::Min,
+            Const::<2>,
+            Const::<2>,
+            Const::<0>,
+            Const::<1>,
+        );
         assert_close_to_literal!(
             r,
             [[[-1.09635627, -1.07717276]], [[-0.01996479, -1.82562149]]]
@@ -260,27 +313,16 @@ mod tests {
     }
 
     #[test]
-    fn test_pool2d_3d_avg2d() {
-        let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = x.leaky_trace().avg_pool2d::<2, 2, 0>();
-        assert_close_to_literal!(r, [[[0.03031558, -0.25052455]], [[0.39499030, 0.04878314]]]);
-        let g = r.exp().mean().backward();
-        #[rustfmt::skip]
-        assert_close_to_literal!(
-            g.get(&x),
-            [
-                [[0.06442373, 0.06442373, 0.048649523, 0.048649523],[0.06442373, 0.06442373, 0.048649523, 0.048649523],[0.0, 0.0, 0.0, 0.0]],
-                [[0.09277311, 0.09277311, 0.06562454, 0.06562454],[0.09277311, 0.09277311, 0.06562454, 0.06562454],[0.0, 0.0, 0.0, 0.0]]
-            ]
-        );
-    }
-
-    #[test]
     fn test_pool2d_4d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank4<2, 4, 2, 2>, TestDtype, _> = dev.sample_normal();
-        let r = x.leaky_trace().avg_pool2d::<1, 2, 0>();
+        let r = x.leaky_trace().pool2d(
+            Pool2DKind::Avg,
+            Const::<1>,
+            Const::<2>,
+            Const::<0>,
+            Const::<1>,
+        );
         assert_close_to_literal!(
             r,
             [
@@ -297,5 +339,10 @@ mod tests {
                 [[[0.39266673, 0.0], [0.0, 0.0]],[[0.16594516, 0.0], [0.0, 0.0]],[[0.037551485, 0.0], [0.0, 0.0]],[[0.15471558, 0.0], [0.0, 0.0]]]
             ]
         );
+    }
+
+    #[test]
+    fn test_pool2d_dilated() {
+        todo!()
     }
 }
