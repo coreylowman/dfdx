@@ -6,26 +6,26 @@ fn main() {
     use std::time::Instant;
 
     type BasicBlock<const C: usize> = Residual<(
-        Conv2D<C, C, 3, 1, 1>,
+        Conv2D<C, C, 3, 3, 1, 1, 1, 1>,
         BatchNorm2D<C>,
         ReLU,
-        Conv2D<C, C, 3, 1, 1>,
+        Conv2D<C, C, 3, 3, 1, 1, 1, 1>,
         BatchNorm2D<C>,
     )>;
 
     type Downsample<const C: usize, const D: usize> = GeneralizedResidual<
         (
-            Conv2D<C, D, 3, 2, 1>,
+            Conv2D<C, D, 3, 3, 2, 2, 1, 1>,
             BatchNorm2D<D>,
             ReLU,
-            Conv2D<D, D, 3, 1, 1>,
+            Conv2D<D, D, 3, 3, 1, 1, 1, 1>,
             BatchNorm2D<D>,
         ),
-        (Conv2D<C, D, 1, 2, 0>, BatchNorm2D<D>),
+        (Conv2D<C, D, 1, 1, 2, 2, 0, 0>, BatchNorm2D<D>),
     >;
 
     type Head = (
-        Conv2D<3, 64, 7, 2, 3>,
+        Conv2D<3, 64, 7, 7, 2, 2, 3, 3>,
         BatchNorm2D<64>,
         ReLU,
         MaxPool2D<3, 2, 1>,
