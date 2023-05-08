@@ -248,3 +248,13 @@ fn test_batched_conv2d() {
         assert_close_to_tensor!(x0, x_grad.clone().select(dev.tensor(i)));
     }
 }
+
+#[test]
+fn test_conv2d_dilated() {
+    todo!()
+}
+
+#[test]
+fn test_conv2d_grouped() {
+    todo!()
+}
