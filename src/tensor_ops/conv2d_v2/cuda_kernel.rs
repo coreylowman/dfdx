@@ -84,21 +84,22 @@ where
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
         let img_strides = self.dev.htod_copy(make_4d::<L>(img.strides).into())?;
-        let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg =
-            launch_cfg::<128>((op.batch * op.groups * op.chan_in * op.h_out * op.w_out) as u32);
-        let params = (op, img.data.as_ref(), &img_strides, &mut patches);
 
         let out_buf = Arc::get_mut(&mut out.data).unwrap();
-        let m = op.chan_out / op.groups;
-        let k = op.chan_in * op.kernel * op.kernel;
-        let n = op.h_out * op.w_out;
-        
+
         unsafe {
+            let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
+            let cfg =
+                launch_cfg::<128>((op.batch * op.groups * op.chan_in * op.h_out * op.w_out) as u32);
+            let params = (op, img.data.as_ref(), &img_strides, &mut patches);
             unfold_fn.launch(cfg, params)?;
-            // LHS    (G * O/G, C*K*K)
-            // RHS (B, G *C*K*K, OH*OW)
-            // OUT (B, G * O/G, OH*OW)
+
+            // LHS    (G, O/G, C*K*K)
+            // RHS (B, G, C*K*K, OH*OW)
+            // OUT (B, G, O/G, OH*OW)
+            let m = op.chan_out / op.groups;
+            let k = op.chan_in * op.kernel * op.kernel;
+            let n = op.h_out * op.w_out;
             if op.groups == 1 {
                 // optimizing here for common case
                 self.gemm_batch(
@@ -118,17 +119,16 @@ where
                         (op.groups, m, k, n),
                         fil.data.as_ref(),
                         [m * k, k, 1],
-                        &patches.slice(i_batch * op.groups * k * n..)),
+                        &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, n, 1],
                         Default::default(),
-                        &mut out_buf.slice_mut(i_batch * op.groups * m * n..)),
+                        &mut out_buf.slice_mut(i_batch * op.groups * m * n..),
                         [m * n, n, 1],
                     )
                     .unwrap();
                 }
             }
         }
-
 
         Ok(())
     }
@@ -150,8 +150,8 @@ where
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
-        let mut f_b1023 = unsafe { self.alloc_empty::<E>(filters_numel) }?;
-        let mut grad_f_b1023 = unsafe { self.alloc_empty::<E>(op.batch * filters_numel) }?;
+        let mut ftr = unsafe { self.alloc_empty::<E>(filters_numel) }?;
+        let mut grad_ftr = unsafe { self.alloc_empty::<E>(op.batch * filters_numel) }?;
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         self.par_stream.wait_for_default()?;
@@ -171,7 +171,7 @@ where
             tr_fn.launch_on_stream(
                 self.par_stream.as_ref(),
                 cfg,
-                (op, rhs.data.as_ref(), &f_strides, &mut f_b1023),
+                (op, rhs.data.as_ref(), &f_strides, &mut ftr),
             )?;
 
             self.par_stream.wait_for_default()?;
@@ -188,7 +188,7 @@ where
                 // optimizing here for common case
                 self.gemm_batch(
                     (op.batch, m, k, n),
-                    &f_b1023,
+                    &ftr,
                     [0, k, 1],
                     &patches,
                     [k * n, n, 1],
@@ -201,14 +201,15 @@ where
                 for i_batch in 0..op.batch {
                     self.gemm_batch(
                         (op.groups, m, k, n),
-                        &f_b1023,
-                        [0, k, 1],
-                        &patches.slice(i_batch * patches_item_numel..),
+                        &ftr,
+                        [m * k, k, 1],
+                        &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, n, 1],
                         <E>::ONE,
-                        &mut grad_lhs.slice_mut(i_batch * op.groups * m * n..)),
+                        &mut grad_lhs.slice_mut(i_batch * op.groups * m * n..),
                         [m * n, n, 1],
                     )
+                    .unwrap();
                 }
             }
             self.blas.set_stream(None)?;
@@ -231,7 +232,7 @@ where
                     &patches,
                     [k * n, 1, k],
                     Default::default(),
-                    &mut grad_f_b1023,
+                    &mut grad_ftr,
                     [m * n, n, 1],
                 )
                 .unwrap();
@@ -240,12 +241,12 @@ where
                 for i_batch in 0..op.batch {
                     self.gemm_batch(
                         (op.groups, m, k, n),
-                        lhs_buf.slice(i_batch * op.groups * m * k..),
+                        &lhs_buf.slice(i_batch * op.groups * m * k..),
                         [m * k, k, 1],
-                        &patches.slice(i_batch * patches_item_numel..),
+                        &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, 1, k],
                         Default::default(),
-                        &mut grad_f_b1023.slice_mut(i_batch * op.groups * m * n..))),
+                        &mut grad_ftr.slice_mut(i_batch * op.groups * m * n..),
                         [m * n, n, 1],
                     )
                     .unwrap();
@@ -256,7 +257,7 @@ where
             // into grad_rhs
             let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
             let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
-            sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides))?;
+            sum_fn.launch(cfg, (op, &grad_ftr, grad_rhs, &f_strides))?;
         }
 
         self.dev.wait_for(self.par_stream.as_ref())?;

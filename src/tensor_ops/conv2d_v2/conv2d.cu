@@ -23,7 +23,7 @@ __device__ void unfold_input_into_patches(
     T *patches // 6d (Batch, Groups * Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= op.batch * op.chan_in * op.h_out * op.w_out) {
+    if (i >= op.batch * op.groups * op.chan_in * op.h_out * op.w_out) {
         return;
     }
 
@@ -82,15 +82,15 @@ __device__ void unfold_output_into_patches(
 
     for (int k1 = 0;k1 < op.kernel;k1++) {
         const size_t oh_ks = y + op.padding;
-        const size_t oh_s = oh_ks - k1;
+        const size_t oh_s = oh_ks - op.dilation * k1;
         const size_t oh = oh_s / op.stride;
-        const bool k1_invalid = (oh_ks < k1 || oh_s % op.stride != 0 || oh >= op.h_out);
+        const bool k1_invalid = (oh_ks < op.dilation * k1 || oh_s % op.stride != 0 || oh >= op.h_out);
         for (int k2 = 0;k2 < op.kernel;k2++) {
             const size_t ow_ks = x + op.padding;
-            const size_t ow_s = ow_ks - k2;
+            const size_t ow_s = ow_ks - op.dilation * k2;
             const size_t ow = ow_s / op.stride;
         
-            const bool invalid = k1_invalid || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out);
+            const bool invalid = k1_invalid || (ow_ks < op.dilation * k2 || ow_s % op.stride != 0 || ow >= op.w_out);
             *patches = invalid ? zero : image_out[oh * op.w_out + ow];
             patches += op.h_in * op.w_in;
         }
