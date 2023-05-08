@@ -88,27 +88,47 @@ where
         let cfg =
             launch_cfg::<128>((op.batch * op.groups * op.chan_in * op.h_out * op.w_out) as u32);
         let params = (op, img.data.as_ref(), &img_strides, &mut patches);
-        unsafe { unfold_fn.launch(cfg, params) }?;
 
-        // (B * G, O / G, C * K * K) * (B * G, C * K * K, OH * OW) = (B * G, O / G, OH * OW)
+        let out_buf = Arc::get_mut(&mut out.data).unwrap();
         let m = op.chan_out / op.groups;
         let k = op.chan_in * op.kernel * op.kernel;
         let n = op.h_out * op.w_out;
-        // groups = 1, batch stride should be 0
-        //
+        
         unsafe {
-            self.gemm_batch(
-                (op.batch * op.groups, m, k, n),
-                fil.data.as_ref(),
-                [m * k / op.batch, k, 1], // TODO what should the batch stride be??
-                &patches,
-                [k * n, n, 1],
-                Default::default(),
-                Arc::get_mut(&mut out.data).unwrap(),
-                [m * n, n, 1],
-            )
-            .unwrap();
+            unfold_fn.launch(cfg, params)?;
+            // LHS    (G * O/G, C*K*K)
+            // RHS (B, G *C*K*K, OH*OW)
+            // OUT (B, G * O/G, OH*OW)
+            if op.groups == 1 {
+                // optimizing here for common case
+                self.gemm_batch(
+                    (op.batch, m, k, n),
+                    fil.data.as_ref(),
+                    [0, k, 1],
+                    &patches,
+                    [k * n, n, 1],
+                    Default::default(),
+                    out_buf,
+                    [m * n, n, 1],
+                )
+                .unwrap();
+            } else {
+                for i_batch in 0..op.batch {
+                    self.gemm_batch(
+                        (op.groups, m, k, n),
+                        fil.data.as_ref(),
+                        [m * k, k, 1],
+                        &patches.slice(i_batch * op.groups * k * n..)),
+                        [k * n, n, 1],
+                        Default::default(),
+                        &mut out_buf.slice_mut(i_batch * op.groups * m * n..)),
+                        [m * n, n, 1],
+                    )
+                    .unwrap();
+                }
+            }
         }
+
 
         Ok(())
     }
@@ -136,36 +156,36 @@ where
 
         self.par_stream.wait_for_default()?;
 
-        {
+        unsafe {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
             let cfg = launch_cfg::<128>((op.batch * op.chan_out * op.h_in * op.w_in) as u32);
-            unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
+            unfold_fn.launch(cfg, (op, grad_out, &mut patches))?;
         }
 
-        {
+        unsafe {
             // prepare filters for backward operations by
             // swapping dims 0 and 1
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
             let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
-            unsafe {
-                tr_fn.launch_on_stream(
-                    self.par_stream.as_ref(),
-                    cfg,
-                    (op, rhs.data.as_ref(), &f_strides, &mut f_b1023),
-                )
-            }?;
+            tr_fn.launch_on_stream(
+                self.par_stream.as_ref(),
+                cfg,
+                (op, rhs.data.as_ref(), &f_strides, &mut f_b1023),
+            )?;
 
             self.par_stream.wait_for_default()?;
 
             // img_g += filters * patches
-            // (B, G * C, H * W) += (B, G, C, O/G * K * K) * (B, G, O/G * K * K, H * W)
+            // LHS =    (G, C, O/G*K*K)
+            // RHS = (B, G, O/G*K*K, H*W)
+            // OUT = (B, G, C, H*W)
             let m = op.chan_in;
             let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
-            unsafe {
-                // TODO what are the strides?
-                self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            if op.groups == 1 {
+                // optimizing here for common case
                 self.gemm_batch(
                     (op.batch, m, k, n),
                     &f_b1023,
@@ -177,18 +197,33 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
-                self.blas.set_stream(None)?;
+            } else {
+                for i_batch in 0..op.batch {
+                    self.gemm_batch(
+                        (op.groups, m, k, n),
+                        &f_b1023,
+                        [0, k, 1],
+                        &patches.slice(i_batch * patches_item_numel..),
+                        [k * n, n, 1],
+                        <E>::ONE,
+                        &mut grad_lhs.slice_mut(i_batch * op.groups * m * n..)),
+                        [m * n, n, 1],
+                    )
+                }
             }
+            self.blas.set_stream(None)?;
         }
 
-        {
+        unsafe {
             // weight_g += img * patches^T
-            // (B, G, C, O/G * K * K) += (B, G * C, H * W) * (B, G, H * W, O/G * K * K)
+            // LHS = (B, G, C, H*W)
+            // RHS = (B, H*W, G, O/G*K*K)
+            // OUT = (B, G, C, O/G*K*K)
             let m = op.chan_in;
             let k = op.h_in * op.w_in;
             let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
-            // TODO what are the strides?
-            unsafe {
+            if op.groups == 1 {
+                // optimizing here for common case
                 self.gemm_batch(
                     (op.batch, m, k, n),
                     lhs.data.as_ref(),
@@ -200,13 +235,28 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
+            } else {
+                let lhs_buf = lhs.data.as_ref();
+                for i_batch in 0..op.batch {
+                    self.gemm_batch(
+                        (op.groups, m, k, n),
+                        lhs_buf.slice(i_batch * op.groups * m * k..),
+                        [m * k, k, 1],
+                        &patches.slice(i_batch * patches_item_numel..),
+                        [k * n, 1, k],
+                        Default::default(),
+                        &mut grad_f_b1023.slice_mut(i_batch * op.groups * m * n..))),
+                        [m * n, n, 1],
+                    )
+                    .unwrap();
+                }
             }
 
             // sum all the gradients collected in our broadcasted grad_f
             // into grad_rhs
             let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
             let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
-            unsafe { sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
+            sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides))?;
         }
 
         self.dev.wait_for(self.par_stream.as_ref())?;
