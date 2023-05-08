@@ -251,10 +251,91 @@ fn test_batched_conv2d() {
 
 #[test]
 fn test_conv2d_dilated() {
-    todo!()
+    let dev: TestDevice = Default::default();
+    let x = dev
+        .tensor([[
+            [0., 1., 2., 4., 5.],
+            [6., 7., 8., 9., 10.],
+            [11., 12., 13., 14., 15.],
+            [16., 17., 18., 19., 20.],
+        ]])
+        .to_dtype::<TestDtype>();
+    let w = dev
+        .tensor([[[[0.1, 0.5], [1.0, 2.0]]]])
+        .to_dtype::<TestDtype>();
+    let y = (x.leaky_trace(), w.clone()).conv2d(Const::<1>, Const::<0>, Const::<2>, Const::<1>);
+    assert_close_to_literal!(y, [[[38.0, 42.1, 45.7], [56.6, 60.2, 63.8]]]);
+    let grads = y.mean().backward();
+    assert_close_to_literal!(
+        grads.get(&x),
+        [[
+            [0.016666668, 0.016666668, 0.1, 0.083333336, 0.083333336],
+            [0.016666668, 0.016666668, 0.1, 0.083333336, 0.083333336],
+            [0.16666667, 0.16666667, 0.5, 0.33333334, 0.33333334],
+            [0.16666667, 0.16666667, 0.5, 0.33333334, 0.33333334]
+        ]]
+    );
+    assert_close_to_literal!(grads.get(&w), [[[[4.0, 6.3333335], [14.5, 16.5]]]]);
 }
 
 #[test]
-fn test_conv2d_grouped() {
-    todo!()
+fn test_conv2d_grouped_forward() {
+    const NUM_GROUPS: usize = 3;
+    let dev: TestDevice = Default::default();
+    let x: Tensor<Rank4<2, 9, 14, 14>, TestDtype, _> = dev.sample_normal();
+    let w: Tensor<Rank4<15, 3, 3, 3>, TestDtype, _> = dev.sample_normal();
+
+    let y = (x.leaky_trace(), w.clone()).conv2d(
+        Const::<1>,
+        Const::<0>,
+        Const::<1>,
+        Const::<NUM_GROUPS>,
+    );
+
+    for i in 0..NUM_GROUPS {
+        let x_group = x
+            .clone()
+            .slice((.., 3 * i..3 * (i + 1), .., ..))
+            .realize::<(Const<2>, Const<3>, Const<14>, Const<14>)>();
+        let w_group = w
+            .clone()
+            .slice((5 * i..5 * (i + 1), .., .., ..))
+            .realize::<(Const<5>, Const<3>, Const<3>, Const<3>)>();
+        let y_group = (x_group, w_group).conv2d(Const::<1>, Const::<0>, Const::<1>, Const::<1>);
+        let y_group_true = y
+            .retaped::<NoneTape>()
+            .slice((.., 5 * i..5 * (i + 1), .., ..))
+            .realize::<(Const<2>, Const<5>, Const<12>, Const<12>)>();
+        assert_close_to_tensor!(y_group, y_group_true);
+    }
+
+    let grads = y.exp().sum().backward();
+    let x_grad = grads.get(&x);
+    let w_grad = grads.get(&w);
+
+    for i in 0..NUM_GROUPS {
+        let x_group = x
+            .clone()
+            .slice((.., 3 * i..3 * (i + 1), .., ..))
+            .realize::<(Const<2>, Const<3>, Const<14>, Const<14>)>();
+        let w_group = w
+            .clone()
+            .slice((5 * i..5 * (i + 1), .., .., ..))
+            .realize::<(Const<5>, Const<3>, Const<3>, Const<3>)>();
+        let y_group = (x_group.leaky_trace(), w_group.clone())
+            .conv2d(Const::<1>, Const::<0>, Const::<1>, Const::<1>);
+        let grads = y_group.exp().sum().backward();
+
+        let x_grad_group_true = x_grad
+            .clone()
+            .slice((.., 3 * i..3 * (i + 1), .., ..))
+            .realize::<(Const<2>, Const<3>, Const<14>, Const<14>)>();
+        let w_grad_group_true = w_grad
+            .clone()
+            .slice((5 * i..5 * (i + 1), .., .., ..))
+            .realize::<(Const<5>, Const<3>, Const<3>, Const<3>)>();
+
+        assert_close_to_tensor!(grads.get(&x_group), x_grad_group_true);
+        assert_close_to_tensor!(grads.get(&w_group), w_grad_group_true);
+    }
 }
