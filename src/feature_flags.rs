@@ -9,12 +9,12 @@
 //!
 //! Cuda (with cudnn):
 //! ```toml
-//! dfdx = { version = "...", default-features = false, features = ["std", "cuda", "cudnn"]}
+//! dfdx = { version = "...", default-features = false, features = ["std", "fast-alloc", "cuda", "cudnn"]}
 //! ```
 //!
 //! Cpu:
 //! ```toml
-//! dfdx = { version = "...", default-features = false, features = ["std", "cpu-par-matmul"]}
+//! dfdx = { version = "...", default-features = false, features = ["std", "fast-alloc", "cpu"]}
 //! ```
 //!
 //! # "std"
@@ -70,38 +70,9 @@
 //! dfdx = { version = "...", features = ["cudnn"] }
 //! ```
 //!
-//! # "cpu-seq-matmul"
+//! # "cpu"
 //!
-//! Used to enable using `matrixmultiply` for matmul operations.
-//!
-//! # "cpu-par-matmul"
-//!
-//! Used to enable the threading feature of `matrixmultiply`. This makes matmuls
-//! substantially faster!
-//!
-//! # "cpu-mkl-matmul"
-//!
-//! Enables using the `Intel MKL` libraries (assuming you installed it already) for matrix multiplication.
-//!
-//! Linking is currently tested & verified on the following platforms:
-//!
-//! - [x] Windows
-//! - [x] Linux
-//! - [x] macOS
-//!
-//! Example:
-//! ```toml
-//! dfdx = { version = "...", features = ["cpu-mkl-matmul"] }
-//! ```
-//!
-//! #### Installing Intel MKL libraries
-//!
-//! It's pretty easy!
-//!
-//! You will need to install Intel MKL on your own from
-//! [this page](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html).
-//!
-//! `build.rs` will fail helpfully if you don't have the correct path/environment variables.
+//! Used to enable using `gemm` for matmul operations.
 //!
 //! # "numpy"
 //!

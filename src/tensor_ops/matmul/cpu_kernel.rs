@@ -5,18 +5,6 @@ use crate::tensor::{Cpu, Tensor, ZerosTensor};
 
 use std::sync::Arc;
 
-#[cfg(feature = "cpu-mkl-matmul")]
-use cblas_sys::{
-    cblas_dgemm as dgemm, cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
-    CblasRowMajor as RowMajor, CblasTrans as Tr,
-};
-
-#[cfg(all(
-    any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
-    not(feature = "cpu-mkl-matmul")
-))]
-use matrixmultiply::{dgemm, sgemm};
-
 #[allow(unused)]
 fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
     (m, k, n): (M, K, N),
@@ -53,6 +41,48 @@ pub(crate) trait MatMulImpl<E> {
     );
 }
 
+#[cfg(feature = "f16")]
+impl MatMulImpl<half::f16> for Cpu {
+    #[inline]
+    fn matmul<M: Dim, K: Dim, N: Dim>(
+        (m, k, n): (M, K, N),
+        ap: *const half::f16,
+        a_strides: [usize; 2],
+        bp: *const half::f16,
+        b_strides: [usize; 2],
+        cp: *mut half::f16,
+        c_strides: [usize; 2],
+    ) {
+        #[cfg(not(feature = "cpu"))]
+        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+
+        #[cfg(feature = "cpu")]
+        unsafe {
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp as *mut gemm::f16,
+                c_strides[1] as isize,
+                c_strides[0] as isize,
+                true,
+                ap as *mut gemm::f16,
+                a_strides[1] as isize,
+                a_strides[0] as isize,
+                bp as *mut gemm::f16,
+                b_strides[1] as isize,
+                b_strides[0] as isize,
+                gemm::f16::ONE,
+                gemm::f16::ONE,
+                false,
+                false,
+                false,
+                gemm::Parallelism::None,
+            )
+        }
+    }
+}
+
 impl MatMulImpl<f32> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
@@ -64,42 +94,33 @@ impl MatMulImpl<f32> for Cpu {
         cp: *mut f32,
         c_strides: [usize; 2],
     ) {
-        let (m, k, n) = (m.size(), k.size(), n.size());
-        #[cfg(feature = "cpu-mkl-matmul")]
-        unsafe {
-            let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
-            let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
-            let (ldc, c_tr) = super::matrix_strides((m, n), c_strides);
-            let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-            let layout = if c_tr { ColMajor } else { RowMajor };
-            let (a_tr, b_tr) = if c_tr {
-                (if a_tr { NoTr } else { Tr }, if b_tr { NoTr } else { Tr })
-            } else {
-                (if a_tr { Tr } else { NoTr }, if b_tr { Tr } else { NoTr })
-            };
-            sgemm(
-                layout, a_tr, b_tr, m, n, k, 1.0, ap, lda as i32, bp, ldb as i32, 1.0, cp,
-                ldc as i32,
-            );
-        }
-
-        #[cfg(all(
-            any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
-            not(feature = "cpu-mkl-matmul")
-        ))]
-        unsafe {
-            let [ar, ac] = a_strides.map(|x| x as isize);
-            let [br, bc] = b_strides.map(|x| x as isize);
-            let [cr, cc] = c_strides.map(|x| x as isize);
-            sgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
-        }
-
-        #[cfg(not(any(
-            feature = "cpu-seq-matmul",
-            feature = "cpu-par-matmul",
-            feature = "cpu-mkl-matmul"
-        )))]
+        #[cfg(not(feature = "cpu"))]
         naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+
+        #[cfg(feature = "cpu")]
+        unsafe {
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp,
+                c_strides[1] as isize,
+                c_strides[0] as isize,
+                true,
+                ap,
+                a_strides[1] as isize,
+                a_strides[0] as isize,
+                bp,
+                b_strides[1] as isize,
+                b_strides[0] as isize,
+                1.0,
+                1.0,
+                false,
+                false,
+                false,
+                gemm::Parallelism::None,
+            )
+        }
     }
 }
 
@@ -114,45 +135,33 @@ impl MatMulImpl<f64> for Cpu {
         cp: *mut f64,
         c_strides: [usize; 2],
     ) {
-        let (m, k, n) = (m.size(), k.size(), n.size());
-
-        #[cfg(feature = "cpu-mkl-matmul")]
-        unsafe {
-            let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
-            let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
-            let (ldc, c_tr) = super::matrix_strides((m, n), c_strides);
-            let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-            let layout = if c_tr { ColMajor } else { RowMajor };
-            let (a_tr, b_tr) = if c_tr {
-                (if a_tr { NoTr } else { Tr }, if b_tr { NoTr } else { Tr })
-            } else {
-                (if a_tr { Tr } else { NoTr }, if b_tr { Tr } else { NoTr })
-            };
-            dgemm(
-                layout, a_tr, b_tr, m, n, k, 1.0, ap, lda as i32, bp, ldb as i32, 1.0, cp,
-                ldc as i32,
-            );
-            return;
-        }
-
-        #[cfg(all(
-            any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
-            not(feature = "cpu-mkl-matmul")
-        ))]
-        unsafe {
-            let [ar, ac] = a_strides.map(|x| x as isize);
-            let [br, bc] = b_strides.map(|x| x as isize);
-            let [cr, cc] = c_strides.map(|x| x as isize);
-            dgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
-            return;
-        }
-
-        #[cfg(not(any(
-            feature = "cpu-seq-matmul",
-            feature = "cpu-par-matmul",
-            feature = "cpu-mkl-matmul"
-        )))]
+        #[cfg(not(feature = "cpu"))]
         naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+
+        #[cfg(feature = "cpu")]
+        unsafe {
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp,
+                c_strides[1] as isize,
+                c_strides[0] as isize,
+                true,
+                ap,
+                a_strides[1] as isize,
+                a_strides[0] as isize,
+                bp,
+                b_strides[1] as isize,
+                b_strides[0] as isize,
+                1.0,
+                1.0,
+                false,
+                false,
+                false,
+                gemm::Parallelism::None,
+            )
+        }
     }
 }
 

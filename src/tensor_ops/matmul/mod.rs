@@ -1,8 +1,5 @@
 #![allow(clippy::type_complexity)]
 
-#[cfg(feature = "f16")]
-mod f16;
-
 pub(super) mod cpu_kernel;
 
 #[cfg(feature = "cuda")]

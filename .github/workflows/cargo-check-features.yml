@@ -11,9 +11,9 @@ jobs:
       matrix:
         config:
           - toolchain: stable
-            command: cargo hack check --feature-powerset --no-dev-deps --depth 2 --skip default,nightly,cpu-mkl-matmul,cuda,cudnn
+            command: cargo hack check --feature-powerset --no-dev-deps --depth 2 --skip default,nightly,cuda,cudnn
           - toolchain: nightly
-            command: cargo hack check --each-feature --no-dev-deps --features nightly --skip default,cpu-mkl-matmul,cuda,cudnn
+            command: cargo hack check --each-feature --no-dev-deps --features nightly --skip default,cuda,cudnn
 
     steps:
       - uses: actions/checkout@v2
