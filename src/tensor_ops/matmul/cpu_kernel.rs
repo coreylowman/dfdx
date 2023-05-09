@@ -8,6 +8,7 @@ use std::sync::Arc;
 #[allow(unused)]
 fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
     (m, k, n): (M, K, N),
+    accum: bool,
     ap: *const F,
     a_strides: [usize; 2],
     bp: *const F,
@@ -22,7 +23,11 @@ fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim
                     let a = *ap.add(a_strides[0] * i_m + a_strides[1] * i_k);
                     let b = *bp.add(b_strides[0] * i_k + b_strides[1] * i_n);
                     let c = cp.add(c_strides[0] * i_m + c_strides[1] * i_n);
-                    *c += a * b;
+                    if accum {
+                        *c += a * b;
+                    } else {
+                        *c = a * b;
+                    }
                 }
             }
         }
@@ -50,14 +55,14 @@ impl MatMulImpl<half::f16> for Cpu {
         (m, k, n): (M, K, N),
         accum: bool,
         ap: *const half::f16,
-        a_strides: [usize; 2],
+        astr: [usize; 2],
         bp: *const half::f16,
-        b_strides: [usize; 2],
+        bstr: [usize; 2],
         cp: *mut half::f16,
-        c_strides: [usize; 2],
+        cstr: [usize; 2],
     ) {
         #[cfg(not(feature = "cpu"))]
-        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
 
         #[cfg(feature = "cpu")]
         unsafe {
@@ -66,15 +71,15 @@ impl MatMulImpl<half::f16> for Cpu {
                 n.size(),
                 k.size(),
                 cp as *mut gemm::f16,
-                c_strides[1] as isize,
-                c_strides[0] as isize,
+                cstr[1] as isize,
+                cstr[0] as isize,
                 accum,
                 ap as *const gemm::f16,
-                a_strides[1] as isize,
-                a_strides[0] as isize,
+                astr[1] as isize,
+                astr[0] as isize,
                 bp as *const gemm::f16,
-                b_strides[1] as isize,
-                b_strides[0] as isize,
+                bstr[1] as isize,
+                bstr[0] as isize,
                 if accum {
                     gemm::f16::ONE
                 } else {
@@ -96,14 +101,14 @@ impl MatMulImpl<f32> for Cpu {
         (m, k, n): (M, K, N),
         accum: bool,
         ap: *const f32,
-        a_strides: [usize; 2],
+        astr: [usize; 2],
         bp: *const f32,
-        b_strides: [usize; 2],
+        bstr: [usize; 2],
         cp: *mut f32,
-        c_strides: [usize; 2],
+        cstr: [usize; 2],
     ) {
         #[cfg(not(feature = "cpu"))]
-        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
 
         #[cfg(feature = "cpu")]
         unsafe {
@@ -112,15 +117,15 @@ impl MatMulImpl<f32> for Cpu {
                 n.size(),
                 k.size(),
                 cp,
-                c_strides[1] as isize,
-                c_strides[0] as isize,
+                cstr[1] as isize,
+                cstr[0] as isize,
                 accum,
                 ap,
-                a_strides[1] as isize,
-                a_strides[0] as isize,
+                astr[1] as isize,
+                astr[0] as isize,
                 bp,
-                b_strides[1] as isize,
-                b_strides[0] as isize,
+                bstr[1] as isize,
+                bstr[0] as isize,
                 if accum { 1.0 } else { 0.0 },
                 1.0,
                 false,
@@ -138,14 +143,14 @@ impl MatMulImpl<f64> for Cpu {
         (m, k, n): (M, K, N),
         accum: bool,
         ap: *const f64,
-        a_strides: [usize; 2],
+        astr: [usize; 2],
         bp: *const f64,
-        b_strides: [usize; 2],
+        bstr: [usize; 2],
         cp: *mut f64,
-        c_strides: [usize; 2],
+        cstr: [usize; 2],
     ) {
         #[cfg(not(feature = "cpu"))]
-        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
 
         #[cfg(feature = "cpu")]
         unsafe {
@@ -154,15 +159,15 @@ impl MatMulImpl<f64> for Cpu {
                 n.size(),
                 k.size(),
                 cp,
-                c_strides[1] as isize,
-                c_strides[0] as isize,
+                cstr[1] as isize,
+                cstr[0] as isize,
                 accum,
                 ap,
-                a_strides[1] as isize,
-                a_strides[0] as isize,
+                astr[1] as isize,
+                astr[0] as isize,
                 bp,
-                b_strides[1] as isize,
-                b_strides[0] as isize,
+                bstr[1] as isize,
+                bstr[0] as isize,
                 if accum { 1.0 } else { 0.0 },
                 1.0,
                 false,
