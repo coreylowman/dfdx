@@ -77,7 +77,7 @@ impl MatMulImpl<half::f16> for Cpu {
                 false,
                 false,
                 false,
-                gemm::Parallelism::None,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
             )
         }
     }
@@ -118,7 +118,7 @@ impl MatMulImpl<f32> for Cpu {
                 false,
                 false,
                 false,
-                gemm::Parallelism::None,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
             )
         }
     }
@@ -159,7 +159,7 @@ impl MatMulImpl<f64> for Cpu {
                 false,
                 false,
                 false,
-                gemm::Parallelism::None,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
             )
         }
     }

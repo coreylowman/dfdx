@@ -38,6 +38,7 @@ safetensors = { version = "0.3", default-features = false, optional = true }
 memmap2 = { version = "0.5", default-features = false, optional = true }
 half = { git = "https://github.com/starkat99/half-rs.git", branch = "main", optional = true, features = ["num-traits", "rand_distr"] }
 gemm = { version = "0.15.3", default-features = false, optional = true }
+rayon = { version = "1.7.0", optional = true }
 
 [dev-dependencies]
 tempfile = "3.3.0"
@@ -55,7 +56,7 @@ std = ["cudarc?/std", "rand_distr/std_math", "gemm?/std"]
 fast-alloc = ["std"]
 no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std", "num-traits/libm"]
 
-cpu = ["dep:gemm"]
+cpu = ["dep:gemm", "dep:rayon"]
 cuda = ["dep:cudarc", "dep:glob"]
 cudnn = ["cuda", "cudarc?/cudnn"]
 
