@@ -30,6 +30,7 @@ fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim
 }
 
 pub(crate) trait MatMulImpl<E> {
+    #[allow(clippy::too_many_arguments)]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         dims: (M, K, N),
         accum: bool,
