@@ -80,6 +80,7 @@ impl Cpu {
         for g in 0..op.groups {
             Self::matmul(
                 (m, k, n),
+                false,
                 filters[g * m * k..].as_ptr(),
                 [k, 1],
                 buf[g * k * n..].as_ptr(),
@@ -134,6 +135,7 @@ impl Cpu {
             for g in 0..op.groups {
                 Self::matmul(
                     (m, k, n),
+                    true,
                     filters_tr[g * m * k..].as_ptr(),
                     [k, 1],
                     buf[g * k * n..].as_ptr(),
@@ -153,6 +155,7 @@ impl Cpu {
             for g in 0..op.groups {
                 Self::matmul(
                     (m, k, n),
+                    true,
                     img[g * m * k..].as_ptr(),
                     [k, 1],
                     buf[g * k * n..].as_ptr(),

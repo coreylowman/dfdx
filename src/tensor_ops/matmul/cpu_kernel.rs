@@ -30,8 +30,10 @@ fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim
 }
 
 pub(crate) trait MatMulImpl<E> {
+    #[allow(clippy::too_many_arguments)]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         dims: (M, K, N),
+        accum: bool,
         ap: *const E,
         a_strides: [usize; 2],
         bp: *const E,
@@ -46,6 +48,7 @@ impl MatMulImpl<half::f16> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         (m, k, n): (M, K, N),
+        accum: bool,
         ap: *const half::f16,
         a_strides: [usize; 2],
         bp: *const half::f16,
@@ -65,14 +68,18 @@ impl MatMulImpl<half::f16> for Cpu {
                 cp as *mut gemm::f16,
                 c_strides[1] as isize,
                 c_strides[0] as isize,
-                true,
-                ap as *mut gemm::f16,
+                accum,
+                ap as *const gemm::f16,
                 a_strides[1] as isize,
                 a_strides[0] as isize,
-                bp as *mut gemm::f16,
+                bp as *const gemm::f16,
                 b_strides[1] as isize,
                 b_strides[0] as isize,
-                gemm::f16::ONE,
+                if accum {
+                    gemm::f16::ONE
+                } else {
+                    gemm::f16::ZERO
+                },
                 gemm::f16::ONE,
                 false,
                 false,
@@ -87,6 +94,7 @@ impl MatMulImpl<f32> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         (m, k, n): (M, K, N),
+        accum: bool,
         ap: *const f32,
         a_strides: [usize; 2],
         bp: *const f32,
@@ -106,14 +114,14 @@ impl MatMulImpl<f32> for Cpu {
                 cp,
                 c_strides[1] as isize,
                 c_strides[0] as isize,
-                true,
+                accum,
                 ap,
                 a_strides[1] as isize,
                 a_strides[0] as isize,
                 bp,
                 b_strides[1] as isize,
                 b_strides[0] as isize,
-                1.0,
+                if accum { 1.0 } else { 0.0 },
                 1.0,
                 false,
                 false,
@@ -128,6 +136,7 @@ impl MatMulImpl<f64> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         (m, k, n): (M, K, N),
+        accum: bool,
         ap: *const f64,
         a_strides: [usize; 2],
         bp: *const f64,
@@ -147,14 +156,14 @@ impl MatMulImpl<f64> for Cpu {
                 cp,
                 c_strides[1] as isize,
                 c_strides[0] as isize,
-                true,
+                accum,
                 ap,
                 a_strides[1] as isize,
                 a_strides[0] as isize,
                 bp,
                 b_strides[1] as isize,
                 b_strides[0] as isize,
-                1.0,
+                if accum { 1.0 } else { 0.0 },
                 1.0,
                 false,
                 false,
@@ -179,6 +188,7 @@ where
         let mut out = self.try_zeros_like(&(m, n))?;
         Self::matmul(
             (m, k, n),
+            false,
             lhs.data.as_ptr(),
             lhs.strides,
             rhs.data.as_ptr(),
@@ -201,6 +211,7 @@ where
         let strides = (m, n).strides();
         Self::matmul(
             (m, n, k),
+            true,
             grad_out.as_ptr(),
             strides,
             rhs.data.as_ptr(),
@@ -210,6 +221,7 @@ where
         );
         Self::matmul(
             (k, m, n),
+            true,
             lhs.data.as_ptr(),
             [lhs.strides[1], lhs.strides[0]],
             grad_out.as_ptr(),
@@ -237,6 +249,7 @@ where
         for i in 0..batch.size() {
             Self::matmul(
                 (m, k, n),
+                false,
                 lhs.data[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[1], lhs.strides[2]],
                 rhs.data.as_ptr(),
@@ -261,6 +274,7 @@ where
         for i in 0..batch.size() {
             Self::matmul(
                 (m, n, k),
+                true,
                 grad_out[i * strides[0]..].as_ptr(),
                 [strides[1], strides[2]],
                 rhs.data.as_ptr(),
@@ -270,6 +284,7 @@ where
             );
             Self::matmul(
                 (k, m, n),
+                true,
                 lhs.data[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[2], lhs.strides[1]],
                 grad_out[i * strides[0]..].as_ptr(),
@@ -300,6 +315,7 @@ where
         for i in 0..b.size() {
             Self::matmul(
                 (m, k, n),
+                false,
                 ap[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[1], lhs.strides[2]],
                 bp[i * rhs.strides[0]..].as_ptr(),
@@ -324,6 +340,7 @@ where
         for i in 0..b.size() {
             Self::matmul(
                 (m, n, k),
+                true,
                 grad_out[i * strides[0]..].as_ptr(),
                 [strides[1], strides[2]],
                 rhs.data[i * rhs.strides[0]..].as_ptr(),
@@ -333,6 +350,7 @@ where
             );
             Self::matmul(
                 (k, m, n),
+                true,
                 lhs.data[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[2], lhs.strides[1]],
                 grad_out[i * strides[0]..].as_ptr(),
@@ -362,6 +380,7 @@ where
             for j in 0..s.size() {
                 Self::matmul(
                     (m, k, n),
+                    false,
                     lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
                     [lhs.strides[2], lhs.strides[3]],
                     rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
@@ -388,6 +407,7 @@ where
             for j in 0..s.size() {
                 Self::matmul(
                     (m, n, k),
+                    true,
                     grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
                     [strides[2], strides[3]],
                     rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
@@ -397,6 +417,7 @@ where
                 );
                 Self::matmul(
                     (k, m, n),
+                    true,
                     lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
                     [lhs.strides[3], lhs.strides[2]],
                     grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
