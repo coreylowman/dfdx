@@ -29,7 +29,6 @@ no-std-compat = { version = "0.4.1", default-features = false, features = [ "all
 spin = { version = "0.9.8", default-features = false, features = ["spin_mutex", "rwlock", "portable_atomic"], optional = true }
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false }
-matrixmultiply = { version = "0.3.2", default-features = false, optional = true }
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
@@ -38,6 +37,7 @@ num-traits = { version = "0.2.15", default-features = false }
 safetensors = { version = "0.3", default-features = false, optional = true }
 memmap2 = { version = "0.5", default-features = false, optional = true }
 half = { git = "https://github.com/starkat99/half-rs.git", branch = "main", optional = true, features = ["num-traits", "rand_distr"] }
+gemm = { version = "0.15.3", default-features = false, optional = true }
 
 [dev-dependencies]
 tempfile = "3.3.0"
@@ -48,17 +48,14 @@ indicatif = "0.17.3"
 glob = { version = "0.3.1", optional = true }
 
 [features]
-default = ["std", "fast-alloc", "cpu-par-matmul"]
-nightly = ["half?/use-intrinsics"]
+default = ["std", "fast-alloc", "cpu"]
+nightly = ["half?/use-intrinsics", "gemm?/nightly"]
 
-std = ["cudarc?/std", "matrixmultiply?/std", "rand_distr/std_math"]
+std = ["cudarc?/std", "rand_distr/std_math", "gemm?/std"]
 fast-alloc = ["std"]
 no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std", "num-traits/libm"]
 
-cpu-seq-matmul = ["dep:matrixmultiply"]
-cpu-par-matmul = ["std", "dep:matrixmultiply", "matrixmultiply?/threading"]
-cpu-mkl-matmul = ["dep:cblas-sys", "dep:libc"]
-
+cpu = ["dep:gemm"]
 cuda = ["dep:cudarc", "dep:glob"]
 cudnn = ["cuda", "cudarc?/cudnn"]
 
