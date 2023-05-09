@@ -70,7 +70,7 @@ impl Default for AdamConfig {
 /// ```
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Adam<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig,
