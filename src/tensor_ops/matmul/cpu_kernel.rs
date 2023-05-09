@@ -6,6 +6,7 @@ use crate::tensor::{Cpu, Tensor, ZerosTensor};
 use std::sync::Arc;
 
 #[allow(unused)]
+#[allow(clippy::too_many_arguments)]
 fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
     (m, k, n): (M, K, N),
     accum: bool,
