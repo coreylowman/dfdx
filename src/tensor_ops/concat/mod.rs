@@ -8,7 +8,7 @@ mod cuda_kernel;
 ///
 /// **Pytorch equivalent** `torch.concat`.
 ///
-/// Stacking with const dims **requires nightly**:
+/// Concat with const dims **requires nightly**:
 /// ```ignore
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
@@ -17,7 +17,7 @@ mod cuda_kernel;
 /// let _: Tensor<Rank2<6, 4>, f32, _> = a.concat(b);
 /// ```
 ///
-/// Stacking with usize dims:
+/// Concat with usize dims:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();

@@ -283,7 +283,6 @@ mod tests {
         test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
     }
 
-    #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_mha() {
         let dev: TestDevice = Default::default();
@@ -310,7 +309,6 @@ mod tests {
         assert_eq!(y1.array(), y2.array());
     }
 
-    #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_transformer() {
         let dev: TestDevice = Default::default();
