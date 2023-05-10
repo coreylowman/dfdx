@@ -202,6 +202,7 @@ mod sum_to;
 mod tanh;
 mod to_dtype;
 mod tri;
+mod upscale2d;
 mod var_to;
 
 pub use abs::abs;
@@ -258,9 +259,11 @@ pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use to_dtype::to_dtype;
 pub use tri::{lower_tri, upper_tri};
+pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 pub use var_to::VarTo;
 
 pub(crate) use to_dtype::ToDtypeKernel;
+pub(crate) use upscale2d::Upscale2DKernel;
 
 #[cfg(feature = "nightly")]
 mod conv2d;
@@ -271,10 +274,6 @@ pub use conv2d::TryConv2D;
 mod convtrans2d;
 #[cfg(feature = "nightly")]
 pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
-
-mod upscale2d;
-pub(crate) use upscale2d::Upscale2DKernel;
-pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 
 #[cfg(feature = "nightly")]
 mod pool2d;
