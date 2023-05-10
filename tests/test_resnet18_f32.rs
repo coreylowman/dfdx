@@ -1,4 +1,7 @@
-#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
+#![cfg_attr(
+    all(feature = "test-integrations", feature = "nightly"),
+    feature(generic_const_exprs)
+)]
 
 #[cfg(all(feature = "test-integrations", feature = "nightly"))]
 mod model {

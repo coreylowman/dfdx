@@ -81,6 +81,7 @@ impl Cpu {
         let n = op.w_out * op.h_out;
         Self::matmul(
             (m, k, n),
+            false,
             filters.as_ptr(),
             [k, 1],
             buf.as_ptr(),
@@ -133,6 +134,7 @@ impl Cpu {
             let n = op.h_in * op.w_in;
             Self::matmul(
                 (m, k, n),
+                true,
                 filters_tr.as_ptr(),
                 [k, 1],
                 buf.as_ptr(),
@@ -150,6 +152,7 @@ impl Cpu {
             let n = op.chan_out * op.kernel * op.kernel;
             Self::matmul(
                 (m, k, n),
+                true,
                 img.as_ptr(),
                 [k, 1],
                 buf.as_ptr(),

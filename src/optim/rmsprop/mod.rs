@@ -77,7 +77,7 @@ impl Default for RMSpropConfig {
 ///     centered: false,
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig,

@@ -164,6 +164,30 @@ where
     }
 }
 
+impl<const N: usize> core::ops::Mul<Const<N>> for usize {
+    type Output = usize;
+    fn mul(self, rhs: Const<N>) -> Self::Output {
+        self.size() * rhs.size()
+    }
+}
+impl<const N: usize> core::ops::Mul<usize> for Const<N> {
+    type Output = usize;
+    fn mul(self, rhs: usize) -> Self::Output {
+        self.size() * rhs.size()
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<const N: usize, const M: usize> core::ops::Mul<Const<N>> for Const<M>
+where
+    Const<{ N * M }>: Sized,
+{
+    type Output = Const<{ N * M }>;
+    fn mul(self, _: Const<N>) -> Self::Output {
+        Const
+    }
+}
+
 /// Represents either `[T; N]` or `Vec<T>`
 pub trait Array<T>: IntoIterator<Item = T> {
     type Dim: Dim;
