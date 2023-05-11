@@ -57,7 +57,7 @@ where
         }
 
         let numel = inp.data.len();
-        let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = launch_cfg::<128>(numel as u32);

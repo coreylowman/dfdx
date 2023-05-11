@@ -61,13 +61,13 @@ where
         let num_heads = NUM_HEADS;
 
         let q_shape = (Const, seq, Const);
-        let mut q_Storage<E> = self.dev.alloc_zeros::<E>(q_shape.num_elements())?;
+        let mut q_storage = self.dev.alloc_zeros::<E>(q_shape.num_elements())?;
 
         let k_shape = (Const, Const, total_length);
-        let mut k_Storage<E> = self.dev.alloc_zeros::<E>(k_shape.num_elements())?;
+        let mut k_storage = self.dev.alloc_zeros::<E>(k_shape.num_elements())?;
 
         let v_shape = (Const, total_length, Const);
-        let mut v_Storage<E> = self.dev.alloc_zeros::<E>(v_shape.num_elements())?;
+        let mut v_storage = self.dev.alloc_zeros::<E>(v_shape.num_elements())?;
 
         let numel = q_shape.num_elements() + k_shape.num_elements() + v_shape.num_elements();
         let op = AttentionReshapeOp {

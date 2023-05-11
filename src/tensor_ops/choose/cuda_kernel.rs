@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Storage, Tensor},
 };
 use cudarc::driver::{CudaSlice, LaunchAsync};
 
@@ -45,7 +45,7 @@ where
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
         let cond_strides: CudaSlice<usize> = self.dev.htod_copy(cond.strides.into())?;
@@ -74,10 +74,10 @@ where
         &self,
         cond: &Tensor<S, bool, Self>,
         lhs: &Tensor<S, E, Self>,
-        grad_lhs: &mut Self::Vec,
+        grad_lhs: &mut <Self as Storage<E>>::Vec,
         rhs: &Tensor<S, E, Self>,
-        grad_rhs: &mut Self::Vec,
-        grad_out: &Self::Vec,
+        grad_rhs: &mut <Self as Storage<E>>::Vec,
+        grad_out: &<Self as Storage<E>>::Vec,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = cond.shape.num_elements();

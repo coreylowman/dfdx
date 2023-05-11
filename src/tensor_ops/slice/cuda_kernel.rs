@@ -61,7 +61,7 @@ where
         let start_idx = NdIndex::new(inp.shape, inp.strides)
             .get_strided_index(inp.shape.first_idx_in_slice(slice));
 
-        let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(dst.concrete().into())?;
         let strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;

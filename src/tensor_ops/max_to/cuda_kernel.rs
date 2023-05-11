@@ -53,8 +53,8 @@ where
 
         let fill_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let mut Storage<E> = unsafe {
-            let mut Storage<E> = self.alloc_empty::<E>(dst.num_elements())?;
+        let mut storage = unsafe {
+            let mut storage = self.alloc_empty::<E>(dst.num_elements())?;
             fill_fn.launch(
                 launch_cfg::<128>(dst.num_elements() as u32),
                 (&mut storage, Self::INIT, dst.num_elements()),

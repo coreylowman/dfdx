@@ -48,7 +48,7 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut Storage<E> = unsafe { self.alloc_empty::<bool>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<bool>(numel) }?;
         self.dev.memset_zeros(&mut storage)?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
@@ -89,7 +89,7 @@ impl<E: Unit, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut Storage<E> = unsafe { self.alloc_empty::<bool>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<bool>(numel) }?;
         self.dev.memset_zeros(&mut storage)?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;

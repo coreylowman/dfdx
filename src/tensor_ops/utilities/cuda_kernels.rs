@@ -78,7 +78,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         match inp {
             Cow::Borrowed(inp) => {
                 let numel = inp.data.len();
-                let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
+                let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
                 let cfg = launch_cfg::<128>(numel as u32);
                 let params = (op, numel, inp.data.as_ref(), &mut storage);
@@ -251,7 +251,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
 
         match (lhs, rhs) {
             (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
-                let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
+                let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
                 let params = (
                     op,
                     numel,             // const size_t numel,
@@ -298,7 +298,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                         Ok(lhs)
                     }
                 } else {
-                    let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
+                    let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
                     let params = (
                         op,
                         numel,             // const size_t numel,
