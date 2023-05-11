@@ -82,9 +82,9 @@ where
         &self,
         op: super::Upscale2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
         let bwd_fn = self.dev.get_func(Self::FWD, Self::BWD).unwrap();

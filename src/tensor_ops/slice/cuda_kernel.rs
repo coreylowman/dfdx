@@ -61,7 +61,7 @@ where
         let start_idx = NdIndex::new(inp.shape, inp.strides)
             .get_strided_index(inp.shape.first_idx_in_slice(slice));
 
-        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
+        let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(dst.concrete().into())?;
         let strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;
@@ -84,8 +84,8 @@ where
     fn backward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
         slice: &Slice,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[1]) {

@@ -53,7 +53,7 @@ pub struct ConvTrans2D<
     const STRIDE: usize,
     const PADDING: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: Storage<E>,
 > {
     pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
 }
@@ -104,7 +104,7 @@ impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: us
     NonMutableModule for ConvTrans2D<I, O, K, S, P, E, D>
 where
     E: Dtype,
-    D: DeviceStorage,
+    D: Storage<E>,
 {
 }
 

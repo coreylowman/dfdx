@@ -54,7 +54,7 @@ impl<E: Unit> ZerosTensor<E> for Cuda {
 }
 
 impl<E: Unit> ZeroFillStorage<E> for Cuda {
-    fn try_fill_with_zeros(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
+    fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Self::Err> {
         self.dev.memset_zeros(&mut storage.data)?;
         Ok(())
     }
@@ -103,7 +103,7 @@ where
 }
 
 impl<E: Unit> OneFillStorage<E> for Cuda {
-    fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
+    fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Self::Err> {
         self.dev
             .htod_copy_into(std::vec![E::ONE; storage.len()], &mut storage.data)?;
         Ok(())
@@ -132,7 +132,7 @@ where
     }
     fn try_fill_with_distr<D: rand_distr::Distribution<E>>(
         &self,
-        storage: &mut Self::Vec<E>,
+        storage: &mut Self::Vec,
         distr: D,
     ) -> Result<(), Self::Err> {
         let mut buf = Vec::with_capacity(storage.len());
@@ -153,9 +153,9 @@ impl<E: Unit> CopySlice<E> for Cuda {
         assert_eq!(
             dst.data.len(),
             src.len(),
-            "Slices must have same number of elements as *physical* storage of tensors."
+            "Slices must have same number of elements as *physical* Storage<E> of tensors."
         );
-        let storage = Arc::make_mut(&mut dst.data);
+        let Storage<E> = Arc::make_mut(&mut dst.data);
         dst.device
             .dev
             .htod_sync_copy_into(src, &mut storage.data)
@@ -165,9 +165,9 @@ impl<E: Unit> CopySlice<E> for Cuda {
         assert_eq!(
             src.data.len(),
             dst.len(),
-            "Slices must have same number of elements as *physical* storage of tensors."
+            "Slices must have same number of elements as *physical* Storage<E> of tensors."
         );
-        let storage: &Self::Vec<E> = src.data.as_ref();
+        let storage: &Self::Vec = src.data.as_ref();
         src.device
             .dev
             .dtoh_sync_copy_into(&storage.data, dst)

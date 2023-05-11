@@ -78,7 +78,7 @@ impl Default for RMSpropConfig {
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
 #[derive(Debug, Clone)]
-pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
+pub struct RMSprop<M, E: Dtype, D: Storage<E>> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig,
 
@@ -90,7 +90,7 @@ pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
+impl<M, E: Dtype, D: Storage<E>> RMSprop<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(_model: &M, cfg: RMSpropConfig) -> Self {
         Self {
@@ -104,15 +104,15 @@ impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
     }
 }
 
-pub trait RMSpropKernel<E: Dtype>: DeviceStorage {
+pub trait RMSpropKernel<E: Dtype>: Storage<E> {
     fn update(
         &self,
         cfg: &RMSpropConfig,
-        param: &mut Self::Vec<E>,
-        momentum: &mut Self::Vec<E>,
-        square_avg: &mut Self::Vec<E>,
-        grad_avg: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Vec,
+        momentum: &mut Self::Vec,
+        square_avg: &mut Self::Vec,
+        grad_avg: &mut Self::Vec,
+        grad: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
@@ -166,7 +166,7 @@ impl<M: TensorCollection<E, D>, D: Device<E> + OneFillStorage<E>, E: Dtype> Opti
         &mut self,
         module: &mut M,
         gradients: &Gradients<E, D>,
-    ) -> Result<(), OptimizerUpdateError<D>> {
+    ) -> Result<(), OptimizerUpdateError<D::Err>> {
         let mut op = (self, gradients, Default::default());
         let result = M::iter_tensors(&mut RecursiveWalker {
             m: module,

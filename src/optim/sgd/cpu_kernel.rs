@@ -10,9 +10,9 @@ impl<E: Dtype> SgdKernel<E> for Cpu {
     fn update(
         &self,
         cfg: &SgdConfig,
-        param: &mut Self::Vec<E>,
-        velocity: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Vec,
+        velocity: &mut Self::Vec,
+        grad: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let lr = E::from_f64(cfg.lr).unwrap();
 

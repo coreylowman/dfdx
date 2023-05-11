@@ -57,7 +57,7 @@ pub trait TryConcatAlong<Ax>: Sized {
     fn try_concat_along(self, ax: Ax) -> Result<Self::Output, Self::Error>;
 }
 
-pub trait ConcatAlongKernel<E: Dtype>: DeviceStorage {
+pub trait ConcatAlongKernel<E: Dtype>: Storage<E> {
     fn forward<A: Shape, B: Shape, C: Shape>(
         &self,
         ax: usize,
@@ -70,10 +70,10 @@ pub trait ConcatAlongKernel<E: Dtype>: DeviceStorage {
         &self,
         ax: usize,
         a: &GhostTensor<A, E, Self>,
-        grad_a: &mut Self::Vec<E>,
+        grad_a: &mut Self::Vec,
         b: &GhostTensor<B, E, Self>,
-        grad_b: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_b: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 

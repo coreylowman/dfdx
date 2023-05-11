@@ -1,12 +1,12 @@
 use crate::{
     shapes::*,
-    tensor::{DeviceStorage, Tensor, TensorFromVec, ZerosTensor},
+    tensor::{Storage, Tensor, TensorFromVec, ZerosTensor},
 };
 
 use std::vec::Vec;
 
 /// Generates a tensor with ordered data from 0 to `N`.
-pub trait Arange<E: Dtype>: DeviceStorage + ZerosTensor<E> + TensorFromVec<E> {
+pub trait Arange<E: Dtype>: Storage<E> + ZerosTensor<E> + TensorFromVec<E> {
     /// Generates a tensor with ordered data from 0 to `N`.
     ///
     /// Const sized tensor:

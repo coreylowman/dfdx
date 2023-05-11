@@ -6,11 +6,11 @@ impl<E: num_traits::Float + Dtype> RMSpropKernel<E> for Cpu {
     fn update(
         &self,
         cfg: &RMSpropConfig,
-        param: &mut Self::Vec<E>,
-        momentum: &mut Self::Vec<E>,
-        square_avg: &mut Self::Vec<E>,
-        grad_avg: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Vec,
+        momentum: &mut Self::Vec,
+        square_avg: &mut Self::Vec,
+        grad_avg: &mut Self::Vec,
+        grad: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let alpha = E::from_f64(cfg.alpha).unwrap();
         let eps = E::from_f64(cfg.eps).unwrap();

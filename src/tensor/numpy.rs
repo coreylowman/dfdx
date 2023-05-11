@@ -15,7 +15,7 @@ use zip::result::{ZipError, ZipResult};
 const MAGIC_NUMBER: &[u8] = b"\x93NUMPY";
 const VERSION: &[u8] = &[1, 0];
 
-impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage<E> + CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Writes `data` to a new file in a zip archive named `filename`.
     pub fn write_to_npz<W: Write + Seek>(
         &self,

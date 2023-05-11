@@ -55,7 +55,7 @@ pub trait BroadcastTo: HasErr + HasShape {
         Self::Shape: BroadcastShapeTo<Dst::Shape, Ax>;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T: Tape<E, D>> BroadcastTo for Tensor<S, E, D, T> {
+impl<S: Shape, E, D: Storage<E>, T: Tape<E, D>> BroadcastTo for Tensor<S, E, D, T> {
     fn try_broadcast_like<Dst: HasShape, Ax: Axes>(
         self,
         dst: &Dst,

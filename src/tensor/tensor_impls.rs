@@ -29,16 +29,16 @@ use std::sync::Arc;
 /// type C = Tensor<Rank3<4, 2, 3>, usize, Cpu, NoneTape>;
 /// ```
 #[derive(Debug, Clone)]
-pub struct Tensor<S: Shape, E: Unit, D: DeviceStorage, T = NoneTape> {
+pub struct Tensor<S: Shape, E, D: Storage<E>, T = NoneTape> {
     pub(crate) id: UniqueId,
-    pub(crate) data: Arc<D::Vec<E>>,
+    pub(crate) data: Arc<D::Vec>,
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
     pub(crate) device: D,
     pub(crate) tape: T,
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
+impl<S: Shape, E, D: Storage<E>, T> HasShape for Tensor<S, E, D, T> {
     type WithShape<New: Shape> = Tensor<New, E, D, T>;
     type Shape = S;
     fn shape(&self) -> &Self::Shape {
@@ -46,20 +46,20 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
     }
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> HasUnitType for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: Storage<E>, T> HasUnitType for Tensor<S, E, D, T> {
     type Unit = E;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDtype for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Storage<E>, T> HasDtype for Tensor<S, E, D, T> {
     type Dtype = E;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
+impl<S: Shape, E, D: Storage<E>, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
 /// Something that can trace gradients
-pub trait Trace<E: Unit, D: DeviceStorage>: Clone {
+pub trait Trace<E, D: Storage<E>>: Clone {
     type Traced;
     /// Start tracking gradients, clones self. The gradients will never free
     /// temporary gradients - See [Gradients::leaky()] for more info.
@@ -86,7 +86,9 @@ pub trait Trace<E: Unit, D: DeviceStorage>: Clone {
     fn traced(self, gradients: Gradients<E, D>) -> Self::Traced;
 }
 
-impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage> Trace<E, D> for Tensor<S, F, D, NoneTape> {
+impl<S: Shape, E: Unit, F: Unit, D: Storage<F> + Storage<E>> Trace<E, D>
+    for Tensor<S, F, D, NoneTape>
+{
     type Traced = Tensor<S, F, D, OwnedTape<E, D>>;
     fn leaky_traced(self) -> Self::Traced {
         self.put_tape(Default::default())
@@ -99,7 +101,7 @@ impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage> Trace<E, D> for Tensor<S, F, 
     }
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
+impl<S: Shape, E, D: Storage<E>, T> Tensor<S, E, D, T> {
     /// Clone and insert a new tape of type `New` into the tensor
     pub fn retaped<New: Tape<E, D>>(&self) -> Tensor<S, E, D, New> {
         Tensor {
@@ -130,7 +132,7 @@ pub trait PutTape<T> {
     fn put_tape(self, tape: T) -> Self::Output;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
+impl<S: Shape, E, D: Storage<E>, T> PutTape<T> for Tensor<S, E, D> {
     type Output = Tensor<S, E, D, T>;
     fn put_tape(self, tape: T) -> Self::Output {
         Tensor {
@@ -161,7 +163,7 @@ pub trait SplitTape {
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Clone, D: Storage<E>, T> SplitTape for Tensor<S, E, D, T> {
     type Tape = T;
     type NoTape = Tensor<S, E, D>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
@@ -185,7 +187,7 @@ pub trait WithEmptyTape {
     fn with_empty_tape(&self) -> Self;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> WithEmptyTape for Tensor<S, E, D, T> {
+impl<S: Shape, E, D: Storage<E>, T: Default> WithEmptyTape for Tensor<S, E, D, T> {
     fn with_empty_tape(&self) -> Self {
         Tensor {
             id: self.id,

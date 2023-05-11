@@ -174,7 +174,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
+        let mut Storage<E> = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
 
         unsafe {
             self.gemm(
@@ -195,10 +195,10 @@ where
     fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
@@ -249,7 +249,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
+        let mut Storage<E> = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         unsafe {
             self.gemm_batch(
                 (batch, m, k, n),
@@ -267,10 +267,10 @@ where
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
@@ -327,7 +327,7 @@ where
         let (_, k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
+        let mut Storage<E> = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         unsafe {
             self.gemm_batch(
                 (batch, m, k, n),
@@ -345,10 +345,10 @@ where
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(B, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
@@ -404,7 +404,7 @@ where
         let (_, _, k, n) = rhs.shape;
         let shape = (batch, seq, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
+        let mut Storage<E> = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
 
         let half_batch = batch.size() / 2;
 
@@ -447,10 +447,10 @@ where
     fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(B, S, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;

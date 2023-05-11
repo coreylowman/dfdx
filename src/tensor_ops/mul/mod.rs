@@ -78,7 +78,7 @@ impl<S: Shape, D: UnaryKernel<ScalarMulKernelOp<half::f16>, half::f16>, T: Tape<
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<E, D>, Rhs> std::ops::Mul<Rhs>
+impl<S: Shape, E: Dtype, D: Storage<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Mul<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryMul<Rhs>,

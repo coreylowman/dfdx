@@ -72,7 +72,7 @@ pub struct Conv2D<
     const DILATION: usize,
     const GROUPS: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: Storage<E>,
 > {
     pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
 }
@@ -156,12 +156,9 @@ impl<
         const P: usize,
         const L: usize,
         const G: usize,
-        E,
-        D,
+        E: Dtype,
+        D: Storage<E>,
     > NonMutableModule for Conv2D<I, O, K, S, P, L, G, E, D>
-where
-    E: Dtype,
-    D: DeviceStorage,
 {
 }
 

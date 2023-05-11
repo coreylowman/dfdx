@@ -40,8 +40,8 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
         &self,
         _dst: Dst,
         inp: &impl Tensorlike<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,

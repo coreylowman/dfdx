@@ -8,7 +8,7 @@ use std::{marker::PhantomData, sync::Arc};
 use crate::{
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Gradients, Tensor},
+    tensor::{Gradients, Storage, Tensor},
     tensor_ops::Device,
 };
 
@@ -71,7 +71,7 @@ impl Default for AdamConfig {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug, Clone)]
-pub struct Adam<M, E: Dtype, D: DeviceStorage> {
+pub struct Adam<M, E: Dtype, D: Storage<E>> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig,
 
@@ -82,7 +82,7 @@ pub struct Adam<M, E: Dtype, D: DeviceStorage> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
+impl<M, E: Dtype, D: Storage<E>> Adam<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(_model: &M, cfg: AdamConfig) -> Self {
         Self {
@@ -95,15 +95,15 @@ impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
     }
 }
 
-pub trait AdamKernel<E: Dtype>: DeviceStorage {
+pub trait AdamKernel<E: Dtype>: Storage<E> {
     fn update(
         &self,
         t: i32,
         cfg: &AdamConfig,
-        param: &mut Self::Vec<E>,
-        moment1: &mut Self::Vec<E>,
-        moment2: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Vec,
+        moment1: &mut Self::Vec,
+        moment2: &mut Self::Vec,
+        grad: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
@@ -149,7 +149,7 @@ impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for A
         &mut self,
         module: &mut M,
         gradients: &Gradients<E, D>,
-    ) -> Result<(), OptimizerUpdateError<D>> {
+    ) -> Result<(), OptimizerUpdateError<D::Err>> {
         self.t = self.t.checked_add(1).unwrap();
         let mut op = (self, gradients, Default::default());
         let result = M::iter_tensors(&mut RecursiveWalker {

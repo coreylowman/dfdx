@@ -71,7 +71,7 @@ where
 
         let cfg = launch_cfg::<128>(physical_numel as u32);
 
-        let mut storage = unsafe { self.alloc_empty::<E>(dst_physical_numel) }?;
+        let mut Storage<E> = unsafe { self.alloc_empty::<E>(dst_physical_numel) }?;
         self.dev.memset_zeros(&mut storage)?;
         let params = (
             physical_numel,    // const size_t numel,
@@ -90,8 +90,8 @@ where
         &self,
         dst: Dst,
         inp: &impl Tensorlike<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,

@@ -57,7 +57,7 @@ where
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
+        let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = launch_cfg::<128>(numel as u32);
@@ -69,8 +69,8 @@ where
         &self,
         op: super::DropoutKernelOp,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let mask = {
             let mut rng = StdRng::seed_from_u64(op.seed);

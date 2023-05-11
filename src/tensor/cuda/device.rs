@@ -237,10 +237,10 @@ impl<E> Drop for CachableCudaSlice<E> {
     }
 }
 
-impl DeviceStorage for Cuda {
+impl DeviceStorage<E> for Cuda {
     type Vec<E: Unit> = CachableCudaSlice<E>;
 
-    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
+    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec, Self::Err> {
         let mut data = unsafe { self.alloc_empty(len) }?;
         self.dev.memset_zeros(&mut data)?;
         Ok(CachableCudaSlice {
@@ -253,7 +253,7 @@ impl DeviceStorage for Cuda {
         self.cpu.random_u64()
     }
 
-    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize {
+    fn len<E: Unit>(&self, v: &Self::Vec) -> usize {
         v.len()
     }
 

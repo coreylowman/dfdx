@@ -4,7 +4,7 @@ use rand_distr::uniform::SampleUniform;
 use crate::{
     nn::modules::*,
     shapes::Dtype,
-    tensor::{DeviceStorage, PutTape, SplitTape},
+    tensor::{PutTape, SplitTape, Storage},
     tensor_ops::Device,
 };
 
@@ -85,7 +85,7 @@ pub struct TransformerEncoderBlock<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: Storage<E>,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, E, D>,

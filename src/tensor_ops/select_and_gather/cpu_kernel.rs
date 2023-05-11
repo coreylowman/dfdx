@@ -3,7 +3,7 @@
 use crate::shapes::{Axes, Dtype, RemoveDimTo, ReplaceDimTo, Shape};
 use crate::tensor::{
     cpu::{index_to_i, LendingIterator, NdIndex},
-    Cpu, Tensor, ZerosTensor,
+    Cpu, Storage, Tensor, ZerosTensor,
 };
 
 impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
@@ -49,10 +49,10 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut <Self as Storage<E>>::Vec,
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &<Self as Storage<E>>::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>,
@@ -122,10 +122,10 @@ impl<E: Dtype> super::RemoveDimKernel<E> for Cpu {
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut <Self as Storage<E>>::Vec,
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &<Self as Storage<E>>::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>,

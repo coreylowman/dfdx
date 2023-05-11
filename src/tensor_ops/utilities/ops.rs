@@ -1,10 +1,10 @@
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{DeviceStorage, Merge, PutTape, SplitTape, Tape, Tensor, Tensorlike},
+    tensor::{Merge, PutTape, SplitTape, Storage, Tape, Tensor, Tensorlike},
 };
 use std::borrow::Cow;
 
-pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
+pub trait UnaryKernel<Op, E: Dtype>: Storage<E> {
     const BACKWARD_WITHOUT_INP: bool;
     const BACKWARD_WITHOUT_DATA: bool;
     fn forward<S: Shape>(
@@ -16,13 +16,13 @@ pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
         &self,
         op: Op,
         inp: &impl Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
-pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
+pub trait BinaryKernel<Op, E: Dtype>: Storage<E> {
     const BACKWARD_WITHOUT_DATA: bool;
     fn forward<S: Shape>(
         &self,
@@ -34,10 +34,10 @@ pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
         &self,
         op: Op,
         lhs: &impl Tensorlike<S, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &impl Tensorlike<S, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 

@@ -5,10 +5,10 @@ mod cuda_kernel;
 
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
+    tensor::{HasErr, Merge, PutTape, SplitTape, Storage, Tape, Tensor},
 };
 
-pub trait ChooseKernel<E: Dtype>: DeviceStorage {
+pub trait ChooseKernel<E: Dtype>: Storage<E> + Storage<bool> {
     fn forward<S: Shape>(
         &self,
         cond: &Tensor<S, bool, Self>,
@@ -20,10 +20,10 @@ pub trait ChooseKernel<E: Dtype>: DeviceStorage {
         &self,
         cond: &Tensor<S, bool, Self>,
         lhs: &Tensor<S, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut <Self as Storage<E>>::Vec,
         rhs: &Tensor<S, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut <Self as Storage<E>>::Vec,
+        grad_out: &<Self as Storage<E>>::Vec,
     ) -> Result<(), Self::Err>;
 }
 

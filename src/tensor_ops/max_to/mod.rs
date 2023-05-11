@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
+pub trait MaxReduceKernel<E: Dtype>: Storage<E> {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
@@ -16,9 +16,9 @@ pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>;

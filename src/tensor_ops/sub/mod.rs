@@ -79,7 +79,7 @@ impl<S: Shape, D: UnaryKernel<ScalarSubKernelOp<half::f16>, half::f16>, T: Tape<
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
+impl<S: Shape, E: Dtype, D: Storage<E>, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
     for Tensor<S, E, D, LTape>
 where
     Self: TrySub<Rhs>,

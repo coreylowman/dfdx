@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::{Storage, Tensor},
 };
 
 mod cpu_kernel;
@@ -48,14 +48,9 @@ impl<S: Shape, E: Dtype, D: AxpyKernel<E>> Tensor<S, E, D> {
     }
 }
 
-pub trait AxpyKernel<E: Dtype>: DeviceStorage {
-    fn forward(
-        &self,
-        a: &mut Self::Vec<E>,
-        alpha: E,
-        b: &Self::Vec<E>,
-        beta: E,
-    ) -> Result<(), Self::Err>;
+pub trait AxpyKernel<E: Dtype>: Storage<E> {
+    fn forward(&self, a: &mut Self::Vec, alpha: E, b: &Self::Vec, beta: E)
+        -> Result<(), Self::Err>;
 }
 
 #[cfg(test)]

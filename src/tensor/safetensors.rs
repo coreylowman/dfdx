@@ -74,7 +74,7 @@ impl From<std::io::Error> for Error {
 }
 
 impl<S: Shape, E: Dtype + SafeDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
-    /// Loads data from the [SafeTensors] storage with the given `key`
+    /// Loads data from the [SafeTensors] Storage<E> with the given `key`
     pub fn load_safetensor(&mut self, tensors: &SafeTensors, key: &str) -> Result<(), Error> {
         let tensor = tensors.tensor(key)?;
         let v = tensor.data();

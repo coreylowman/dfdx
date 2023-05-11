@@ -51,7 +51,7 @@ impl ConvTrans2DOp {
     }
 }
 
-pub(super) trait ConvTrans2DKernel<E: Dtype>: DeviceStorage {
+pub(super) trait ConvTrans2DKernel<E: Dtype>: Storage<E> {
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: ConvTrans2DOp,
@@ -65,11 +65,11 @@ pub(super) trait ConvTrans2DKernel<E: Dtype>: DeviceStorage {
         &self,
         op: ConvTrans2DOp,
         lhs: &Tensor<L, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
@@ -125,7 +125,7 @@ pub trait TryConvTrans2D<F> {
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T, F> TryConvTrans2D<F> for Tensor<S, E, D, T> {}
+impl<S: Shape, E: Dtype, D: Storage<E>, T, F> TryConvTrans2D<F> for Tensor<S, E, D, T> {}
 
 impl<
         const C: usize,

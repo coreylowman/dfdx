@@ -103,9 +103,9 @@ impl<E: Float + Dtype> super::Pool2DKernel<E> for Cpu {
         &self,
         op: super::Pool2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);

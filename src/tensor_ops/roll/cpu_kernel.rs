@@ -37,8 +37,8 @@ impl<E: Dtype> super::RollKernel<E> for Cpu {
         &self,
         op: super::RollOp,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let dims = inp.shape.concrete();
         let strides = inp.shape.strides();

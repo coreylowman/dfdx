@@ -53,8 +53,8 @@ where
 
         let fill_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let mut storage = unsafe {
-            let mut storage = self.alloc_empty::<E>(dst.num_elements())?;
+        let mut Storage<E> = unsafe {
+            let mut Storage<E> = self.alloc_empty::<E>(dst.num_elements())?;
             fill_fn.launch(
                 launch_cfg::<128>(dst.num_elements() as u32),
                 (&mut storage, Self::INIT, dst.num_elements()),
@@ -92,9 +92,9 @@ where
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,

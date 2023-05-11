@@ -62,10 +62,10 @@ where
         &self,
         t: i32,
         cfg: &super::AdamConfig,
-        param: &mut Self::Vec<E>,
-        moment1: &mut Self::Vec<E>,
-        moment2: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Vec,
+        moment1: &mut Self::Vec,
+        moment2: &mut Self::Vec,
+        grad: &Self::Vec,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;

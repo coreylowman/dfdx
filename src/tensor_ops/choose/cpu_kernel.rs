@@ -2,7 +2,7 @@ use crate::{
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{LendingIterator, NdIndex},
-        Cpu, Tensor, ZerosTensor,
+        Cpu, Storage, Tensor, ZerosTensor,
     },
 };
 
@@ -32,10 +32,10 @@ impl<E: Dtype> super::ChooseKernel<E> for Cpu {
         &self,
         cond: &Tensor<S, bool, Self>,
         lhs: &Tensor<S, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut <Self as Storage<E>>::Vec,
         rhs: &Tensor<S, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut <Self as Storage<E>>::Vec,
+        grad_out: &<Self as Storage<E>>::Vec,
     ) -> Result<(), Self::Err> {
         let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
         let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);

@@ -7,7 +7,7 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
+pub trait ReplaceDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -18,16 +18,16 @@ pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut <Self as Storage<E>>::Vec,
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &<Self as Storage<E>>::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>;
 }
 
-pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
+pub trait RemoveDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -38,10 +38,10 @@ pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut <Self as Storage<E>>::Vec,
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &<Self as Storage<E>>::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>;
@@ -73,7 +73,7 @@ pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
 /// let idx: Tensor<Rank1<3>, usize, _> = dev.tensor([0, 2, 4]);
 /// let _: Tensor<Rank1<3>, f32, _> = a.select(idx);
 ///```
-pub trait SelectTo<D: DeviceStorage>: HasErr + HasShape {
+pub trait SelectTo<E, D: Storage<E> + Storage<usize>>: HasErr + HasShape {
     /// Select values given indices.
     fn select<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where
@@ -91,7 +91,7 @@ pub trait SelectTo<D: DeviceStorage>: HasErr + HasShape {
         Self::Shape: RemoveDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
+impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<E, D>
     for Tensor<Src, E, D, T>
 {
     fn try_select<Dst: Shape, Idx: Shape>(
@@ -146,7 +146,7 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
 /// let idx: Tensor<Rank2<3, 2>, usize, _> = dev.tensor([[0, 1], [2, 3], [4, 4]]);
 /// let _: Tensor<Rank2<3, 2>, f32, _> = a.gather(idx);
 ///```
-pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
+pub trait GatherTo<E, D: Storage<E> + Storage<usize>>: HasErr + HasShape {
     /// Gather values given indices.
     fn gather<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where
@@ -163,7 +163,7 @@ pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
         Self::Shape: ReplaceDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
+impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<E, D>
     for Tensor<Src, E, D, T>
 {
     fn try_gather<Dst: Shape, Idx: Shape>(

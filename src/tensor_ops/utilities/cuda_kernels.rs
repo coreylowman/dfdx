@@ -78,7 +78,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         match inp {
             Cow::Borrowed(inp) => {
                 let numel = inp.data.len();
-                let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
+                let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
 
                 let cfg = launch_cfg::<128>(numel as u32);
                 let params = (op, numel, inp.data.as_ref(), &mut storage);
@@ -100,9 +100,9 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         &self,
         op: K,
         inp: &impl Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         match (inp.data(), out.data()) {
@@ -251,7 +251,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
 
         match (lhs, rhs) {
             (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
-                let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
+                let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
                 let params = (
                     op,
                     numel,             // const size_t numel,
@@ -298,7 +298,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                         Ok(lhs)
                     }
                 } else {
-                    let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
+                    let mut Storage<E> = unsafe { self.alloc_empty::<E>(numel) }?;
                     let params = (
                         op,
                         numel,             // const size_t numel,
@@ -322,10 +322,10 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         &self,
         op: K,
         lhs: &impl Tensorlike<S, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &impl Tensorlike<S, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let bwd_lhs_fn = self
             .dev

@@ -63,10 +63,10 @@ impl<E: Dtype + CudaTypeName> super::ConcatAlongKernel<E> for Cuda {
         &self,
         ax: usize,
         a: &GhostTensor<A, E, Self>,
-        grad_a: &mut Self::Vec<E>,
+        grad_a: &mut Self::Vec,
         b: &GhostTensor<B, E, Self>,
-        grad_b: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_b: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let module_name = std::format!("concat_{}", E::NAME);
         let bwd = self.dev.get_func(&module_name, "bwd").unwrap();

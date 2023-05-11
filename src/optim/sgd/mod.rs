@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use crate::{
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Gradients, Tensor},
+    tensor::{Gradients, Storage, Tensor},
     tensor_ops::Device,
 };
 
@@ -112,7 +112,7 @@ impl Default for SgdConfig {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug, Clone)]
-pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
+pub struct Sgd<M, E: Dtype, D: Storage<E>> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig,
 
@@ -121,7 +121,7 @@ pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
+impl<M, E: Dtype, D: Storage<E>> Sgd<M, E, D> {
     /// Constructs using hyperparameters from `cfg`
     pub fn new(_model: &M, cfg: SgdConfig) -> Self {
         Self {
@@ -132,13 +132,13 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     }
 }
 
-pub trait SgdKernel<E: Dtype>: DeviceStorage {
+pub trait SgdKernel<E: Dtype>: Storage<E> {
     fn update(
         &self,
         cfg: &SgdConfig,
-        param: &mut Self::Vec<E>,
-        velocity: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Vec,
+        velocity: &mut Self::Vec,
+        grad: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
@@ -181,7 +181,7 @@ impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for S
         &mut self,
         module: &mut M,
         gradients: &Gradients<E, D>,
-    ) -> Result<(), OptimizerUpdateError<D>> {
+    ) -> Result<(), OptimizerUpdateError<D::Err>> {
         let mut op = (self, gradients, Default::default());
         let result = M::iter_tensors(&mut RecursiveWalker {
             m: module,

@@ -28,7 +28,7 @@ macro_rules! impl_cuda_kernels {
 
                 let dst = inp.shape.replace(idx.shape);
                 let numel = dst.num_elements();
-                let mut storage = unsafe { self.alloc_empty::<$TypeName>(numel) }?;
+                let mut Storage<E> = unsafe { self.alloc_empty::<$TypeName>(numel) }?;
                 self.dev.memset_zeros(&mut storage)?;
 
                 let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
@@ -113,7 +113,7 @@ macro_rules! impl_cuda_kernels {
 
                 let dst = inp.shape.remove(idx.shape);
                 let numel = dst.num_elements();
-                let mut storage = unsafe { self.alloc_empty::<$TypeName>(numel) }?;
+                let mut Storage<E> = unsafe { self.alloc_empty::<$TypeName>(numel) }?;
                 self.dev.memset_zeros(&mut storage)?;
 
                 let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;

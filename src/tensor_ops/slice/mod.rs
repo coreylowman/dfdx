@@ -4,7 +4,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-pub trait SliceKernel<E: Unit>: DeviceStorage {
+pub trait SliceKernel<E: Unit>: Storage<E> {
     fn forward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -14,8 +14,8 @@ pub trait SliceKernel<E: Unit>: DeviceStorage {
     fn backward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
         slice: &Slice,
     ) -> Result<(), Self::Err>;
 }
