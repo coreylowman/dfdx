@@ -35,16 +35,7 @@ impl Cpu {
                 data.resize(numel, elem);
                 Ok(data)
             },
-            |allocation| {
-                // SAFETY:
-                // - ✅ "ptr must have been allocated using the global allocator, such as via the alloc::alloc function."
-                // - ✅ handled by tensor cache "T needs to have the same alignment as what ptr was allocated with."
-                // - ✅ handled by tensor cache "The size of T times the capacity needs to be the same size as the pointer was allocated with."
-                // - ✅ "length needs to be less than or equal to capacity."
-                // - ✅ all the dtypes for this are builtin numbers "The first length values must be properly initialized values of type T."
-                // - ✅ "capacity needs to be the capacity that the pointer was allocated with."
-                // - ✅ "The allocated size in bytes must be no larger than isize::MAX. See the safety documentation of pointer::offset."
-                let mut data = unsafe { Vec::from_raw_parts(allocation.0 as *mut E, numel, numel) };
+            |mut data| {
                 data.fill(elem);
                 Ok(data)
             },

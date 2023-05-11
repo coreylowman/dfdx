@@ -169,7 +169,7 @@ pub use cuda::{Cuda, CudaError};
 pub type AutoDevice = Cuda;
 
 pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
-pub use storage_traits::{DeviceStorage, HasErr};
+pub use storage_traits::{CacheSize, DeviceStorage, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, TriangleTensor, ZerosTensor};
 
 pub use tensor_impls::{PutTape, SplitTape, Tensor, Trace, WithEmptyTape};
