@@ -22,7 +22,7 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: D
 impl<const IN: usize, const INNER: usize, const OUT: usize, E, D: Device<E>> TensorCollection<E, D>
     for Mlp<IN, INNER, OUT, E, D>
 where
-    E: Dtype + num_traits::Float,
+    E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,
 {
     // Type alias that specifies the how Mlp's type changes when using a different dtype and/or
     // device.
