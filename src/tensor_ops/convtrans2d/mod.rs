@@ -5,12 +5,16 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
+use super::ReshapeTo;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub(super) struct ConvTrans2DOp {
+    pub kernel: usize,
     pub stride: usize,
     pub padding: usize,
-    pub kernel: usize,
+    pub dilation: usize,
+    pub groups: usize,
     pub batch: usize,
     pub chan_in: usize,
     pub chan_out: usize,
@@ -20,38 +24,9 @@ pub(super) struct ConvTrans2DOp {
     pub w_out: usize,
 }
 
-impl ConvTrans2DOp {
-    fn new(s: usize, p: usize, k: usize, [b, c, h_in, w_in]: [usize; 4], o: usize) -> Self {
-        Self {
-            stride: s,
-            padding: p,
-            kernel: k,
-            batch: b,
-            chan_in: c,
-            chan_out: o,
-            h_in,
-            h_out: (h_in - 1) * s - 2 * p + k,
-            w_in,
-            w_out: (w_in - 1) * s - 2 * p + k,
-        }
-    }
-
-    #[rustfmt::skip]
-    pub(super) fn inp_patches_shape(&self) -> (usize, usize, usize, usize, usize) {
-        (self.chan_in, self.kernel, self.kernel, self.h_out, self.w_out)
-    }
-
-    #[rustfmt::skip]
-    pub(super) fn out_patches_shape(&self) -> (usize, usize, usize, usize, usize) {
-        (self.chan_out, self.kernel, self.kernel, self.h_in, self.w_in)
-    }
-
-    pub(super) fn filters_tr_shape(&self) -> (usize, usize, usize, usize) {
-        (self.chan_in, self.chan_out, self.kernel, self.kernel)
-    }
-}
-
 pub(super) trait ConvTrans2DKernel<E: Dtype>: Storage<E> {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
+
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: ConvTrans2DOp,
@@ -73,29 +48,77 @@ pub(super) trait ConvTrans2DKernel<E: Dtype>: Storage<E> {
     ) -> Result<(), Self::Err>;
 }
 
-pub trait ConvTransAlgebra<const K: usize, const S: usize, const P: usize>: Dim {
-    type Convolved: Dim;
+pub trait TryConvTrans2D<Stride, Padding, Dilation, Groups>: Sized {
+    type Convolved;
+    type Error: std::fmt::Debug;
 
-    fn convolve_dim(&self) -> Self::Convolved;
+    /// Applies a 2D convolution to the input tensor.
+    fn convtrans2d(
+        self,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+        groups: Groups,
+    ) -> Self::Convolved {
+        self.try_convtrans2d(stride, padding, dilation, groups)
+            .unwrap()
+    }
+
+    /// Fallibly applies a 2D convolution to the input tensor.
+    fn try_convtrans2d(
+        self,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+        groups: Groups,
+    ) -> Result<Self::Convolved, Self::Error>;
 }
 
-impl<const D: usize, const K: usize, const S: usize, const P: usize> ConvTransAlgebra<K, S, P>
-    for Const<D>
+impl<
+        const KERNEL: usize,
+        const STRIDE: usize,
+        const PADDING: usize,
+        const DILATION: usize,
+        Groups: Dim,
+        const DIM: usize,
+    > TryConvTrans2D<Const<STRIDE>, Const<PADDING>, Const<DILATION>, Groups>
+    for (Const<DIM>, Const<KERNEL>)
 where
-    Const<{ D * S + K - S - 2 * P }>: Sized,
+    Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 }>: Sized,
 {
-    type Convolved = Const<{ D * S + K - S - 2 * P }>;
+    type Convolved = Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 }>;
+    type Error = std::convert::Infallible;
 
-    fn convolve_dim(&self) -> Self::Convolved {
-        Default::default()
+    fn try_convtrans2d(
+        self,
+        _: Const<STRIDE>,
+        _: Const<PADDING>,
+        _: Const<DILATION>,
+        _: Groups,
+    ) -> Result<Self::Convolved, Self::Error> {
+        Ok(Const)
     }
 }
 
-impl<const K: usize, const S: usize, const P: usize> ConvTransAlgebra<K, S, P> for usize {
+impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
+    TryConvTrans2D<Stride, Padding, Dilation, Groups> for (usize, Kernel)
+{
     type Convolved = usize;
+    type Error = std::convert::Infallible;
 
-    fn convolve_dim(&self) -> Self::Convolved {
-        (self * S + K).checked_sub(S + 2 * P).unwrap()
+    fn try_convtrans2d(
+        self,
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+        _: Groups,
+    ) -> Result<Self::Convolved, Self::Error> {
+        let (dim, kernel) = self;
+        Ok(
+            ((dim - 1) * stride.size() + dilation.size() * (kernel.size() - 1) + 1)
+                .checked_sub(2 * padding.size())
+                .unwrap(),
+        )
     }
 }
 
@@ -107,103 +130,134 @@ pub trait TryConvTrans2DTo<F, const S: usize, const P: usize>: HasErr {
     fn try_convtrans2d_to(self, filters: F) -> Result<Self::Output, Self::Err>;
 }
 
-pub trait TryConvTrans2D<F> {
-    fn convtrans2d<const S: usize, const P: usize>(self, filters: F) -> Self::Output
-    where
-        Self: TryConvTrans2DTo<F, S, P>,
-    {
-        self.convtrans2d_to(filters)
-    }
-    fn try_convtrans2d<const S: usize, const P: usize>(
+impl<InpChan, OutChan, Kernel, Stride, Padding, Dilation, Groups, H, W, E, D, T>
+    TryConvTrans2D<Stride, Padding, Dilation, Groups>
+    for (
+        Tensor<(<InpChan as std::ops::Mul<Groups>>::Output, H, W), E, D, T>,
+        Tensor<(OutChan, InpChan, Kernel, Kernel), E, D>,
+    )
+where
+    InpChan: Dim,
+    OutChan: Dim,
+    Kernel: Dim,
+    Stride: Dim,
+    Padding: Dim,
+    Dilation: Dim,
+    Groups: Dim,
+    H: Dim,
+    W: Dim,
+    E: Dtype,
+    D: ConvTrans2DKernel<E> + crate::tensor_ops::reshape_to::ReshapeKernel<E>,
+    T: Tape<E, D>,
+    InpChan: std::ops::Mul<Groups>,
+    <InpChan as std::ops::Mul<Groups>>::Output: Dim,
+    (H, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
+    (W, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
+    <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+{
+    type Convolved = Tensor<
+        (
+            OutChan,
+            <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
+        ),
+        E,
+        D,
+        T,
+    >;
+    type Error = D::Err;
+
+    fn try_convtrans2d(
         self,
-        filters: F,
-    ) -> Result<Self::Output, Self::Err>
-    where
-        Self: TryConvTrans2DTo<F, S, P>,
-    {
-        self.try_convtrans2d_to(filters)
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+        groups: Groups,
+    ) -> Result<Self::Convolved, Self::Error> {
+        let (img, filters) = self;
+        let (inp_chan, h, w) = img.shape;
+        let img = img.try_reshape_like(&(Const::<1>, inp_chan, h, w))?;
+        let out = (img, filters).try_convtrans2d(stride, padding, dilation, groups)?;
+        let (_, out_chan, out_h, out_w) = out.shape;
+        out.try_reshape_like(&(out_chan, out_h, out_w))
     }
 }
-
-impl<S: Shape, E: Dtype, D: Storage<E>, T, F> TryConvTrans2D<F> for Tensor<S, E, D, T> {}
-
-impl<
-        const C: usize,
-        H: Dim + ConvTransAlgebra<K, S, P>,
-        W: Dim + ConvTransAlgebra<K, S, P>,
-        const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        E: Dtype,
-        D: ConvTrans2DKernel<E> + ZerosTensor<E>,
-        T: 'static + Tape<E, D>,
-    > TryConvTrans2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
-    for Tensor<(Const<C>, H, W), E, D, T>
+impl<InpChan, OutChan, Kernel, Stride, Padding, Dilation, Groups, Batch, H, W, E, D, T>
+    TryConvTrans2D<Stride, Padding, Dilation, Groups>
+    for (
+        Tensor<(Batch, <InpChan as std::ops::Mul<Groups>>::Output, H, W), E, D, T>,
+        Tensor<(OutChan, InpChan, Kernel, Kernel), E, D>,
+    )
+where
+    InpChan: Dim,
+    OutChan: Dim,
+    Kernel: Dim,
+    Stride: Dim,
+    Padding: Dim,
+    Dilation: Dim,
+    Groups: Dim,
+    Batch: Dim,
+    H: Dim,
+    W: Dim,
+    E: Dtype,
+    D: ConvTrans2DKernel<E>,
+    T: Tape<E, D>,
+    InpChan: std::ops::Mul<Groups>,
+    <InpChan as std::ops::Mul<Groups>>::Output: Dim,
+    (H, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
+    (W, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
+    <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
 {
-    type Output = Tensor<(Const<O>, H::Convolved, W::Convolved), E, D, T>;
+    type Convolved = Tensor<
+        (
+            Batch,
+            OutChan,
+            <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
+        ),
+        E,
+        D,
+        T,
+    >;
+    type Error = D::Err;
 
-    fn try_convtrans2d_to(
+    fn try_convtrans2d(
         self,
-        filters: Tensor<Rank4<O, C, K, K>, E, D>,
-    ) -> Result<Self::Output, Self::Err> {
-        let h = self.shape.1;
-        let w = self.shape.2;
-
-        let op = ConvTrans2DOp::new(S, P, K, [1, C, h.size(), w.size()], O);
-        let (lhs, ltape) = self.split_tape();
+        stride: Stride,
+        padding: Padding,
+        dilation: Dilation,
+        groups: Groups,
+    ) -> Result<Self::Convolved, Self::Error> {
+        let (img, filters) = self;
+        assert_eq!(img.shape.1.size(), filters.shape.1.size() * groups.size());
+        assert_eq!(filters.shape.2, filters.shape.3);
+        let (batch, _, h, w) = img.shape;
+        let (out_chan, inp_chan, kernel, _) = filters.shape;
+        assert!(out_chan.size() % groups.size() == 0);
+        if img.strides != img.shape.strides() || filters.strides != filters.shape.strides() {
+            panic!("Image & filter inputs to conv2d must be contiguous");
+        }
+        let h_out = (h, kernel).convtrans2d(stride, padding, dilation, groups);
+        let w_out = (w, kernel).convtrans2d(stride, padding, dilation, groups);
+        let op = ConvTrans2DOp {
+            stride: stride.size(),
+            padding: padding.size(),
+            kernel: kernel.size(),
+            dilation: dilation.size(),
+            groups: groups.size(),
+            batch: batch.size(),
+            chan_in: inp_chan.size(),
+            chan_out: out_chan.size(),
+            h_in: h.size(),
+            h_out: h_out.size(),
+            w_in: w.size(),
+            w_out: w_out.size(),
+        };
+        let (lhs, ltape) = img.split_tape();
         let (rhs, rtape) = filters.split_tape();
-        let mut tape = ltape.merge(rtape);
-        let mut out = lhs
-            .device
-            .try_zeros_like(&(Const, h.convolve_dim(), w.convolve_dim()))?;
-        lhs.device.forward(op, &lhs, &rhs, &mut out)?;
-        let lhs_ghost = lhs.ghost();
-        let rhs_ghost = rhs.ghost();
-        let out_ghost = out.ghost();
-        tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&rhs_ghost)?;
-            grads.try_alloc_for(&lhs_ghost)?;
-            grads.try_alloc_for(&out_ghost)?;
-            let (grad_lhs, grad_rhs, grad_out) =
-                grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
-            lhs.device
-                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &out_ghost, grad_out)
-        });
-        Ok(out.put_tape(tape))
-    }
-}
-
-impl<
-        B: Dim,
-        const C: usize,
-        H: Dim + ConvTransAlgebra<K, S, P>,
-        W: Dim + ConvTransAlgebra<K, S, P>,
-        const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        E: Dtype,
-        D: ConvTrans2DKernel<E> + ZerosTensor<E>,
-        T: 'static + Tape<E, D>,
-    > TryConvTrans2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
-    for Tensor<(B, Const<C>, H, W), E, D, T>
-{
-    type Output = Tensor<(B, Const<O>, H::Convolved, W::Convolved), E, D, T>;
-    fn try_convtrans2d_to(
-        self,
-        filters: Tensor<Rank4<O, C, K, K>, E, D>,
-    ) -> Result<Self::Output, Self::Err> {
-        let h = self.shape.2;
-        let w = self.shape.3;
-
-        let batch = self.shape().0;
-        let op = ConvTrans2DOp::new(S, P, K, [batch.size(), C, h.size(), w.size()], O);
-        let (lhs, ltape) = self.split_tape();
-        let (rhs, rtape) = filters.split_tape();
-        let mut out =
-            lhs.device
-                .try_zeros_like(&(batch, Const, h.convolve_dim(), w.convolve_dim()))?;
+        let mut out = lhs.device.alloc((batch, out_chan, h_out, w_out))?;
         let mut tape = ltape.merge(rtape);
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let lhs_ghost = lhs.ghost();
@@ -255,7 +309,8 @@ mod tests {
             [[[0.8291070, 0.0848221, 0.3680936], [0.4642293, 0.1073243, 0.1073309], [0.7863810, 0.3699800, 0.4956312]], [[0.0681600, 0.5616951, 0.4053129], [0.1850831, 0.8223089, 0.0667553], [0.8905262, 0.6328429, 0.8180532]]],
             [[[0.7582999, 0.9763424, 0.5727801], [0.3743349, 0.4793805, 0.6885015], [0.8183323, 0.1882774, 0.9794642]], [[0.5606869, 0.7552301, 0.6572021], [0.8761331, 0.2401637, 0.1778120], [0.2065960, 0.4133974, 0.8821540]]],
         ]);
-        let y = x.leaky_trace().convtrans2d::<1, 0>(w.clone());
+        let y = (x.leaky_trace(), w.clone())
+            .convtrans2d(Const::<1>, Const::<0>, Const::<1>, Const::<1>);
         #[rustfmt::skip]
         assert_close_to_literal!(
             y,
@@ -312,7 +367,8 @@ mod tests {
             [[[0.0067961, 0.4006048, 0.3549793],[0.5392876, 0.3803764, 0.6090584],[0.4874769, 0.5006863, 0.8963661],],[[0.3751084, 0.5425243, 0.5102475],[0.6024926, 0.2719866, 0.9794098],[0.2236674, 0.1083973, 0.4948432],],],
             [[[0.9486710, 0.9823384, 0.5994584],[0.2740490, 0.2620903, 0.2716798],[0.3620688, 0.9108542, 0.9017550],],[[0.6089512, 0.4252676, 0.2729263],[0.8855131, 0.3937372, 0.3419960],[0.8216078, 0.6664743, 0.5395248],],],
         ]);
-        let y = x.leaky_trace().convtrans2d::<2, 0>(w.clone());
+        let y = (x.leaky_trace(), w.clone())
+            .convtrans2d(Const::<2>, Const::<0>, Const::<1>, Const::<1>);
         #[rustfmt::skip]
         assert_close_to_literal!(
             y,
@@ -350,7 +406,8 @@ mod tests {
         let x: Tensor<Rank3<3, 28, 28>, TestDtype, _> = dev.sample_normal();
         let w: Tensor<Rank4<5, 3, 6, 6>, TestDtype, _> = dev.sample_normal();
 
-        let y: Tensor<Rank3<5, 83, 83>, _, _, _> = x.leaky_trace().convtrans2d::<3, 2>(w.clone());
+        let y: Tensor<Rank3<5, 83, 83>, _, _, _> = (x.leaky_trace(), w.clone())
+            .convtrans2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>);
         let y0 = y.retaped::<NoneTape>();
         let grads0 = y.square().mean().backward();
         let x0 = grads0.get(&x);
@@ -360,8 +417,8 @@ mod tests {
             .broadcast::<Rank4<10, 3, 28, 28>, _>()
             .reshape::<Rank4<10, 3, 28, 28>>();
 
-        let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> =
-            x.leaky_trace().convtrans2d::<3, 2>(w.clone());
+        let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> = (x.leaky_trace(), w.clone())
+            .convtrans2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>);
         for i in 0..10 {
             assert_close_to_tensor!(y0, y.retaped::<NoneTape>().select(dev.tensor(i)), 1e-5);
         }
