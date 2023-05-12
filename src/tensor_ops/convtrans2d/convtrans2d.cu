@@ -1,9 +1,11 @@
 #include "cuda_fp16.h"
 
 struct Conv2DOp {
+    size_t kernel;
     size_t stride;
     size_t padding;
-    size_t kernel;
+    size_t dilation;
+    size_t groups;
     size_t batch;
     size_t chan_in;
     size_t chan_out;
@@ -16,12 +18,12 @@ struct Conv2DOp {
 template<typename T>
 __device__ void unfold_input_into_patches(
     const Conv2DOp op,
-    const T *image, // 4d (Batch, Channels, Height, Width)
+    const T *image, // 4d (Batch, Groups * Channels, Height, Width)
     const size_t *strides, // 4d image strides
-    T *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
+    T *patches // 6d (Batch, Groups * Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= op.batch * op.chan_in * op.h_out * op.w_out) {
+    if (i >= op.batch * op.groups * op.chan_in * op.h_out * op.w_out) {
         return;
     }
 
@@ -30,8 +32,8 @@ __device__ void unfold_input_into_patches(
     idx /= op.w_out;
     const size_t oh = idx % op.h_out;
     idx /= op.h_out;
-    const size_t c = idx % op.chan_in;
-    idx /= op.chan_in;
+    const size_t c = idx % (op.chan_in * op.groups);
+    idx /= (op.chan_in * op.groups);
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
@@ -44,15 +46,15 @@ __device__ void unfold_input_into_patches(
 
     for (int k1 = 0;k1 < op.kernel;k1++) {
         const size_t y_ks = oh + op.padding;
-        const size_t y_s = y_ks - k1;
+        const size_t y_s = y_ks - op.dilation * k1;
         const size_t y = y_s / op.stride;
-        const bool k1_invalid = (y_ks < k1 || y_s % op.stride != 0 || y >= op.h_in);
+        const bool k1_invalid = (y_ks < op.dilation * k1 || y_s % op.stride != 0 || y >= op.h_in);
         for (int k2 = 0;k2 < op.kernel;k2++) {
             const size_t x_ks = ow + op.padding;
-            const size_t x_s = x_ks - k2;
+            const size_t x_s = x_ks - op.dilation * k2;
             const size_t x = x_s / op.stride;
         
-            const bool invalid = k1_invalid || (x_ks < k2 || x_s % op.stride != 0 || x >= op.w_in);
+            const bool invalid = k1_invalid || (x_ks < op.dilation * k2 || x_s % op.stride != 0 || x >= op.w_in);
             *patches = invalid ? zero : image[y * strides[2] + x * strides[3]];
             patches += op.h_out * op.w_out;
         }
@@ -87,9 +89,9 @@ __device__ void unfold_output_into_patches(
     T zero = 0.0;
 
     for (int k1 = 0;k1 < op.kernel;k1++) {
-        const size_t oh = y * op.stride + k1 - op.padding;
+        const size_t oh = y * op.stride + op.dilation * k1 - op.padding;
         for (int k2 = 0;k2 < op.kernel;k2++) {
-            const size_t ow = x * op.stride + k2 - op.padding;
+            const size_t ow = x * op.stride + op.dilation * k2 - op.padding;
             *patches = (oh >= op.h_out || ow >= op.w_out) ? zero : image_out[oh * op.w_out + ow];
             patches += op.h_in * op.w_in;
         }
@@ -101,7 +103,7 @@ __device__ void transpose_filters(
     const Conv2DOp op,
     const T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
     const size_t *strides, // 4d filters strides
-    T *filters_tr // 4d (ChanIn, ChanOut, KernelSize, KernelSize)
+    T *filters_tr // 5d (Groups, ChanIn, ChanOut/Groups, KernelSize, KernelSize)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= op.chan_in * op.chan_out * op.kernel * op.kernel) {
@@ -113,19 +115,25 @@ __device__ void transpose_filters(
     idx /= op.kernel;
     const size_t k1 = idx % op.kernel;
     idx /= op.kernel;
-    const size_t o = idx % op.chan_out;
-    idx /= op.chan_out;
     const size_t c = idx % op.chan_in;
+    idx /= op.chan_in;
+    const size_t o = idx % op.chan_out;
+    const size_t og = o % o_per_g;
+    const size_t g = o / o_per_g;
 
     auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
-
-    filters_tr[i] = filters[i_no];
+    filters_tr += k2;
+    filters_tr += k1 * op.kernel;
+    filters_tr += og * (op.kernel * op.kernel);
+    filters_tr += c * (o_per_g * op.kernel * op.kernel);
+    filters_tr += g * (op.chan_in * o_per_g * op.kernel * op.kernel);
+    *filters_tr = filters[i_no];
 }
 
 template<typename T>
 __device__ void sum_transposed_filters(
     const Conv2DOp op,
-    const T *filters_tr, // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
+    const T *filters_tr, // 6d (Batch, Groups, ChanIn, ChanOut/Groups, KernelSize, KernelSize)
     T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
     const size_t *strides // 4d filter strides
 ) {
@@ -135,6 +143,8 @@ __device__ void sum_transposed_filters(
         return;
     }
 
+    const size_t o_per_g = op.chan_out / op.groups;
+
     unsigned int idx = i;
     const size_t k2 = idx % op.kernel;
     idx /= op.kernel;
@@ -143,12 +153,17 @@ __device__ void sum_transposed_filters(
     const size_t c = idx % op.chan_in;
     idx /= op.chan_in;
     const size_t o = idx % op.chan_out;
-    idx /= op.chan_out;
+    const size_t og = o % o_per_g;
+    const size_t g = o / o_per_g;
 
     auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
     auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
 
-    filters_tr += i_tr;
+    filters_tr += k2;
+    filters_tr += k1 * op.kernel;
+    filters_tr += og * (op.kernel * op.kernel);
+    filters_tr += c * (o_per_g * op.kernel * op.kernel);
+    filters_tr += g * (op.chan_in * o_per_g * op.kernel * op.kernel);
 
     T tmp = 0.0;
     for (int b = 0; b < op.batch; b++) {
