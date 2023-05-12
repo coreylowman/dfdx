@@ -4,7 +4,7 @@ use crate::{
     tensor::{CopySlice, RandomU64, Storage},
 };
 
-/// A [DeviceStorage] that requires all the tensor ops implementations
+/// A [Storage] that requires all the tensor ops implementations
 pub trait Device<E: Dtype>:
     Storage<E>
     + RandomU64

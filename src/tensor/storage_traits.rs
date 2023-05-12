@@ -23,7 +23,7 @@ pub trait RandomU64 {
 
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
 pub trait Storage<E>: 'static + std::fmt::Debug + Default + Clone + HasErr {
-    /// Generic Storage<E> type
+    /// Generic Storage type
     type Vec: 'static + std::fmt::Debug + Clone + Send + Sync;
 
     /// Allocates a gradient for the given nd array
@@ -58,13 +58,13 @@ pub trait Cache: HasErr {
     fn try_enable_cache(&self) -> Result<(), Self::Err>;
 
     /// Disables the cache of the device. This will also empty the cache
-    /// if there are things in it. See [DeviceStorage::empty_cache] for
+    /// if there are things in it. See [Cache::empty_cache] for
     /// more information.
     fn disable_cache(&self) {
         self.try_disable_cache().unwrap()
     }
 
-    /// Tries to disable the cache of the device. See [DeviceStorage::disable_cache] for
+    /// Tries to disable the cache of the device. See [Cache::disable_cache] for
     /// details of when this is useful.
     fn try_disable_cache(&self) -> Result<(), Self::Err>;
 
@@ -81,7 +81,7 @@ pub trait Cache: HasErr {
         self.try_empty_cache().unwrap();
     }
 
-    /// Tries to empty the cache of the device. See [DeviceStorage::empty_cache] for
+    /// Tries to empty the cache of the device. See [Cache::empty_cache] for
     /// details of when this is useful.
     fn try_empty_cache(&self) -> Result<(), Self::Err>;
 }
@@ -420,7 +420,7 @@ pub trait SampleTensor<E>: Storage<E> {
         distr: D,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 
-    /// Fills tensor Storage<E> with data from a given distribution
+    /// Fills tensor `Storage<E>` with data from a given distribution
     fn try_fill_with_distr<D: Distribution<E>>(
         &self,
         storage: &mut Self::Vec,

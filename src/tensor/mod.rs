@@ -4,7 +4,7 @@
 //! At a high level a tensor is made up of:
 //! 1. The [crate::shapes::Shape] of the array it stores
 //! 2. The [crate::shapes::Dtype] of the elements of the array
-//! 3. The [DeviceStorage] (e.g. [Cpu] or [Cuda]) that it uses to store the nd array
+//! 3. The [Storage] (e.g. [Cpu] or [Cuda]) that it uses to store the nd array
 //! 4. A [Tape], which can either actually be a tape ([OwnedTape])
 //!    or be empty ([NoneTape]).
 //!
@@ -132,8 +132,8 @@
 //! allocation patterns are repetitive. If this results in extra memory use due to
 //! irregular allocation patterns there are two things you can do:
 //!
-//! 1. Call [DeviceStorage::empty_cache()], which will empty out all of the saved allocations.
-//! 2. Disable the cache entirely by calling [DeviceStorage::disable_cache()]. This will
+//! 1. Call [Cache::empty_cache()], which will empty out all of the saved allocations.
+//! 2. Disable the cache entirely by calling [Cache::disable_cache()]. This will
 //! empty out any existing allocations and prevent any new ones from being cached.
 
 pub(crate) mod cache;

@@ -12,7 +12,7 @@ use std::sync::Arc;
 /// Generics:
 /// 1. [Shape] - the shape of the underlying nd array
 /// 2. [Dtype] - the type of the datas stored in the array
-/// 3. [DeviceStorage] - the device the array is stored on
+/// 3. [Storage] - the device the array is stored on
 /// 4. [Tape] - the tape the tensor has
 ///
 /// Examples:
@@ -114,7 +114,7 @@ impl<S: Shape, E, D: Storage<E>, T> Tensor<S, E, D, T> {
         }
     }
 
-    /// Get a reference to the tensor's `DeviceStorage`
+    /// Get a reference to the tensor's `Storage`
     pub fn device(&self) -> &D {
         &self.device
     }
