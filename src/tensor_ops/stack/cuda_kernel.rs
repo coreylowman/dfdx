@@ -52,8 +52,8 @@ impl<E: Dtype + CudaTypeName> super::StackKernel<E> for Cuda {
 
     fn backward(
         &self,
-        mut grad_inp: Vec<&mut Self::Vec<E>>,
-        grad_out: &Self::Vec<E>,
+        mut grad_inp: Vec<&mut Self::Vec>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let module_name = std::format!("stack_bwd_{}", E::NAME);
         if !self.dev.has_func(&module_name, "stack_bwd") {

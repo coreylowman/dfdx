@@ -1,6 +1,36 @@
-use crate::{shapes::*, tensor_ops::*};
+use crate::{shapes::*, tensor::HasErr, tensor_ops::*};
 
 use super::*;
+
+impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for () {
+    type To<E2: Dtype, D2: Device<E2>> = ();
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        _: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        Ok(None)
+    }
+}
+
+impl<D: Device<E>, E: Dtype> BuildOnDevice<D, E> for () {
+    type Built = ();
+}
+
+impl<X: HasErr> Module<X> for () {
+    type Output = X;
+    type Error = X::Err;
+    fn try_forward(&self, input: X) -> Result<Self::Output, Self::Error> {
+        Ok(input)
+    }
+}
+
+impl<X: HasErr> ModuleMut<X> for () {
+    type Output = X;
+    type Error = X::Err;
+    fn try_forward_mut(&mut self, input: X) -> Result<Self::Output, Self::Error> {
+        Ok(input)
+    }
+}
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),*]) => {

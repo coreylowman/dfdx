@@ -35,7 +35,7 @@ pub trait RealizeTo: HasErr + HasShape {
         Self::Shape: RealizeShapeTo<Dst>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<E, D>> RealizeTo for Tensor<S, E, D, T> {
+impl<S: Shape, E, D: Storage<E>, T: Tape<E, D>> RealizeTo for Tensor<S, E, D, T> {
     fn try_realize<Dst: Shape<Concrete = S::Concrete>>(self) -> Result<Self::WithShape<Dst>, Self>
     where
         Self::Shape: RealizeShapeTo<Dst>,

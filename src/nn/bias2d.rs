@@ -37,11 +37,11 @@ where
 /// model.forward(x);
 /// ```
 #[derive(Clone, Debug)]
-pub struct Bias2D<const C: usize, E: Dtype, D: DeviceStorage> {
+pub struct Bias2D<const C: usize, E: Dtype, D: Storage<E>> {
     pub bias: Tensor<Rank1<C>, E, D>,
 }
 
-impl<const C: usize, E: Dtype, D: DeviceStorage> NonMutableModule for Bias2D<C, E, D> {}
+impl<const C: usize, E: Dtype, D: Storage<E>> NonMutableModule for Bias2D<C, E, D> {}
 
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = Bias2D<C, E2, D2>;

@@ -84,7 +84,7 @@ where
     }
 }
 
-pub trait ConcatKernel<E: Dtype>: DeviceStorage {
+pub trait ConcatKernel<E: Dtype>: Storage<E> {
     fn forward<A: Shape, B: Shape>(
         &self,
         a: &Tensor<A, E, Self>,
@@ -94,9 +94,9 @@ pub trait ConcatKernel<E: Dtype>: DeviceStorage {
         A: ConcatShape<B>;
     fn backward(
         &self,
-        grad_a: &mut Self::Vec<E>,
-        grad_b: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_a: &mut Self::Vec,
+        grad_b: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 

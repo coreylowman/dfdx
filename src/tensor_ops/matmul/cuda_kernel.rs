@@ -195,10 +195,10 @@ where
     fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
@@ -267,10 +267,10 @@ where
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
@@ -345,10 +345,10 @@ where
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(B, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
@@ -447,10 +447,10 @@ where
     fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(B, S, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;

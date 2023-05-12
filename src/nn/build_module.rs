@@ -1,12 +1,15 @@
 use super::tensor_collection::*;
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::{Storage, Tensor},
     tensor_ops::Device,
 };
 
-struct Builder<'a, D: DeviceStorage>(&'a D);
-impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for Builder<'a, D> {
+struct Builder<'a, E, D: Storage<E>> {
+    device: &'a D,
+    dtype: std::marker::PhantomData<E>,
+}
+impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for Builder<'a, E, D> {
     type Viewer = ();
     type Err = D::Err;
     type E2 = E;
@@ -17,7 +20,7 @@ impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for Builder<'a, D> {
         opts: TensorOptions<S, E, D>,
         _t: (),
     ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
-        let mut tensor: Tensor<S, E, D> = self.0.try_zeros_like(&opts.shape)?;
+        let mut tensor: Tensor<S, E, D> = self.device.try_zeros_like(&opts.shape)?;
         (opts.reset)(&mut tensor)?;
         Ok(Some(tensor))
     }
@@ -36,7 +39,10 @@ pub trait BuildModule<D: Device<E>, E: Dtype>:
     fn try_build(device: &D) -> Result<Self, D::Err> {
         let out = Self::iter_tensors(&mut RecursiveWalker {
             m: (),
-            f: &mut Builder(device),
+            f: &mut Builder {
+                device,
+                dtype: std::marker::PhantomData,
+            },
         })?;
 
         Ok(out.unwrap())

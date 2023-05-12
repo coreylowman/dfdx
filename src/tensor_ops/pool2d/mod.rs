@@ -31,7 +31,7 @@ pub struct Pool2DOp {
     pub w_out: usize,
 }
 
-pub(super) trait Pool2DKernel<E: Dtype>: DeviceStorage {
+pub(super) trait Pool2DKernel<E: Dtype>: Storage<E> {
     fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
 
     fn forward<I: Shape, O: Shape>(
@@ -46,9 +46,9 @@ pub(super) trait Pool2DKernel<E: Dtype>: DeviceStorage {
         &self,
         op: Pool2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 

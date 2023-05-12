@@ -30,14 +30,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
-    /// See [log_softmax]
+    /// See [log_softmax()]
     pub fn log_softmax<Ax: Axes>(self) -> Self
     where
         S: ReduceShape<Ax>,
     {
         self.try_log_softmax::<Ax>().unwrap()
     }
-    /// See [log_softmax]
+    /// See [log_softmax()]
     pub fn try_log_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
     where
         S: ReduceShape<Ax>,

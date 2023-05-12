@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait SumKernel<E: Dtype>: DeviceStorage {
+pub trait SumKernel<E: Dtype>: Storage<E> {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
@@ -17,8 +17,8 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
         &self,
         dst: Dst,
         inp: &impl Tensorlike<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>;

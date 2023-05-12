@@ -42,9 +42,9 @@ impl<E: Dtype> super::ConcatKernel<E> for Cpu {
     }
     fn backward(
         &self,
-        grad_a: &mut Self::Vec<E>,
-        grad_b: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_a: &mut Self::Vec,
+        grad_b: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let mut offset = 0;
         for ga in grad_a.iter_mut() {

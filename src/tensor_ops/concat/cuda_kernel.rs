@@ -30,9 +30,9 @@ impl<E: Dtype + CudaTypeName> super::ConcatKernel<E> for Cuda {
     }
     fn backward(
         &self,
-        grad_a: &mut Self::Vec<E>,
-        grad_b: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_a: &mut Self::Vec,
+        grad_b: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let module_name = std::format!("concat_bwd_{}", E::NAME);
         if !self.dev.has_func(&module_name, "concat_bwd") {

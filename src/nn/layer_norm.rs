@@ -36,13 +36,13 @@ where
 /// ```
 
 #[derive(Debug, Clone)]
-pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
+pub struct LayerNorm1D<const M: usize, E: Dtype, D: Storage<E>> {
     pub gamma: Tensor<Rank1<M>, E, D>,
     pub beta: Tensor<Rank1<M>, E, D>,
     pub epsilon: f64,
 }
 
-impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1D<M, E, D> {}
+impl<const M: usize, E: Dtype, D: Storage<E>> NonMutableModule for LayerNorm1D<M, E, D> {}
 
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;

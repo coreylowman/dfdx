@@ -55,7 +55,7 @@ where
 /// - Running statistics: **not** updated
 /// - Normalization: calculated using running stats
 #[derive(Clone, Debug)]
-pub struct BatchNorm1D<const C: usize, E: Dtype, D: DeviceStorage> {
+pub struct BatchNorm1D<const C: usize, E: Dtype, D: Storage<E>> {
     /// Scale for affine transform. Defaults to 1.0
     pub scale: Tensor<Rank1<C>, E, D>,
     /// Bias for affine transform. Defaults to 0.0

@@ -63,8 +63,8 @@ where
         &self,
         op: super::RollOp,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let numel = inp.shape.num_elements();
         let strides = inp.shape.strides();

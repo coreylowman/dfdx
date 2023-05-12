@@ -44,9 +44,9 @@ where
         &self,
         op: super::PowiKernelOp,
         inp: &impl Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         self.backward(
             super::PowfKernelOp(E::from_i32(op.0).unwrap()),

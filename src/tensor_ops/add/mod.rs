@@ -6,7 +6,7 @@ mod cuda_kernel;
 use super::ops::*;
 use crate::{
     shapes::*,
-    tensor::{DeviceStorage, HasErr, Merge, Tape, Tensor},
+    tensor::{HasErr, Merge, Storage, Tape, Tensor},
 };
 
 #[repr(C)]
@@ -85,7 +85,7 @@ impl<S: Shape, D: UnaryKernel<ScalarAddKernelOp<half::f16>, half::f16>, T: Tape<
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<E, D>, Rhs> std::ops::Add<Rhs>
+impl<S: Shape, E: Dtype, D: Storage<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryAdd<Rhs>,

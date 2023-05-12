@@ -1,6 +1,6 @@
 use crate::{
     shapes::{RemoveDimTo, ReplaceDimTo, Shape},
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Storage, Tensor},
 };
 use cudarc::driver::{DeviceSlice, LaunchAsync};
 
@@ -59,10 +59,10 @@ macro_rules! impl_cuda_kernels {
             fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
                 &self,
                 inp: &Tensor<Src, $TypeName, Self>,
-                grad_inp: &mut Self::Vec<$TypeName>,
+                grad_inp: &mut <Self as Storage<$TypeName>>::Vec,
                 idx: &Tensor<Idx, usize, Self>,
                 _: &Tensor<Dst, $TypeName, Self>,
-                grad_out: &Self::Vec<$TypeName>,
+                grad_out: &<Self as Storage<$TypeName>>::Vec,
             ) -> Result<(), Self::Err>
             where
                 Src: ReplaceDimTo<Dst, Idx>,
@@ -147,10 +147,10 @@ macro_rules! impl_cuda_kernels {
             fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
                 &self,
                 inp: &Tensor<Src, $TypeName, Self>,
-                grad_inp: &mut Self::Vec<$TypeName>,
+                grad_inp: &mut <Self as Storage<$TypeName>>::Vec,
                 idx: &Tensor<Idx, usize, Self>,
                 out: &Tensor<Dst, $TypeName, Self>,
-                grad_out: &Self::Vec<$TypeName>,
+                grad_out: &<Self as Storage<$TypeName>>::Vec,
             ) -> Result<(), Self::Err>
             where
                 Src: RemoveDimTo<Dst, Idx>,

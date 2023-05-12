@@ -77,9 +77,9 @@ where
         &self,
         op: super::Pool2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
         let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides).into())?;

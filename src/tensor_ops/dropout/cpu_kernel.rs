@@ -37,8 +37,8 @@ impl<E: Float + Dtype> super::DropoutKernel<E> for Cpu {
         &self,
         op: super::DropoutKernelOp,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
         let dist = Bernoulli::new(op.prob).unwrap();

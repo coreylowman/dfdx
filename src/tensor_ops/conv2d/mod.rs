@@ -28,7 +28,7 @@ pub(super) struct Conv2DOp {
     pub w_out: usize,
 }
 
-pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
+pub(super) trait Conv2DKernel<E: Dtype>: Storage<E> {
     fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
 
     fn forward<L: Shape, R: Shape, O: Shape>(
@@ -44,11 +44,11 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
         &self,
         op: Conv2DOp,
         lhs: &Tensor<L, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
