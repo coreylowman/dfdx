@@ -23,7 +23,7 @@ use super::{ModuleField, ModuleFields, TensorField};
 ///     relu: ReLU,
 /// }
 ///
-/// impl<E: Dtype + num_traits::Float, D: Device<E>> TensorCollection<E, D> for Mlp<E, D> {
+/// impl<E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform, D: Device<E>> TensorCollection<E, D> for Mlp<E, D> {
 ///     type To<E2: Dtype, D2: Device<E2>> = Mlp<E2, D2>;
 ///
 ///     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
