@@ -123,7 +123,7 @@ mod cuda {
                     .arg("--query-gpu=compute_cap")
                     .arg("--format=csv")
                     .output()
-                    .unwrap();
+                    .expect("`nvidia-smi` failed. Ensure that you have CUDA installed and that `nvidia-smi` is in your PATH.");
                 let out = std::str::from_utf8(&out.stdout).unwrap();
                 let mut lines = out.lines();
                 assert_eq!(lines.next().unwrap(), "compute_cap");
@@ -136,7 +136,7 @@ mod cuda {
                 let out = std::process::Command::new("nvcc")
                     .arg("--list-gpu-code")
                     .output()
-                    .unwrap();
+                    .expect("`nvcc` failed. Ensure that you have CUDA installed and that `nvcc` is in your PATH.");
                 let out = std::str::from_utf8(&out.stdout).unwrap();
 
                 let out = out.lines().collect::<Vec<&str>>();
@@ -188,12 +188,12 @@ mod cuda {
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::piped())
                         .spawn()
-                        .unwrap()
+                        .expect("nvcc failed to start. Ensure that you have CUDA installed and that `nvcc` is in your PATH.")
                 })
                 .collect::<Vec<_>>();
 
             for (kernel_path, child) in kernel_paths.iter().zip(children.into_iter()) {
-                let output = child.wait_with_output().unwrap();
+                let output = child.wait_with_output().expect("nvcc failed to run. Ensure that you have CUDA installed and that `nvcc` is in your PATH.");
                 assert!(
                     output.status.success(),
                     "nvcc error while compiling {kernel_path:?}:\n\n# stdout\n{:#}\n\n# stderr\n{:#}",
