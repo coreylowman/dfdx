@@ -12,27 +12,17 @@ extern "C" __global__ void NAME( \
     const size_t *rhs_strides, \
     bool *out \
 ) { \
-    unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x; \
-    if (out_i >= numel) { \
-        return; \
+    for (unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x; out_i < numel; out_i += blockDim.x * gridDim.x) { \
+        unsigned int lhs_i = get_strided_index(out_i, num_dims, dims, lhs_strides); \
+        unsigned int rhs_i = get_strided_index(out_i, num_dims, dims, rhs_strides); \
+        out[out_i] = (bool)(lhs[lhs_i]) OP (bool)(rhs[rhs_i]); \
     } \
-\
-    unsigned int lhs_i = get_strided_index(out_i, num_dims, dims, lhs_strides); \
-    unsigned int rhs_i = get_strided_index(out_i, num_dims, dims, rhs_strides); \
-\
-    out[out_i] = (bool)(lhs[lhs_i]) OP (bool)(rhs[rhs_i]); \
 }
 
-extern "C" __global__ void boolean_not(
-    const size_t numel,
-    const bool *inp,
-    bool *out
-) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+extern "C" __global__ void boolean_not(const size_t numel, const bool *inp, bool *out) {
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        out[i] = !(bool)(inp[i]);
     }
-    out[i] = !(bool)(inp[i]);
 }
 
 BOOLEAN_OP(boolean_and, &&);

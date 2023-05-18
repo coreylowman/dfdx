@@ -25,42 +25,37 @@ __device__ void adam_update(
     T* moment2,
     const T* grad
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i >= numel) {
-        return;
-    }
-
     T beta1 = cfg.beta1;
     T beta2 = cfg.beta2;
     T lr = cfg.lr;
     T weight_decay = cfg.weight_decay;
     T eps = cfg.eps;
-
-    T p = param[i];
-    T g = grad[i];
-    T m = moment1[i];
-    T v = moment2[i];
     T one = 1.0;
     T t = t_int;
-
-    if (cfg.weight_decay_type == L2) {
-        g += weight_decay * p;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        T p = param[i];
+        T g = grad[i];
+        T m = moment1[i];
+        T v = moment2[i];
+    
+        if (cfg.weight_decay_type == L2) {
+            g += weight_decay * p;
+        }
+    
+        m = m * beta1 + g * (one - beta1);
+        v = v * beta2 + g * g * (one - beta2);
+        T m_hat = m * one / (one - powg(beta1, t));
+        T v_hat = v * one / (one - powg(beta2, t));
+        g = lr * m_hat / (sqrtg(v_hat) + eps);
+    
+        if (cfg.weight_decay_type == Decoupled) {
+            g += (weight_decay * lr) * p;
+        }
+    
+        moment1[i] = m;
+        moment2[i] = v;
+        param[i] -= g;
     }
-
-    m = m * beta1 + g * (one - beta1);
-    v = v * beta2 + g * g * (one - beta2);
-    T m_hat = m * one / (one - powg(beta1, t));
-    T v_hat = v * one / (one - powg(beta2, t));
-    g = lr * m_hat / (sqrtg(v_hat) + eps);
-
-    if (cfg.weight_decay_type == Decoupled) {
-        g += (weight_decay * lr) * p;
-    }
-
-    moment1[i] = m;
-    moment2[i] = v;
-    param[i] -= g;
 }
 
 #define ADAM(TYPENAME, FN) \

@@ -13,16 +13,12 @@ __device__ void choose_fwd(
     const size_t *rhs_strides,
     T *out
 ) {
-    unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (out_i >= numel) {
-        return;
+    for (unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x; out_i < numel; out_i += blockDim.x * gridDim.x) {
+        unsigned int lhs_i = get_strided_index(out_i, num_dims, dims, lhs_strides);
+        unsigned int rhs_i = get_strided_index(out_i, num_dims, dims, rhs_strides);
+        unsigned int cond_i = get_strided_index(out_i, num_dims, dims, cond_strides);
+        out[out_i] = cond[cond_i] ? lhs[lhs_i] : rhs[rhs_i];
     }
-
-    unsigned int lhs_i = get_strided_index(out_i, num_dims, dims, lhs_strides);
-    unsigned int rhs_i = get_strided_index(out_i, num_dims, dims, rhs_strides);
-    unsigned int cond_i = get_strided_index(out_i, num_dims, dims, cond_strides);
-
-    out[out_i] = cond[cond_i] ? lhs[lhs_i] : rhs[rhs_i];
 }
 
 template<typename T>
@@ -38,19 +34,12 @@ __device__ void choose_bwd(
     const size_t *rhs_strides,
     const T *grad_out
 ) {
-    unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (out_i >= numel) {
-        return;
+    for (unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x; out_i < numel; out_i += blockDim.x * gridDim.x) {
+        unsigned int lhs_i = get_strided_index(out_i, num_dims, dims, lhs_strides);
+        unsigned int rhs_i = get_strided_index(out_i, num_dims, dims, rhs_strides);
+        unsigned int cond_i = get_strided_index(out_i, num_dims, dims, cond_strides);
+        atomicAdd(cond[cond_i] ? grad_lhs + lhs_i : grad_rhs + rhs_i, grad_out[out_i]);
     }
-
-    unsigned int lhs_i = get_strided_index(out_i, num_dims, dims, lhs_strides);
-    unsigned int rhs_i = get_strided_index(out_i, num_dims, dims, rhs_strides);
-    unsigned int cond_i = get_strided_index(out_i, num_dims, dims, cond_strides);
-
-    auto go = grad_out[out_i];
-    T* out_loc = cond[cond_i] ? grad_lhs + lhs_i : grad_rhs + rhs_i;
-
-    atomicAdd(out_loc, go);
 }
 
 #define CHOOSE(TYPENAME, FWD, BWD) \

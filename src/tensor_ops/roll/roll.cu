@@ -16,32 +16,29 @@ __device__ void roll_fwd(
     const T *inp,
     T *out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        auto idx = i;
+        const T item = inp[get_strided_index(i, num_dims, dims, inp_strides)];
+    
+        size_t out_i = 0;
+        for (int d = num_dims - 1; d > op.axis; d--) {
+            size_t dim_i = idx % dims[d];
+            out_i += dim_i * out_strides[d];
+            idx /= dims[d];
+        }
+    
+        size_t dim_i = idx % dims[op.axis];
+        size_t new_dim_i = (dim_i + op.amount) % dims[op.axis];
+        out_i += new_dim_i * out_strides[op.axis];
+        idx /= dims[op.axis];
+    
+        for (int d = op.axis - 1; d >= 0;d--) {
+            size_t dim_i = idx % dims[d];
+            out_i += dim_i * out_strides[d];
+            idx /= dims[d];
+        }
+        out[out_i] = item;
     }
-
-    const T item = inp[get_strided_index(i, num_dims, dims, inp_strides)];
-
-    size_t out_i = 0;
-    for (int d = num_dims - 1; d > op.axis; d--) {
-        size_t dim_i = i % dims[d];
-        out_i += dim_i * out_strides[d];
-        i /= dims[d];
-    }
-
-    size_t dim_i = i % dims[op.axis];
-    size_t new_dim_i = (dim_i + op.amount) % dims[op.axis];
-    out_i += new_dim_i * out_strides[op.axis];
-    i /= dims[op.axis];
-
-    for (int d = op.axis - 1; d >= 0;d--) {
-        size_t dim_i = i % dims[d];
-        out_i += dim_i * out_strides[d];
-        i /= dims[d];
-    }
-
-    out[out_i] = item;
 }
 
 template<typename T>
@@ -55,32 +52,30 @@ __device__ void roll_bwd(
     T *grad_inp,
     const T *grad_out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        auto idx = i;
+        const size_t inp_i = get_strided_index(i, num_dims, dims, inp_strides);
+    
+        size_t out_i = 0;
+        for (int d = num_dims - 1; d > op.axis; d--) {
+            size_t dim_i = idx % dims[d];
+            out_i += dim_i * out_strides[d];
+            idx /= dims[d];
+        }
+    
+        size_t dim_i = idx % dims[op.axis];
+        size_t new_dim_i = (dim_i + op.amount) % dims[op.axis];
+        out_i += new_dim_i * out_strides[op.axis];
+        idx /= dims[op.axis];
+    
+        for (int d = op.axis - 1; d >= 0;d--) {
+            size_t dim_i = idx % dims[d];
+            out_i += dim_i * out_strides[d];
+            idx /= dims[d];
+        }
+    
+        atomicAdd(grad_inp + inp_i, grad_out[out_i]);
     }
-
-    const size_t inp_i = get_strided_index(i, num_dims, dims, inp_strides);
-
-    size_t out_i = 0;
-    for (int d = num_dims - 1; d > op.axis; d--) {
-        size_t dim_i = i % dims[d];
-        out_i += dim_i * out_strides[d];
-        i /= dims[d];
-    }
-
-    size_t dim_i = i % dims[op.axis];
-    size_t new_dim_i = (dim_i + op.amount) % dims[op.axis];
-    out_i += new_dim_i * out_strides[op.axis];
-    i /= dims[op.axis];
-
-    for (int d = op.axis - 1; d >= 0;d--) {
-        size_t dim_i = i % dims[d];
-        out_i += dim_i * out_strides[d];
-        i /= dims[d];
-    }
-
-    atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }
 
 #define ROLL(TY, FWD, BWD) \
