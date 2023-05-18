@@ -16,8 +16,9 @@ typedef int intptr_t;
 #endif
 #include \"cuda_fp16.h\"
 extern \"C\" __global__ void kernel(const size_t n, const $Src *inp, $Dst *out) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) { out[i] = inp[i]; }
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
+        out[i] = inp[i];
+    }
 }";
 
 impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, E2> for Cuda {

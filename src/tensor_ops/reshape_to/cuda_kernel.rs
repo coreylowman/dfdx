@@ -119,20 +119,15 @@ extern \"C\" __global__ void reshape_fwd(
     const $T *inp,
     $T *out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
-    }
-
     const size_t *inp_dims = info;
     const size_t *inp_strides = info + inp_num_dims;
     const size_t *out_dims = info + 2 * inp_num_dims;
     const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
-
-    unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
-
-    out[out_i] = inp[inp_i];
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
+        unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
+        out[out_i] = inp[inp_i];
+    }
 }
 ";
 
@@ -153,19 +148,14 @@ extern \"C\" __global__ void reshape_bwd(
     $T *grad_inp,
     const $T *grad_out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
-    }
-
     const size_t *inp_dims = info;
     const size_t *inp_strides = info + inp_num_dims;
     const size_t *out_dims = info + 2 * inp_num_dims;
     const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
-
-    unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
-
-    atomicAdd(grad_inp + inp_i, grad_out[out_i]);
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
+        unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
+        atomicAdd(grad_inp + inp_i, grad_out[out_i]);
+    }
 }
 ";

@@ -12,14 +12,12 @@ extern "C" __global__ void FWD( \
     bool *out, \
     const size_t *out_strides \
 ) { \
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; \
-    if (i >= numel) { \
-        return; \
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) { \
+        unsigned int lhs_i = get_strided_index(i, num_dims, dims, lhs_strides); \
+        unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides); \
+        unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides); \
+        out[out_i] = lhs[lhs_i] SYMBOL rhs[rhs_i]; \
     } \
-    unsigned int lhs_i = get_strided_index(i, num_dims, dims, lhs_strides); \
-    unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides); \
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides); \
-    out[out_i] = lhs[lhs_i] SYMBOL rhs[rhs_i]; \
 } \
 \
 extern "C" __global__ void SCALAR_FWD( \
@@ -32,13 +30,11 @@ extern "C" __global__ void SCALAR_FWD( \
     bool *out, \
     const size_t *out_strides \
 ) { \
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; \
-    if (i >= numel) { \
-        return; \
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) { \
+        unsigned int lhs_i = get_strided_index(i, num_dims, dims, lhs_strides); \
+        unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides); \
+        out[out_i] = lhs[lhs_i] SYMBOL scalar; \
     } \
-    unsigned int lhs_i = get_strided_index(i, num_dims, dims, lhs_strides); \
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides); \
-    out[out_i] = lhs[lhs_i] SYMBOL scalar; \
 }
 
 CMP_OP(__half, eq_fwd_f16, scalar_eq_fwd_f16, ==)

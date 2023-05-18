@@ -84,7 +84,8 @@ impl<E: Dtype + CudaTypeName> super::StackKernel<E> for Cuda {
 const BWD_KERNEL: &str = "
 #include \"cuda_fp16.h\"
 extern \"C\" __global__ void stack_bwd(const size_t numel, const $Ty *inp, $Ty *out) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < numel) { out[i] += inp[i]; }
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        out[i] += inp[i];
+    }
 }
 ";
