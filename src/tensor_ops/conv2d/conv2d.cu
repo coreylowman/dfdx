@@ -68,7 +68,7 @@ __device__ void unfold_output_into_patches(
         idx /= op.chan_out;
         const size_t b = idx % op.batch;
     
-        const T *image_i = image + b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out);
+        const T *image_i = image_out + b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out);
         T *patches_i = patches + y * op.w_in + x;
         patches_i += o * (op.kernel * op.kernel * op.h_in * op.w_in);
         patches_i += b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in);
@@ -116,12 +116,12 @@ __device__ void transpose_filters(
         const size_t g = o / o_per_g;
     
         auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
-        const T *filters_i = filters_tr + k2;
-        filters_i += k1 * op.kernel;
-        filters_i += og * (op.kernel * op.kernel);
-        filters_i += c * (o_per_g * op.kernel * op.kernel);
-        filters_i += g * (op.chan_in * o_per_g * op.kernel * op.kernel);
-        *filters_i = filters[i_no];
+        T *filters_tr_i = filters_tr + k2;
+        filters_tr_i += k1 * op.kernel;
+        filters_tr_i += og * (op.kernel * op.kernel);
+        filters_tr_i += c * (o_per_g * op.kernel * op.kernel);
+        filters_tr_i += g * (op.chan_in * o_per_g * op.kernel * op.kernel);
+        *filters_tr_i = filters[i_no];
     }
 }
 
@@ -147,10 +147,9 @@ __device__ void sum_transposed_filters(
         const size_t og = o % o_per_g;
         const size_t g = o / o_per_g;
     
-        auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
         auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
     
-        T *filters_tr_i = filters_tr + k2;
+        const T *filters_tr_i = filters_tr + k2;
         filters_tr_i += k1 * op.kernel;
         filters_tr_i += og * (op.kernel * op.kernel);
         filters_tr_i += c * (o_per_g * op.kernel * op.kernel);
@@ -159,7 +158,7 @@ __device__ void sum_transposed_filters(
         T tmp = 0.0;
         for (int b = 0; b < op.batch; b++) {
             tmp += *filters_tr_i;
-            filters_tr_i += numel;
+            filters_tr_i += n;
         }
     
         filters[i_no] += tmp;
