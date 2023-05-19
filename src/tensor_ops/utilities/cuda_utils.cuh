@@ -94,30 +94,15 @@ __device__ void chunk_sum(
     }
 }
 
-extern "C" __global__ void fill_with_f16(__half *buf, __half value, const size_t numel) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+template<typename T>
+__device__ void fill_with(T *buf, T value, const size_t numel) {
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        buf[i] = value;
     }
-    buf[i] = value;
 }
-
-extern "C" __global__ void fill_with_f32(float *buf, float value, const size_t numel) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
-    }
-    buf[i] = value;
-}
-
-extern "C" __global__ void fill_with_f64(double *buf, double value, const size_t numel) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
-    }
-    buf[i] = value;
-}
-
+extern "C" __global__ void fill_with_f16(__half *buf, __half value, const size_t numel) { fill_with(buf, value, numel); }
+extern "C" __global__ void fill_with_f32(float *buf, float value, const size_t numel) { fill_with(buf, value, numel); }
+extern "C" __global__ void fill_with_f64(double *buf, double value, const size_t numel) { fill_with(buf, value, numel); }
 
 __device__ __forceinline__ bool isnang(float a) { return isnan(a); }
 __device__ __forceinline__ bool isnang(double a) { return isnan(a); }
