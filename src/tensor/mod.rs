@@ -145,6 +145,8 @@ mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
+#[cfg(feature = "numpy")]
+pub use numpy::NumpyDtype;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
 mod tensorlike;
