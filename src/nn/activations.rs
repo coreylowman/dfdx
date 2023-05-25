@@ -27,6 +27,7 @@ macro_rules! activation_impls {
 activation_impls!(ReLU, try_relu, #[doc="Calls [relu()]."]);
 activation_impls!(GeLU, try_gelu, #[doc="Calls [gelu()]."]);
 activation_impls!(ReLU6, try_relu6, #[doc="Calls [relu6()]."]);
+activation_impls!(HardSwish, try_hard_swish, #[doc="Calls [hard_swish()]."]);
 activation_impls!(Sin, try_sin, #[doc="Calls [sin()]."]);
 activation_impls!(Cos, try_cos, #[doc="Calls [cos()]."]);
 activation_impls!(Ln, try_ln, #[doc="Calls [ln()]."]);
