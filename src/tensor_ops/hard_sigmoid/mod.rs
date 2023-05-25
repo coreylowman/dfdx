@@ -49,9 +49,6 @@ mod tests {
         let r = x.leaky_trace().hard_sigmoid();
         assert_close_to_literal!(r, [0.0, 0.3333333, 0.5, 0.6666666, 1.0]);
         let g = r.mean().backward();
-        assert_close_to_literal!(
-            g.get(&x),
-            [0.0, 0.033333335, 0.033333335, 0.033333335, 0.0]
-        );
+        assert_close_to_literal!(g.get(&x), [0.0, 0.033333335, 0.033333335, 0.033333335, 0.0]);
     }
 }
