@@ -196,7 +196,7 @@ impl<const N: usize> core::ops::Div<Const<N>> for usize {
 impl<const N: usize> core::ops::Div<usize> for Const<N> {
     type Output = usize;
     fn div(self, rhs: usize) -> Self::Output {
-        N * rhs.size()
+        N / rhs.size()
     }
 }
 
