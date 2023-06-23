@@ -32,6 +32,7 @@ impl<
 where
     E: Dtype,
     D: Device<E>,
+    Const<{ I / G }>: Sized,
     Conv2D<I, O, K, S, P, L, G, E, D>: BuildModule<D, E>,
 {
     type Built = Conv2D<I, O, K, S, P, L, G, E, D>;
@@ -62,6 +63,7 @@ where
 ///
 /// See [conv animations](https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md) for helpful
 /// visualization of all of these parameters.
+
 #[derive(Debug, Clone)]
 pub struct Conv2D<
     const IN_CHAN: usize,
@@ -73,8 +75,10 @@ pub struct Conv2D<
     const GROUPS: usize,
     E: Dtype,
     D: Storage<E>,
-> {
-    pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
+> where
+    Const<{ IN_CHAN / GROUPS }>: Sized,
+{
+    pub weight: Tensor<Rank4<OUT_CHAN, { IN_CHAN / GROUPS }, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
 }
 
 impl<
@@ -89,6 +93,7 @@ impl<
         D,
     > TensorCollection<E, D> for Conv2D<I, O, K, S, P, L, G, E, D>
 where
+    Const<{ I / G }>: Sized,
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
@@ -112,9 +117,8 @@ where
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<
-        const C: usize,
+        const I: usize,
         const O: usize,
         const K: usize,
         const S: usize,
@@ -124,19 +128,21 @@ impl<
         E,
         D,
         Img,
-    > Module<Img> for Conv2D<C, O, K, S, P, L, G, E, D>
+    > Module<Img> for Conv2D<I, O, K, S, P, L, G, E, D>
 where
+    Const<{ I / G }>: Sized,
     E: Dtype,
     D: Device<E>,
-    (Img, Tensor<Rank4<O, C, K, K>, E, D>): TryConv2D<Const<S>, Const<P>, Const<L>, Const<G>>,
+    (Img, Tensor<Rank4<O, { I / G }, K, K>, E, D>):
+        TryConv2D<Const<S>, Const<P>, Const<L>, Const<G>>,
 {
-    type Output = <(Img, Tensor<Rank4<O, C, K, K>, E, D>) as TryConv2D<
+    type Output = <(Img, Tensor<Rank4<O, { I / G }, K, K>, E, D>) as TryConv2D<
         Const<S>,
         Const<P>,
         Const<L>,
         Const<G>,
     >>::Convolved;
-    type Error = <(Img, Tensor<Rank4<O, C, K, K>, E, D>) as TryConv2D<
+    type Error = <(Img, Tensor<Rank4<O, { I / G }, K, K>, E, D>) as TryConv2D<
         Const<S>,
         Const<P>,
         Const<L>,
@@ -159,10 +165,11 @@ impl<
         E: Dtype,
         D: Storage<E>,
     > NonMutableModule for Conv2D<I, O, K, S, P, L, G, E, D>
+where
+    Const<{ I / G }>: Sized,
 {
 }
 
-#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -187,6 +194,33 @@ mod tests {
         let _: Tensor<Rank3<2, 10, 10>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 1, 1>, TestDtype>().forward(x.clone());
         let _: Tensor<Rank3<2, 12, 12>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 1, 2>, TestDtype>().forward(x.clone());
         let _: Tensor<Rank3<2, 6, 6>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 2, 2>, TestDtype>().forward(x.clone());
+    }
+
+    #[test]
+    fn test_grouped_forward_sizes() {
+        let dev: TestDevice = Default::default();
+
+        let x = dev.zeros::<Rank3<16, 10, 10>>();
+
+        let m = dev.build_module::<Conv2D<16, 32, 3, 1, 0, 1, 1>, TestDtype>();
+        let _: Tensor<Rank4<32, 16, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m = dev.build_module::<Conv2D<16, 32, 3, 1, 0, 1, 2>, TestDtype>();
+        let _: Tensor<Rank4<32, 8, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m = dev.build_module::<Conv2D<16, 32, 3, 1, 0, 1, 4>, TestDtype>();
+        let _: Tensor<Rank4<32, 4, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m = dev.build_module::<Conv2D<16, 32, 3, 1, 0, 1, 8>, TestDtype>();
+        let _: Tensor<Rank4<32, 2, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m = dev.build_module::<Conv2D<16, 32, 3, 1, 0, 1, 16>, TestDtype>();
+        let _: Tensor<Rank4<32, 1, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x);
     }
 
     #[rustfmt::skip]
