@@ -141,23 +141,23 @@ impl<const M: usize> ConstDim for Const<M> {
 
 impl<const N: usize> core::ops::Add<Const<N>> for usize {
     type Output = usize;
-    fn add(self, rhs: Const<N>) -> Self::Output {
-        self.size() + rhs.size()
+    fn add(self, _: Const<N>) -> Self::Output {
+        self.size() + N
     }
 }
 impl<const N: usize> core::ops::Add<usize> for Const<N> {
     type Output = usize;
     fn add(self, rhs: usize) -> Self::Output {
-        self.size() + rhs.size()
+        N + rhs.size()
     }
 }
 
 #[cfg(feature = "nightly")]
 impl<const N: usize, const M: usize> core::ops::Add<Const<N>> for Const<M>
 where
-    Const<{ N + M }>: Sized,
+    Const<{ M + N }>: Sized,
 {
-    type Output = Const<{ N + M }>;
+    type Output = Const<{ M + N }>;
     fn add(self, _: Const<N>) -> Self::Output {
         Const
     }
@@ -165,24 +165,48 @@ where
 
 impl<const N: usize> core::ops::Mul<Const<N>> for usize {
     type Output = usize;
-    fn mul(self, rhs: Const<N>) -> Self::Output {
-        self.size() * rhs.size()
+    fn mul(self, _: Const<N>) -> Self::Output {
+        self.size() * N
     }
 }
 impl<const N: usize> core::ops::Mul<usize> for Const<N> {
     type Output = usize;
     fn mul(self, rhs: usize) -> Self::Output {
-        self.size() * rhs.size()
+        N * rhs.size()
     }
 }
 
 #[cfg(feature = "nightly")]
 impl<const N: usize, const M: usize> core::ops::Mul<Const<N>> for Const<M>
 where
-    Const<{ N * M }>: Sized,
+    Const<{ M * N }>: Sized,
 {
-    type Output = Const<{ N * M }>;
+    type Output = Const<{ M * N }>;
     fn mul(self, _: Const<N>) -> Self::Output {
+        Const
+    }
+}
+
+impl<const N: usize> core::ops::Div<Const<N>> for usize {
+    type Output = usize;
+    fn div(self, _: Const<N>) -> Self::Output {
+        self.size() / N
+    }
+}
+impl<const N: usize> core::ops::Div<usize> for Const<N> {
+    type Output = usize;
+    fn div(self, rhs: usize) -> Self::Output {
+        N * rhs.size()
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<const N: usize, const M: usize> core::ops::Div<Const<N>> for Const<M>
+where
+    Const<{ M / N }>: Sized,
+{
+    type Output = Const<{ M / N }>;
+    fn div(self, _: Const<N>) -> Self::Output {
         Const
     }
 }
