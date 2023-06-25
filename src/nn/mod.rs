@@ -190,6 +190,8 @@ mod batchnorm2d;
 mod bias2d;
 #[cfg(feature = "nightly")]
 mod conv;
+#[cfg(feature = "nightly")]
+mod rec;
 mod convtrans;
 mod dropout;
 mod ema;
@@ -283,6 +285,10 @@ pub mod builders {
     pub use super::convtrans::builder::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::builder::Embedding;
+    #[cfg(feature = "nightly")]
+    pub use super::rec::builder::RNN;
+    #[cfg(feature = "nightly")]
+    pub use super::rec::builder::GRU;
     #[cfg(feature = "nightly")]
     pub use super::flatten::Flatten2D;
     pub use super::generalized_residual::GeneralizedResidual;
