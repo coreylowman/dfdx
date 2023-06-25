@@ -190,8 +190,6 @@ mod batchnorm2d;
 mod bias2d;
 #[cfg(feature = "nightly")]
 mod conv;
-#[cfg(feature = "nightly")]
-mod rec;
 mod convtrans;
 mod dropout;
 mod ema;
@@ -206,6 +204,8 @@ mod npz;
 mod pool2d;
 mod pool_global;
 pub mod prelu;
+#[cfg(feature = "nightly")]
+mod rec;
 mod repeated;
 mod reshape;
 mod residual;
@@ -257,6 +257,8 @@ pub mod modules {
     #[cfg(feature = "nightly")]
     pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
     pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
+    #[cfg(feature = "nightly")]
+    pub use super::rec::{GRU, RNN};
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
@@ -286,10 +288,6 @@ pub mod builders {
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::builder::Embedding;
     #[cfg(feature = "nightly")]
-    pub use super::rec::builder::RNN;
-    #[cfg(feature = "nightly")]
-    pub use super::rec::builder::GRU;
-    #[cfg(feature = "nightly")]
     pub use super::flatten::Flatten2D;
     pub use super::generalized_residual::GeneralizedResidual;
     pub use super::layer_norm::builder::LayerNorm1D;
@@ -298,6 +296,8 @@ pub mod builders {
     pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
     pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
     pub use super::prelu::builder::{PReLU, PReLU1D};
+    #[cfg(feature = "nightly")]
+    pub use super::rec::builder::{GRU, RNN};
     pub use super::repeated::Repeated;
     pub use super::reshape::Reshape;
     pub use super::residual::Residual;
