@@ -1,4 +1,5 @@
 #![allow(clippy::type_complexity)]
+use num_traits::NumCast;
 
 use crate::{
     shapes::{ConstShape, Dtype, Shape},
@@ -6,7 +7,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{HyperparameterField, ModuleField, ModuleFields, TensorField};
+use super::{ScalarField, ModuleField, ModuleFields, TensorField};
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, including resetting, counting number of params, updating gradients,
@@ -109,18 +110,18 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
     /// Creates a [ModuleFields] that represents hyperparamter tensor field.
     ///
     /// See also: [TensorField], [TensorCollection], [TensorOptions].
-    fn hyperparameter<F1, F2, N>(
+    fn scalar<F1, F2, N>(
         name: &str,
         get_ref: F1,
         get_mut: F2,
-        options: HyperparameterOptions<N>,
-    ) -> HyperparameterField<F1, F2, Self, N>
+        options: ScalarOptions<N>,
+    ) -> ScalarField<F1, F2, Self, N>
     where
         F1: FnMut(&Self) -> &N,
         F2: FnMut(&mut Self) -> &mut N,
-        N: num_traits::ToPrimitive,
+        N: NumCast,
     {
-        HyperparameterField {
+        ScalarField {
             name,
             get_ref,
             get_mut,
@@ -160,15 +161,15 @@ pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Size
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;
 
-    fn visit_hyperparameter<N, GetRef, GetMut>(
+    fn visit_scalar<N, GetRef, GetMut>(
         &mut self,
         name: &str,
         get_refs: GetRef,
         get_muts: GetMut,
-        opts: HyperparameterOptions<N>,
+        opts: ScalarOptions<N>,
     ) -> Result<Option<N>, Self::Err>
     where
-        N: num_traits::ToPrimitive,
+        N: NumCast,
         GetRef: FnMut(&T) -> &N,
         GetMut: FnMut(&mut T) -> &mut N;
 
@@ -267,13 +268,13 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
 
 /// Options to change behavior of [ModuleVisitor]
 #[non_exhaustive]
-pub struct HyperparameterOptions<N: num_traits::ToPrimitive> {
+pub struct ScalarOptions<N: NumCast> {
     /// The default value for this parameter
     pub default: N,
 }
 
-impl<N: num_traits::ToPrimitive> HyperparameterOptions<N> {
-    // Constructs a HyperparameterOptions using the parameter's default value
+impl<N: NumCast> ScalarOptions<N> {
+    // Constructs a ScalarOptions using the parameter's default value
     pub fn from_default(default: N) -> Self {
         Self { default }
     }

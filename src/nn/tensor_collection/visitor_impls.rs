@@ -1,3 +1,5 @@
+use num_traits::NumCast;
+
 use std::{
     string::{String, ToString},
     vec::Vec,
@@ -53,19 +55,19 @@ impl<'a, T: TensorCollection<E, D>, E: Dtype, D: Device<E>, F: TensorVisitor<E, 
         )
     }
 
-    fn visit_hyperparameter<N, GetRef, GetMut>(
+    fn visit_scalar<N, GetRef, GetMut>(
         &mut self,
         name: &str,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
-        opts: HyperparameterOptions<N>,
+        opts: ScalarOptions<N>,
     ) -> Result<Option<N>, Self::Err>
     where
-        N: num_traits::ToPrimitive,
+        N: NumCast,
         GetRef: FnMut(&T) -> &N,
         GetMut: FnMut(&mut T) -> &mut N,
     {
-        self.f.visit_hyperparameter(
+        self.f.visit_scalar(
             opts,
             F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
         )
@@ -238,9 +240,9 @@ where
 }
 
 impl<'a, F1, F2, Mod, N, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D>
-    for HyperparameterField<'a, F1, F2, Mod, N>
+    for ScalarField<'a, F1, F2, Mod, N>
 where
-    N: num_traits::ToPrimitive,
+    N: NumCast,
     F1: FnMut(&Mod) -> &N,
     F2: FnMut(&mut Mod) -> &mut N,
     Mod: TensorCollection<E, D>,
@@ -252,7 +254,7 @@ where
         self,
         visitor: &mut V,
     ) -> Result<Self::Options<V::E2, V::D2>, V::Err> {
-        visitor.visit_hyperparameter(self.name, self.get_ref, self.get_mut, self.options)
+        visitor.visit_scalar(self.name, self.get_ref, self.get_mut, self.options)
     }
 
     fn handle_options<E2: Dtype, D2: Device<E2>>(

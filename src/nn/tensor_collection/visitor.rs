@@ -1,10 +1,12 @@
+use num_traits::NumCast;
+
 use crate::{
     shapes::{Dtype, Shape},
     tensor::Tensor,
     tensor_ops::Device,
 };
 
-use super::{HyperparameterOptions, ModuleVisitor, TensorCollection, TensorOptions};
+use super::{ScalarOptions, ModuleVisitor, TensorCollection, TensorOptions};
 
 /// A standard [ModuleVisitor] that executes `F` on every [Tensor] encountered.
 /// `F` must implement [TensorVisitor]
@@ -78,9 +80,9 @@ pub trait TensorVisitor<E: Dtype, D: Device<E>> {
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
     ) -> Result<Option<Tensor<S, Self::E2, Self::D2>>, Self::Err>;
 
-    fn visit_hyperparameter<N: num_traits::ToPrimitive>(
+    fn visit_scalar<N: NumCast>(
         &mut self,
-        opts: HyperparameterOptions<N>,
+        opts: ScalarOptions<N>,
         _h: <Self::Viewer as TensorViewer>::View<'_, N>,
     ) -> Result<Option<N>, Self::Err> {
         Ok(Some(opts.default))
@@ -154,16 +156,16 @@ where
 }
 
 /// A [ModuleFields] that represents a field that contains single number which should be serialized.
-pub struct HyperparameterField<'a, F1, F2, Mod, N>
+pub struct ScalarField<'a, F1, F2, Mod, N>
 where
-    N: num_traits::ToPrimitive,
+    N: NumCast,
     F1: FnMut(&Mod) -> &N,
     F2: FnMut(&mut Mod) -> &mut N,
 {
     pub(super) name: &'a str,
     pub(super) get_ref: F1,
     pub(super) get_mut: F2,
-    pub(super) options: HyperparameterOptions<N>,
+    pub(super) options: ScalarOptions<N>,
     pub(super) m: std::marker::PhantomData<Mod>,
 }
 
