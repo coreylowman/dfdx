@@ -146,7 +146,7 @@ impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for Dropout {
                 |s| &mut s.p,
                 ScalarOptions::from_default(0.5),
             ),
-            |p| Dropout { p }
+            |p| Dropout { p },
         )
     }
 }
