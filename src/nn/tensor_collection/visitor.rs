@@ -6,7 +6,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{ScalarOptions, ModuleVisitor, TensorCollection, TensorOptions};
+use super::{ModuleVisitor, ScalarOptions, TensorCollection, TensorOptions};
 
 /// A standard [ModuleVisitor] that executes `F` on every [Tensor] encountered.
 /// `F` must implement [TensorVisitor]

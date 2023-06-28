@@ -6,8 +6,8 @@ mod collection;
 mod visitor;
 mod visitor_impls;
 
-pub use collection::{ScalarOptions, ModuleVisitor, TensorCollection, TensorOptions};
+pub use collection::{ModuleVisitor, ScalarOptions, TensorCollection, TensorOptions};
 pub use visitor::{
-    ScalarField, ModuleField, ModuleFields, RecursiveWalker, TensorField, TensorViewer,
+    ModuleField, ModuleFields, RecursiveWalker, ScalarField, TensorField, TensorViewer,
     TensorVisitor, ViewTensorMut, ViewTensorName, ViewTensorRef,
 };
