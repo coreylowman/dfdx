@@ -6,7 +6,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{ModuleField, ModuleFields, TensorField, HyperparameterField};
+use super::{HyperparameterField, ModuleField, ModuleFields, TensorField};
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, including resetting, counting number of params, updating gradients,

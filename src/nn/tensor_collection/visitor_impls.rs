@@ -237,7 +237,8 @@ where
     }
 }
 
-impl<'a, F1, F2, Mod, N, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D> for HyperparameterField<'a, F1, F2, Mod, N>
+impl<'a, F1, F2, Mod, N, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D>
+    for HyperparameterField<'a, F1, F2, Mod, N>
 where
     N: num_traits::ToPrimitive,
     F1: FnMut(&Mod) -> &N,
