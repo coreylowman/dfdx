@@ -70,6 +70,7 @@ pub trait Dtype:
     + std::ops::MulAssign
     + std::ops::DivAssign
     + num_traits::FromPrimitive
+    + num_traits::ToPrimitive
 {
 }
 impl Dtype for f32 {}

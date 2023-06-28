@@ -6,7 +6,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{ModuleField, ModuleFields, TensorField};
+use super::{ModuleField, ModuleFields, TensorField, HyperparameterField};
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, including resetting, counting number of params, updating gradients,
@@ -105,6 +105,29 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
             m: Default::default(),
         }
     }
+
+    /// Creates a [ModuleFields] that represents hyperparamter tensor field.
+    ///
+    /// See also: [TensorField], [TensorCollection], [TensorOptions].
+    fn hyperparameter<F1, F2, N>(
+        name: &str,
+        get_ref: F1,
+        get_mut: F2,
+        options: HyperparameterOptions<N>,
+    ) -> HyperparameterField<F1, F2, Self, N>
+    where
+        F1: FnMut(&Self) -> &N,
+        F2: FnMut(&mut Self) -> &mut N,
+        N: num_traits::ToPrimitive,
+    {
+        HyperparameterField {
+            name,
+            get_ref,
+            get_mut,
+            options,
+            m: Default::default(),
+        }
+    }
 }
 
 /// An object that can visit [TensorCollection]s and [Tensor]s recursively.
@@ -136,6 +159,18 @@ pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Size
     where
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;
+
+    fn visit_hyperparameter<N, GetRef, GetMut>(
+        &mut self,
+        name: &str,
+        get_refs: GetRef,
+        get_muts: GetMut,
+        opts: HyperparameterOptions<N>,
+    ) -> Result<Option<N>, Self::Err>
+    where
+        N: num_traits::ToPrimitive,
+        GetRef: FnMut(&T) -> &N,
+        GetMut: FnMut(&mut T) -> &mut N;
 
     /// Takes something that implements [ModuleFields] and function that takes
     /// [ModuleFields::Output] and returns an instance of T.
@@ -227,5 +262,19 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
             reset,
             shape: S::default(),
         }
+    }
+}
+
+/// Options to change behavior of [ModuleVisitor]
+#[non_exhaustive]
+pub struct HyperparameterOptions<N: num_traits::ToPrimitive> {
+    /// The default value for this parameter
+    pub default: N,
+}
+
+impl<N: num_traits::ToPrimitive> HyperparameterOptions<N> {
+    // Constructs a HyperparameterOptions using the parameter's default value
+    pub fn from_default(default: N) -> Self {
+        Self { default }
     }
 }

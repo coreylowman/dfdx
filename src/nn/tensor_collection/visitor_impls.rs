@@ -53,6 +53,24 @@ impl<'a, T: TensorCollection<E, D>, E: Dtype, D: Device<E>, F: TensorVisitor<E, 
         )
     }
 
+    fn visit_hyperparameter<N, GetRef, GetMut>(
+        &mut self,
+        name: &str,
+        mut get_refs: GetRef,
+        mut get_muts: GetMut,
+        opts: HyperparameterOptions<N>,
+    ) -> Result<Option<N>, Self::Err>
+    where
+        N: num_traits::ToPrimitive,
+        GetRef: FnMut(&T) -> &N,
+        GetMut: FnMut(&mut T) -> &mut N,
+    {
+        self.f.visit_hyperparameter(
+            opts,
+            F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
+        )
+    }
+
     fn visit_fields<M: ModuleFields<T, E, D>>(
         &mut self,
         fields: M,
@@ -219,6 +237,30 @@ where
     }
 }
 
+impl<'a, F1, F2, Mod, N, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D> for HyperparameterField<'a, F1, F2, Mod, N>
+where
+    N: num_traits::ToPrimitive,
+    F1: FnMut(&Mod) -> &N,
+    F2: FnMut(&mut Mod) -> &mut N,
+    Mod: TensorCollection<E, D>,
+{
+    type Options<E2: Dtype, D2: Device<E2>> = Option<N>;
+    type Output<E2: Dtype, D2: Device<E2>> = N;
+
+    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
+        self,
+        visitor: &mut V,
+    ) -> Result<Self::Options<V::E2, V::D2>, V::Err> {
+        visitor.visit_hyperparameter(self.name, self.get_ref, self.get_mut, self.options)
+    }
+
+    fn handle_options<E2: Dtype, D2: Device<E2>>(
+        options: Self::Options<E2, D2>,
+    ) -> Option<Self::Output<E2, D2>> {
+        options
+    }
+}
+
 impl<T: ModuleFields<Mod, E, D>, Mod: TensorCollection<E, D>, E: Dtype, D: Device<E>>
     ModuleFields<Mod, E, D> for Vec<T>
 {
@@ -227,12 +269,12 @@ impl<T: ModuleFields<Mod, E, D>, Mod: TensorCollection<E, D>, E: Dtype, D: Devic
 
     fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
         self,
-        module: &mut V,
+        visitor: &mut V,
     ) -> Result<Self::Options<V::E2, V::D2>, V::Err> {
         let mut out = Vec::with_capacity(self.len());
 
         for x in self {
-            out.push(x.visit_fields(module)?);
+            out.push(x.visit_fields(visitor)?);
         }
 
         Ok(out)
@@ -255,7 +297,7 @@ impl<Mod: TensorCollection<E, D>, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D
     type Options<E2: Dtype, D2: Device<E2>> = ();
     type Output<E2: Dtype, D2: Device<E2>> = ();
 
-    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(self, _module: &mut V) -> Result<(), V::Err> {
+    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(self, _visitor: &mut V) -> Result<(), V::Err> {
         Ok(())
     }
 
@@ -270,7 +312,7 @@ macro_rules! tuple_impls {
             type View<'a, Mod: 'a> = ($($name::View<'a, Mod>,)+);
 
             fn view_field<'a, Mod, Field, GetRef, GetMut>(
-                module: &'a mut Self::View<'_, Mod>,
+                visitor: &'a mut Self::View<'_, Mod>,
                 name: &str,
                 get_ref: &mut GetRef,
                 get_mut: &mut GetMut,
@@ -279,7 +321,7 @@ macro_rules! tuple_impls {
                 GetRef: FnMut(&Mod) -> &Field,
                 GetMut: FnMut(&mut Mod) -> &mut Field,
             {
-                ($($name::view_field(&mut module.$idx, name, get_ref, get_mut),)+)
+                ($($name::view_field(&mut visitor.$idx, name, get_ref, get_mut),)+)
             }
         }
 

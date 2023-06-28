@@ -4,7 +4,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{ModuleVisitor, TensorCollection, TensorOptions};
+use super::{HyperparameterOptions, ModuleVisitor, TensorCollection, TensorOptions};
 
 /// A standard [ModuleVisitor] that executes `F` on every [Tensor] encountered.
 /// `F` must implement [TensorVisitor]
@@ -77,6 +77,14 @@ pub trait TensorVisitor<E: Dtype, D: Device<E>> {
         opts: TensorOptions<S, E, D>,
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
     ) -> Result<Option<Tensor<S, Self::E2, Self::D2>>, Self::Err>;
+
+    fn visit_hyperparameter<N: num_traits::ToPrimitive>(
+        &mut self,
+        opts: HyperparameterOptions<N>,
+        _h: <Self::Viewer as TensorViewer>::View<'_, N>,
+    ) -> Result<Option<N>, Self::Err> {
+        Ok(Some(opts.default))
+    }
 }
 
 /// Something that can view [Tensor]s in different ways. For example
@@ -110,7 +118,7 @@ pub trait ModuleFields<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> {
     /// and returns optionally constructed fields
     fn visit_fields<V: ModuleVisitor<M, E, D>>(
         self,
-        module: &mut V,
+        visitor: &mut V,
     ) -> Result<Self::Options<V::E2, V::D2>, V::Err>;
 
     /// If any optional fields are None, returns None. Otherwise returns instances of all fields.
@@ -142,6 +150,20 @@ where
     pub(super) get_ref: F1,
     pub(super) get_mut: F2,
     pub(super) options: TensorOptions<S, E, D>,
+    pub(super) m: std::marker::PhantomData<Mod>,
+}
+
+/// A [ModuleFields] that represents a field that contains single number which should be serialized.
+pub struct HyperparameterField<'a, F1, F2, Mod, N>
+where
+    N: num_traits::ToPrimitive,
+    F1: FnMut(&Mod) -> &N,
+    F2: FnMut(&mut Mod) -> &mut N,
+{
+    pub(super) name: &'a str,
+    pub(super) get_ref: F1,
+    pub(super) get_mut: F2,
+    pub(super) options: HyperparameterOptions<N>,
     pub(super) m: std::marker::PhantomData<Mod>,
 }
 

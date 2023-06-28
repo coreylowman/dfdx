@@ -41,7 +41,7 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
         }
         let mut f = r
             .by_name(&filename)
-            .expect(&std::format!("'{}' not found", filename));
+            .unwrap_or_else(|_| panic!("'{filename}' not found"));
         self.read_from(&mut f)?;
         Ok(())
     }
