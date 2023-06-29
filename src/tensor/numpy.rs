@@ -83,7 +83,7 @@ pub(crate) fn read_from_npz<R: Read + Seek, E: Dtype + NumpyDtype>(
     read_from_npy(&mut f, shape)
 }
 
-pub(crate) fn write_to_npy<W: Write, E: Dtype + NumpyDtype>(
+fn write_to_npy<W: Write, E: Dtype + NumpyDtype>(
     w: &mut W,
     shape: &[usize],
     data: &[E],
@@ -98,7 +98,7 @@ pub(crate) fn write_to_npy<W: Write, E: Dtype + NumpyDtype>(
     Ok(())
 }
 
-pub(crate) fn read_from_npy<R: Read, E: Dtype + NumpyDtype>(
+fn read_from_npy<R: Read, E: Dtype + NumpyDtype>(
     r: &mut R,
     shape: &[usize],
 ) -> Result<Vec<E>, NpyError> {

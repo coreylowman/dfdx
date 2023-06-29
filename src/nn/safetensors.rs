@@ -12,7 +12,6 @@ use safetensors::{
     tensor::{Dtype as SDtype, SafeTensors, TensorView},
     SafeTensorError,
 };
-use std::collections::BTreeMap;
 
 use super::tensor_collection::*;
 
@@ -25,12 +24,12 @@ struct TensorData {
 }
 
 pub struct Writer {
-    tensors: BTreeMap<String, TensorData>,
+    tensors: Vec<(String, TensorData)>,
 }
 
 impl Writer {
     pub fn new() -> Self {
-        let tensors = BTreeMap::new();
+        let tensors = Vec::new();
         Self { tensors }
     }
 
@@ -44,11 +43,11 @@ impl Writer {
         let data = tensor.as_vec();
         let data: Vec<u8> = data.iter().flat_map(|f| f.to_le_bytes()).collect();
         let tdata = TensorData { dtype, shape, data };
-        self.tensors.insert(key, tdata);
+        self.tensors.push((key, tdata));
     }
 
     pub fn save(&self, path: &Path) -> Result<(), SafeTensorError> {
-        let views: BTreeMap<String, TensorView> = self
+        let (names, views): (Vec<String>, Vec<TensorView>) = self
             .tensors
             .iter()
             .map(|(k, tensor)| {
@@ -57,8 +56,11 @@ impl Writer {
                     TensorView::new(tensor.dtype, tensor.shape.clone(), &tensor.data).unwrap(),
                 )
             })
-            .collect();
-        serialize_to_file(&views, &None, path)
+            .unzip();
+
+        let data = names.into_iter().zip(views.iter());
+
+        serialize_to_file(data, &None, path)
     }
 }
 
@@ -74,6 +76,20 @@ impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for Writer {
         (t, full_path): (&Tensor<S, E, D>, String),
     ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         self.add(full_path, t);
+        Ok(None)
+    }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        _: ScalarOptions<N>,
+        (n, full_path): (&N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        let data = TensorData {
+            dtype: safetensors::Dtype::F64,
+            shape: Vec::new(),
+            data: n.to_f64().unwrap_or_else(|| panic!("Failed to convert scalar value at {full_path} to f64!")).to_le_bytes().to_vec(),
+        };
+        self.tensors.push((full_path, data));
         Ok(None)
     }
 }
@@ -146,6 +162,24 @@ impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTens
         (t, full_path): (&mut Tensor<S, E, D>, String),
     ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         t.load_safetensor(self, &full_path)?;
+        Ok(None)
+    }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        _: ScalarOptions<N>,
+        (n, full_path): (&mut N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        let data = self.tensor(&full_path)?.data();
+        let mut array = [0; 8];
+        array.copy_from_slice(data);
+        let val = f64::from_le_bytes(array);
+        *n = N::from(val).unwrap_or_else(|| {
+            panic!(
+                "Failed to convert f64 value {val} at {full_path} to {} when reading from safetensors!",
+                std::any::type_name::<N>()
+            )
+        });
         Ok(None)
     }
 }
