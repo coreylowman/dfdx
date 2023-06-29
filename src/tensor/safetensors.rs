@@ -14,12 +14,7 @@ pub trait SafeDtype: Sized {
 impl SafeDtype for f32 {
     type Array = [u8; 4];
     fn from_le_bytes(bytes: &[u8], index: usize) -> Self {
-        Self::from_le_bytes([
-            bytes[index],
-            bytes[index + 1],
-            bytes[index + 2],
-            bytes[index + 3],
-        ])
+        Self::from_le_bytes(bytes[index..index + 4].try_into().unwrap())
     }
 
     fn to_le_bytes(self) -> Self::Array {
@@ -34,16 +29,7 @@ impl SafeDtype for f32 {
 impl SafeDtype for f64 {
     type Array = [u8; 8];
     fn from_le_bytes(bytes: &[u8], index: usize) -> Self {
-        Self::from_le_bytes([
-            bytes[index],
-            bytes[index + 1],
-            bytes[index + 2],
-            bytes[index + 3],
-            bytes[index + 4],
-            bytes[index + 5],
-            bytes[index + 6],
-            bytes[index + 7],
-        ])
+        Self::from_le_bytes(bytes[index..index + 8].try_into().unwrap())
     }
 
     fn safe_dtype() -> SDtype {

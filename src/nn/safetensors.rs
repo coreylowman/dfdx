@@ -87,7 +87,11 @@ impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for Writer {
         let data = TensorData {
             dtype: safetensors::Dtype::F64,
             shape: Vec::new(),
-            data: n.to_f64().unwrap_or_else(|| panic!("Failed to convert scalar value at {full_path} to f64!")).to_le_bytes().to_vec(),
+            data: n
+                .to_f64()
+                .unwrap_or_else(|| panic!("Failed to convert scalar value at {full_path} to f64!"))
+                .to_le_bytes()
+                .to_vec(),
         };
         self.tensors.push((full_path, data));
         Ok(None)
