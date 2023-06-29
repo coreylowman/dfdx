@@ -58,34 +58,81 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
         self.write_to(&mut f)
     }
 
-    pub(crate) fn read_from<R: Read>(&mut self, r: &mut R) -> Result<(), NpyError> {
-        let endian = read_header::<R, E>(r, self.shape().concrete().into_iter().collect())?;
-        let numel = self.shape().num_elements();
-        let mut buf = Vec::with_capacity(numel);
-        for _ in 0..numel {
-            buf.push(E::read_endian(r, endian)?);
-        }
-        D::copy_from(self, &buf);
+    fn read_from<R: Read>(&mut self, r: &mut R) -> Result<(), NpyError> {
+        let buf = read_from_npy(r, self.shape().concrete().as_ref())?;
+        self.copy_from(&buf);
         Ok(())
     }
 
-    pub(crate) fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        let endian = Endian::Little;
-        write_header::<W, E>(w, endian, self.shape().concrete().into_iter().collect())?;
-        let numel = self.shape().num_elements();
-        let mut buf = std::vec![Default::default(); numel];
-        D::copy_into(self, &mut buf);
-        for v in buf.iter() {
-            v.write_endian(w, endian)?;
-        }
-        Ok(())
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        let buf = self.as_vec();
+        write_to_npy(w, self.shape().concrete().as_ref(), &buf)
     }
+}
+
+pub(crate) fn write_to_npz<W: Write + Seek, E: Dtype + NumpyDtype>(
+    w: &mut zip::ZipWriter<W>,
+    shape: &[usize],
+    data: &[E],
+    mut filename: String,
+) -> io::Result<()> {
+    if !filename.ends_with(".npy") {
+        filename.push_str(".npy");
+    }
+    w.start_file(filename, Default::default())?;
+    write_to_npy(w, shape, data)
+}
+
+pub(crate) fn read_from_npz<R: Read + Seek, E: Dtype + NumpyDtype>(
+    r: &mut zip::ZipArchive<R>,
+    shape: &[usize],
+    mut filename: String,
+) -> Result<Vec<E>, NpyError> {
+    if !filename.ends_with(".npy") {
+        filename.push_str(".npy");
+    }
+
+    let mut f = r
+        .by_name(&filename)
+        .unwrap_or_else(|_| panic!("'{filename}' not found"));
+
+    read_from_npy(&mut f, shape)
+}
+
+pub(crate) fn write_to_npy<W: Write, E: Dtype + NumpyDtype>(
+    w: &mut W,
+    shape: &[usize],
+    data: &[E],
+) -> io::Result<()> {
+    let endian = Endian::Little;
+    write_header::<W, E>(w, endian, shape)?;
+
+    for v in data.iter() {
+        v.write_endian(w, endian)?;
+    }
+
+    Ok(())
+}
+
+pub(crate) fn read_from_npy<R: Read, E: Dtype + NumpyDtype>(
+    r: &mut R,
+    shape: &[usize],
+) -> Result<Vec<E>, NpyError> {
+    let endian = read_header::<R, E>(r, shape)?;
+    let numel = shape.iter().product::<usize>();
+    let mut out = Vec::new();
+
+    for _ in 0..numel {
+        out.push(E::read_endian(r, endian)?);
+    }
+
+    Ok(out)
 }
 
 fn write_header<W: Write, E: NumpyDtype>(
     w: &mut W,
     endian: Endian,
-    shape: Vec<usize>,
+    shape: &[usize],
 ) -> io::Result<()> {
     let shape_str = to_shape_str(shape);
 
@@ -121,7 +168,7 @@ fn write_header<W: Write, E: NumpyDtype>(
     Ok(())
 }
 
-fn read_header<R: Read, E: NumpyDtype>(r: &mut R, shape: Vec<usize>) -> Result<Endian, NpyError> {
+fn read_header<R: Read, E: NumpyDtype>(r: &mut R, shape: &[usize]) -> Result<Endian, NpyError> {
     let mut magic = [0; 6];
     r.read_exact(&mut magic)?;
     if magic != MAGIC_NUMBER {
@@ -311,7 +358,7 @@ impl From<std::string::FromUtf8Error> for NpyError {
     }
 }
 
-fn to_shape_str(shape: Vec<usize>) -> String {
+fn to_shape_str(shape: &[usize]) -> String {
     shape
         .iter()
         .map(|v| v.to_string())
