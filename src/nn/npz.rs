@@ -168,7 +168,7 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
         let buf: Vec<f64> = read_from_npz(self, &[], full_path)?;
         *n = N::from(buf[0]).unwrap_or_else(|| {
             panic!(
-                "Failed to convert f64 value {} to {}!",
+                "Failed to convert f64 value {} to {} when reading from npz!",
                 buf[0],
                 std::any::type_name::<N>()
             )

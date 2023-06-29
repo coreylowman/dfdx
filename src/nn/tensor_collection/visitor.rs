@@ -155,7 +155,7 @@ where
     pub(super) m: std::marker::PhantomData<Mod>,
 }
 
-/// A [ModuleFields] that represents a field that contains single number which should be serialized.
+/// A [ModuleFields] that represents a field that contains a scalar value that should be serialized.
 pub struct ScalarField<'a, F1, F2, Mod, N>
 where
     N: NumCast,

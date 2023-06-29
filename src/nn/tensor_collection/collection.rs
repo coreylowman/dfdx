@@ -107,7 +107,7 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
         }
     }
 
-    /// Creates a [ModuleFields] that represents hyperparamter tensor field.
+    /// Creates a [ModuleFields] that represents a scalar field.
     ///
     /// See also: [TensorField], [TensorCollection], [TensorOptions].
     fn scalar<F1, F2, N>(

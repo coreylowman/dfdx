@@ -20,13 +20,10 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     pub fn write_to_npz<W: Write + Seek>(
         &self,
         w: &mut zip::ZipWriter<W>,
-        mut filename: String,
+        filename: String,
     ) -> ZipResult<()> {
-        if !filename.ends_with(".npy") {
-            filename.push_str(".npy");
-        }
-        w.start_file(filename, Default::default())?;
-        self.write_to(w)?;
+        let buf = self.as_vec();
+        write_to_npz(w, self.shape().concrete().as_ref(), &buf, filename)?;
         Ok(())
     }
 
@@ -34,39 +31,26 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     pub fn read_from_npz<R: Read + Seek>(
         &mut self,
         r: &mut zip::ZipArchive<R>,
-        mut filename: String,
+        filename: String,
     ) -> Result<(), NpzError> {
-        if !filename.ends_with(".npy") {
-            filename.push_str(".npy");
-        }
-        let mut f = r
-            .by_name(&filename)
-            .unwrap_or_else(|_| panic!("'{filename}' not found"));
-        self.read_from(&mut f)?;
+        let buf = read_from_npz(r, self.shape().concrete().as_ref(), filename)?;
+        self.copy_from(&buf);
         Ok(())
     }
 
     /// Attemps to load the data from a `.npy` file at `path`
     pub fn load_from_npy<P: AsRef<Path>>(&mut self, path: P) -> Result<(), NpyError> {
         let mut f = BufReader::new(File::open(path)?);
-        self.read_from(&mut f)
+        let buf = read_from_npy(&mut f, self.shape().concrete().as_ref())?;
+        self.copy_from(&buf);
+        Ok(())
     }
 
     /// Saves the tensor to a `.npy` file located at `path`
     pub fn save_to_npy<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = BufWriter::new(File::create(path)?);
-        self.write_to(&mut f)
-    }
-
-    fn read_from<R: Read>(&mut self, r: &mut R) -> Result<(), NpyError> {
-        let buf = read_from_npy(r, self.shape().concrete().as_ref())?;
-        self.copy_from(&buf);
-        Ok(())
-    }
-
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
         let buf = self.as_vec();
-        write_to_npy(w, self.shape().concrete().as_ref(), &buf)
+        write_to_npy(&mut f, self.shape().concrete().as_ref(), &buf)
     }
 }
 
