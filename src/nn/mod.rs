@@ -305,4 +305,5 @@ pub mod builders {
     #[cfg(feature = "nightly")]
     pub use super::upscale::Upscale2DBy;
     pub use super::*;
+    pub use dfdx_derive::Sequential;
 }
