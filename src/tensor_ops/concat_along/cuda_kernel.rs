@@ -104,38 +104,37 @@ extern \"C\" __global__ void fwd(
     const size_t *rhs_dims = info + 3 + 2 * num_dims;
     const size_t *rhs_strides = info + 3 + 3 * num_dims;
 
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) { return; }
-
-    // out_dims will be (..., lhs_dims[ax] + rhs_dims[ax], ...)
-
-    // striding lhs & rhs up to the concat'd axis
-    size_t i_tmp = i;
-    size_t lhs_i = 0;
-    size_t rhs_i = 0;
-    for (int d = num_dims - 1; d > axis; d--) {
-        size_t dim_i = i_tmp % lhs_dims[d];
-        lhs_i += dim_i * lhs_strides[d];
-        rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= lhs_dims[d];
-    }
-
-    // figure out if we are using lhs or rhs for this `i`
-    size_t i_along_axis = i_tmp % (lhs_dims[axis] + rhs_dims[axis]);
-    i_tmp /= (lhs_dims[axis] + rhs_dims[axis]);
-
-    // striding lhs & rhs along the rest of the axes
-    for (int d = axis - 1; d >= 0;d--) {
-        size_t dim_i = i_tmp % lhs_dims[d];
-        lhs_i += dim_i * lhs_strides[d];
-        rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= lhs_dims[d];
-    }
-
-    if (i_along_axis < lhs_dims[axis]) {
-        out[i] = lhs[lhs_i + i_along_axis * lhs_strides[axis]];
-    } else {
-        out[i] = rhs[rhs_i + (i_along_axis - lhs_dims[axis]) * rhs_strides[axis]];
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        // out_dims will be (..., lhs_dims[ax] + rhs_dims[ax], ...)
+    
+        // striding lhs & rhs up to the concat'd axis
+        size_t i_tmp = i;
+        size_t lhs_i = 0;
+        size_t rhs_i = 0;
+        for (int d = num_dims - 1; d > axis; d--) {
+            size_t dim_i = i_tmp % lhs_dims[d];
+            lhs_i += dim_i * lhs_strides[d];
+            rhs_i += dim_i * rhs_strides[d];
+            i_tmp /= lhs_dims[d];
+        }
+    
+        // figure out if we are using lhs or rhs for this `i`
+        size_t i_along_axis = i_tmp % (lhs_dims[axis] + rhs_dims[axis]);
+        i_tmp /= (lhs_dims[axis] + rhs_dims[axis]);
+    
+        // striding lhs & rhs along the rest of the axes
+        for (int d = axis - 1; d >= 0;d--) {
+            size_t dim_i = i_tmp % lhs_dims[d];
+            lhs_i += dim_i * lhs_strides[d];
+            rhs_i += dim_i * rhs_strides[d];
+            i_tmp /= lhs_dims[d];
+        }
+    
+        if (i_along_axis < lhs_dims[axis]) {
+            out[i] = lhs[lhs_i + i_along_axis * lhs_strides[axis]];
+        } else {
+            out[i] = rhs[rhs_i + (i_along_axis - lhs_dims[axis]) * rhs_strides[axis]];
+        }
     }
 }
 
@@ -153,38 +152,37 @@ extern \"C\" __global__ void bwd(
     const size_t *rhs_dims = info + 3 + 2 * num_dims;
     const size_t *rhs_strides = info + 3 + 3 * num_dims;
 
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) { return; }    
-
-    // out_dims will be (..., lhs_dims[ax] + rhs_dims[ax], ...)
-
-    // striding lhs & rhs up to the concat'd axis
-    size_t i_tmp = i;
-    size_t lhs_i = 0;
-    size_t rhs_i = 0;
-    for (int d = num_dims - 1; d > axis; d--) {
-        size_t dim_i = i_tmp % lhs_dims[d];
-        lhs_i += dim_i * lhs_strides[d];
-        rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= lhs_dims[d];
-    }
-
-    // figure out if we are using lhs or rhs for this `i`
-    size_t i_along_axis = i_tmp % (lhs_dims[axis] + rhs_dims[axis]);
-    i_tmp /= (lhs_dims[axis] + rhs_dims[axis]);
-
-    // striding lhs & rhs along the rest of the axes
-    for (int d = axis - 1; d >= 0;d--) {
-        size_t dim_i = i_tmp % lhs_dims[d];
-        lhs_i += dim_i * lhs_strides[d];
-        rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= lhs_dims[d];
-    }
-
-    if (i_along_axis < lhs_dims[axis]) {
-        atomicAdd(grad_lhs + lhs_i + i_along_axis * lhs_strides[axis], grad_out[i]);
-    } else {
-        atomicAdd(grad_rhs + rhs_i + (i_along_axis - lhs_dims[axis]) * rhs_strides[axis], grad_out[i]);
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        // out_dims will be (..., lhs_dims[ax] + rhs_dims[ax], ...)
+    
+        // striding lhs & rhs up to the concat'd axis
+        size_t i_tmp = i;
+        size_t lhs_i = 0;
+        size_t rhs_i = 0;
+        for (int d = num_dims - 1; d > axis; d--) {
+            size_t dim_i = i_tmp % lhs_dims[d];
+            lhs_i += dim_i * lhs_strides[d];
+            rhs_i += dim_i * rhs_strides[d];
+            i_tmp /= lhs_dims[d];
+        }
+    
+        // figure out if we are using lhs or rhs for this `i`
+        size_t i_along_axis = i_tmp % (lhs_dims[axis] + rhs_dims[axis]);
+        i_tmp /= (lhs_dims[axis] + rhs_dims[axis]);
+    
+        // striding lhs & rhs along the rest of the axes
+        for (int d = axis - 1; d >= 0;d--) {
+            size_t dim_i = i_tmp % lhs_dims[d];
+            lhs_i += dim_i * lhs_strides[d];
+            rhs_i += dim_i * rhs_strides[d];
+            i_tmp /= lhs_dims[d];
+        }
+    
+        if (i_along_axis < lhs_dims[axis]) {
+            atomicAdd(grad_lhs + lhs_i + i_along_axis * lhs_strides[axis], grad_out[i]);
+        } else {
+            atomicAdd(grad_rhs + rhs_i + (i_along_axis - lhs_dims[axis]) * rhs_strides[axis], grad_out[i]);
+        }
     }
 }
 ";

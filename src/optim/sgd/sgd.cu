@@ -28,40 +28,36 @@ __device__ void sgd_update(
     T* velocity,
     const T* grad
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i >= numel) {
-        return;
-    }
-
     T weight_decay = cfg.weight_decay;
     T lr = cfg.lr;
     T momentum = cfg.momentum;
 
-    T p = param[i];
-    T g = grad[i];
-    T v = velocity[i];
-
-    if (cfg.weight_decay_type == L2) {
-        g += weight_decay * p;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        T p = param[i];
+        T g = grad[i];
+        T v = velocity[i];
+    
+        if (cfg.weight_decay_type == L2) {
+            g += weight_decay * p;
+        }
+    
+        if (cfg.momentum_type == Classic) {
+            v = g + momentum * v;
+            g = v * lr;
+        } else if (cfg.momentum_type == Nesterov) {
+            v = g + momentum * v;
+            g = (g + momentum * v) * lr;
+        } else {
+            g *= lr;
+        }
+    
+        if (cfg.weight_decay_type == Decoupled) {
+            g += weight_decay * lr * p;
+        }
+    
+        velocity[i] = v;
+        param[i] -= g;
     }
-
-    if (cfg.momentum_type == Classic) {
-        v = g + momentum * v;
-        g = v * lr;
-    } else if (cfg.momentum_type == Nesterov) {
-        v = g + momentum * v;
-        g = (g + momentum * v) * lr;
-    } else {
-        g *= lr;
-    }
-
-    if (cfg.weight_decay_type == Decoupled) {
-        g += weight_decay * lr * p;
-    }
-
-    velocity[i] = v;
-    param[i] -= g;
 }
 
 #define SGD(TYPENAME, FN) \

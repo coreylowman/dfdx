@@ -56,17 +56,12 @@ __device__ void gather_fwd(
     T *out,
     const size_t out_num_dims
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int out_i = i;
+        unsigned int inp_i =
+            get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out_num_dims);
+        out[out_i] = inp[inp_i];
     }
-
-    unsigned int out_i = i;
-    unsigned int inp_i =
-        get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out_num_dims);
-
-    out[out_i] = inp[inp_i];
-    // out[out_i] = inp_i;
 }
 
 template<typename T>
@@ -83,16 +78,12 @@ __device__ void gather_bwd(
     const T *grad_out,
     const size_t out_num_dims
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int out_i = i;
+        unsigned int inp_i =
+            get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out_num_dims);
+        atomicAdd(grad_inp + inp_i, grad_out[out_i]);
     }
-
-    unsigned int out_i = i;
-    unsigned int inp_i =
-        get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out_num_dims);
-
-    atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }
 
 #define GATHER(TYPENAME, FWD, BWD) \

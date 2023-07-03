@@ -44,16 +44,12 @@ __device__ void select_fwd(
     const size_t *out_dims,
     const size_t *out_strides
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int out_i = get_strided_index(i, inp_num_dims - 1, out_dims, out_strides);
+        unsigned int inp_i =
+            get_selected_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides);
+        out[out_i] = inp[inp_i];
     }
-
-    unsigned int out_i = get_strided_index(i, inp_num_dims - 1, out_dims, out_strides);
-    unsigned int inp_i =
-        get_selected_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides);
-
-    out[out_i] = inp[inp_i];
 }
 
 template<typename T>
@@ -71,16 +67,12 @@ __device__ void select_bwd(
     const size_t *out_dims,
     const size_t *out_strides
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int out_i = get_strided_index(i, inp_num_dims - 1, out_dims, out_strides);
+        unsigned int inp_i =
+            get_selected_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides);
+        atomicAdd(grad_inp + inp_i, grad_out[out_i]);
     }
-
-    unsigned int out_i = get_strided_index(i, inp_num_dims - 1, out_dims, out_strides);
-    unsigned int inp_i =
-        get_selected_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides);
-
-    atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }
 
 #define SELECT(TYPENAME, FWD, BWD) \

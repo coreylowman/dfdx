@@ -11,13 +11,10 @@ __device__ void slice_fwd(
     const T *inp,
     T *out
 ) {
-    unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (out_i >= numel) {
-        return;
+    for (unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x; out_i < numel; out_i += blockDim.x * gridDim.x) {
+        unsigned int inp_i = offset + get_strided_index(out_i, num_dims, dims, strides);
+        out[out_i] = inp[inp_i];
     }
-
-    unsigned int inp_i = offset + get_strided_index(out_i, num_dims, dims, strides);
-    out[out_i] = inp[inp_i];
 }
 
 template<typename T>
@@ -30,14 +27,11 @@ __device__ void slice_bwd(
     T *grad_inp,
     const T *out
 ) {
-    unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (out_i >= numel) {
-        return;
+    for (unsigned int out_i = blockIdx.x * blockDim.x + threadIdx.x; out_i < numel; out_i += blockDim.x * gridDim.x) {
+        unsigned int inp_i = offset + get_strided_index(out_i, num_dims, dims, strides);
+        // TODO (maybe): use chunk_sum to speed this up 
+        atomicAdd(grad_inp + inp_i, out[out_i]);
     }
-
-    unsigned int inp_i = offset + get_strided_index(out_i, num_dims, dims, strides);
-    // TODO (maybe): use chunk_sum to speed this up 
-    atomicAdd(grad_inp + inp_i, out[out_i]);
 }
 
 #define SLICE_FWD(TYPENAME, FN) \

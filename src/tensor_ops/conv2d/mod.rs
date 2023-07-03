@@ -166,8 +166,17 @@ impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
 impl<InpChan, OutChan, Kernel, Stride, Padding, Dilation, Groups, H, W, E, D, T>
     TryConv2D<Stride, Padding, Dilation, Groups>
     for (
-        Tensor<(<InpChan as std::ops::Mul<Groups>>::Output, H, W), E, D, T>,
-        Tensor<(OutChan, InpChan, Kernel, Kernel), E, D>,
+        Tensor<(InpChan, H, W), E, D, T>,
+        Tensor<
+            (
+                OutChan,
+                <InpChan as std::ops::Div<Groups>>::Output,
+                Kernel,
+                Kernel,
+            ),
+            E,
+            D,
+        >,
     )
 where
     InpChan: Dim,
@@ -182,8 +191,8 @@ where
     E: Dtype,
     D: Conv2DKernel<E> + crate::tensor_ops::reshape_to::ReshapeKernel<E>,
     T: Tape<E, D>,
-    InpChan: std::ops::Mul<Groups>,
-    <InpChan as std::ops::Mul<Groups>>::Output: Dim,
+    InpChan: std::ops::Div<Groups>,
+    <InpChan as std::ops::Div<Groups>>::Output: Dim,
     (H, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
     (W, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
     <(H, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
@@ -220,8 +229,17 @@ where
 impl<InpChan, OutChan, Kernel, Stride, Padding, Dilation, Groups, Batch, H, W, E, D, T>
     TryConv2D<Stride, Padding, Dilation, Groups>
     for (
-        Tensor<(Batch, <InpChan as std::ops::Mul<Groups>>::Output, H, W), E, D, T>,
-        Tensor<(OutChan, InpChan, Kernel, Kernel), E, D>,
+        Tensor<(Batch, InpChan, H, W), E, D, T>,
+        Tensor<
+            (
+                OutChan,
+                <InpChan as std::ops::Div<Groups>>::Output,
+                Kernel,
+                Kernel,
+            ),
+            E,
+            D,
+        >,
     )
 where
     InpChan: Dim,
@@ -237,8 +255,8 @@ where
     E: Dtype,
     D: Conv2DKernel<E>,
     T: Tape<E, D>,
-    InpChan: std::ops::Mul<Groups>,
-    <InpChan as std::ops::Mul<Groups>>::Output: Dim,
+    InpChan: std::ops::Div<Groups>,
+    <InpChan as std::ops::Div<Groups>>::Output: Dim,
     (H, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
     (W, Kernel): TryConv2D<Stride, Padding, Dilation, Groups>,
     <(H, Kernel) as TryConv2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
