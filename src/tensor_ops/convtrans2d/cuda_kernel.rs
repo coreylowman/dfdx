@@ -94,7 +94,7 @@ where
         // RHS (B, G, C/G*K*K, OH*OW)
         // OUT (B, G, O/G, OH*OW)
         let m = op.chan_out / op.groups;
-        let k = op.chan_in * op.kernel * op.kernel;
+        let k = (op.chan_in / op.groups) * op.kernel * op.kernel;
         let n = op.h_out * op.w_out;
         unsafe {
             // generate patches for matmul
@@ -162,7 +162,8 @@ where
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
-        let rhs = rhs.data.as_ref();
+        let rhs_buf = rhs.data.as_ref();
+        let lhs_buf = lhs.data.as_ref();
 
         unsafe {
             self.par_stream.wait_for_default()?;
@@ -179,7 +180,7 @@ where
                 // optimizing here for common case
                 self.gemm_batch(
                     (op.batch, m, k, n),
-                    rhs,
+                    rhs_buf,
                     [0, k, 1],
                     &patches,
                     [k * n, n, 1],
@@ -192,7 +193,7 @@ where
                 for i_batch in 0..op.batch {
                     self.gemm_batch(
                         (op.groups, m, k, n),
-                        rhs,
+                        rhs_buf,
                         [m * k, k, 1],
                         &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, n, 1],
@@ -210,25 +211,26 @@ where
             // weight_g += img * patches^T
             // LHS = (B, G, C/G, H*W)
             // RHS = (B, H*W, G, O/G*K*K)
-            // OUT = (B, G, C, O/G*K*K)
+            // OUT =    (G, C/G, O/G*K*K)
             let m = op.chan_in / op.groups;
             let k = op.h_in * op.w_in;
             let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
             if op.groups == 1 {
                 // optimizing here for common case
-                self.gemm_batch(
-                    (op.batch, m, k, n),
-                    lhs.data.as_ref(),
-                    [m * k, k, 1],
-                    &patches,
-                    [k * n, 1, k],
-                    Default::default(),
-                    grad_rhs,
-                    [m * n, n, 1],
-                )
-                .unwrap();
+                for i_batch in 0..op.batch {
+                    self.gemm(
+                        (m, k, n),
+                        &lhs_buf.slice(i_batch * m * k..),
+                        [k, 1],
+                        &patches.slice(i_batch * k * n..),
+                        [1, k],
+                        E::ONE,
+                        grad_rhs,
+                        [n, 1],
+                    )
+                    .unwrap()
+                }
             } else {
-                let lhs_buf = lhs.data.as_ref();
                 for i_batch in 0..op.batch {
                     self.gemm_batch(
                         (op.groups, m, k, n),
@@ -236,8 +238,8 @@ where
                         [m * k, k, 1],
                         &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, 1, k],
-                        Default::default(),
-                        &mut grad_rhs.slice_mut(i_batch * op.groups * m * n..),
+                        E::ONE,
+                        grad_rhs,
                         [m * n, n, 1],
                     )
                     .unwrap();
