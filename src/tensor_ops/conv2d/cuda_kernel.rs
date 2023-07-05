@@ -143,7 +143,11 @@ where
     ) -> Result<(), Self::Err> {
         let patches_item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
         let patches_numel = op.batch * patches_item_numel;
-        let filters_numel = (op.chan_in / op.groups) * op.chan_out * op.kernel * op.kernel;
+        let filters_numel = op.groups
+            * (op.chan_in / op.groups)
+            * (op.chan_out / op.groups)
+            * op.kernel
+            * op.kernel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };

@@ -44,7 +44,7 @@ __device__ void unfold_input_into_patches(
             const size_t y = oh * op.stride + op.dilation * k1 - op.padding;
             for (int k2 = 0;k2 < op.kernel;k2++) {
                 const size_t x = ow * op.stride + op.dilation * k2 - op.padding;
-                *patches_i = (y >= op.h_in || x >= op.w_in) ? zero : image[y * strides[2] + x * strides[3]];
+                *patches_i = (y >= op.h_in || x >= op.w_in) ? zero : image_i[y * strides[2] + x * strides[3]];
                 patches_i += op.h_out * op.w_out;
             }
         }
@@ -86,7 +86,7 @@ __device__ void unfold_output_into_patches(
                 const size_t ow = ow_s / op.stride;
             
                 const bool invalid = k1_invalid || (ow_ks < op.dilation * k2 || ow_s % op.stride != 0 || ow >= op.w_out);
-                *patches_i = invalid ? zero : image_out[oh * op.w_out + ow];
+                *patches_i = invalid ? zero : image_i[oh * op.w_out + ow];
                 patches_i += op.h_in * op.w_in;
             }
         }
@@ -101,8 +101,8 @@ __device__ void transpose_filters(
     T *filters_tr // 5d (Groups, ChanIn/Groups, ChanOut/Groups, KernelSize, KernelSize)
 ) {
     const size_t c_per_g = op.chan_in / op.groups;
-    const size_t n = c_per_g * op.chan_out * op.kernel * op.kernel;
     const size_t o_per_g = op.chan_out / op.groups;
+    const size_t n = c_per_g * op.chan_out * op.kernel * op.kernel;
 
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
         unsigned int idx = i;
