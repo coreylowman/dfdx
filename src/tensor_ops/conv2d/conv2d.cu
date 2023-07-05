@@ -96,9 +96,9 @@ __device__ void unfold_output_into_patches(
 template<typename T>
 __device__ void transpose_filters(
     const Conv2DOp op,
-    const T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
+    const T *filters, // 4d (ChanOut, ChanIn/Groups, KernelSize, KernelSize)
     const size_t *strides, // 4d filters strides
-    T *filters_tr // 5d (Groups, ChanIn, ChanOut/Groups, KernelSize, KernelSize)
+    T *filters_tr // 5d (Groups, ChanIn/Groups, ChanOut/Groups, KernelSize, KernelSize)
 ) {
     const size_t c_per_g = op.chan_in / op.groups;
     const size_t n = c_per_g * op.chan_out * op.kernel * op.kernel;
@@ -110,17 +110,17 @@ __device__ void transpose_filters(
         idx /= op.kernel;
         const size_t k1 = idx % op.kernel;
         idx /= op.kernel;
-        const size_t c = idx % c_per_g;
+        const size_t cg = idx % c_per_g;
         idx /= c_per_g;
         const size_t o = idx % op.chan_out;
         const size_t og = o % o_per_g;
         const size_t g = o / o_per_g;
     
-        auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
+        auto i_no = o * strides[0] + cg * strides[1] + k1 * strides[2] + k2 * strides[3];
         T *filters_tr_i = filters_tr + k2;
         filters_tr_i += k1 * op.kernel;
         filters_tr_i += og * (op.kernel * op.kernel);
-        filters_tr_i += c * (o_per_g * op.kernel * op.kernel);
+        filters_tr_i += cg * (o_per_g * op.kernel * op.kernel);
         filters_tr_i += g * (c_per_g * o_per_g * op.kernel * op.kernel);
         *filters_tr_i = filters[i_no];
     }
@@ -129,8 +129,8 @@ __device__ void transpose_filters(
 template<typename T>
 __device__ void sum_transposed_filters(
     const Conv2DOp op,
-    const T *filters_tr, // 6d (Batch, Groups, ChanIn, ChanOut/Groups, KernelSize, KernelSize)
-    T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
+    const T *filters_tr, // 6d (Batch, Groups, ChanIn/Groups, ChanOut/Groups, KernelSize, KernelSize)
+    T *filters, // 4d (ChanOut, ChanIn/Groups, KernelSize, KernelSize)
     const size_t *strides // 4d filter strides
 ) {
     const size_t o_per_g = op.chan_out / op.groups;
@@ -143,18 +143,18 @@ __device__ void sum_transposed_filters(
         idx /= op.kernel;
         const size_t k1 = idx % op.kernel;
         idx /= op.kernel;
-        const size_t c = idx % c_per_g;
+        const size_t cg = idx % c_per_g;
         idx /= c_per_g;
         const size_t o = idx % op.chan_out;
         const size_t og = o % o_per_g;
         const size_t g = o / o_per_g;
     
-        auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
+        auto i_no = o * strides[0] + cg * strides[1] + k1 * strides[2] + k2 * strides[3];
     
         const T *filters_tr_i = filters_tr + k2;
         filters_tr_i += k1 * op.kernel;
         filters_tr_i += og * (op.kernel * op.kernel);
-        filters_tr_i += c * (o_per_g * op.kernel * op.kernel);
+        filters_tr_i += cg * (o_per_g * op.kernel * op.kernel);
         filters_tr_i += g * (c_per_g * o_per_g * op.kernel * op.kernel);
     
         T tmp = 0.0;
