@@ -234,25 +234,25 @@ mod tests {
             .forward_mut(dev.zeros::<Rank3<1, 8, 8>>());
     }
 
-    // #[test]
-    // fn test_conv_with_optimizer() {
-    //     let dev: TestDevice = Default::default();
+    #[test]
+    fn test_conv_with_optimizer() {
+        let dev: TestDevice = Default::default();
 
-    //     let mut m = dev.build_module::<ConvTrans2D<2, 4, 3>, TestDtype>();
+        let mut m = dev.build_module::<ConvTrans2D<2, 4, 3>, TestDtype>();
 
-    //     let weight_init = m.weight.clone();
+        let weight_init = m.weight.clone();
 
-    //     let mut opt = Sgd::new(&m, Default::default());
-    //     let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().leaky_trace());
-    //     let g = out.square().mean().backward();
+        let mut opt = Sgd::new(&m, Default::default());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().leaky_trace());
+        let g = out.square().mean().backward();
 
-    //     assert_ne!(
-    //         g.get(&m.weight).array(),
-    //         [[[[TestDtype::zero(); 3]; 3]; 2]; 4]
-    //     );
+        assert_ne!(
+            g.get(&m.weight).array(),
+            [[[[TestDtype::zero(); 3]; 3]; 4]; 2]
+        );
 
-    //     opt.update(&mut m, &g).expect("unused params");
+        opt.update(&mut m, &g).expect("unused params");
 
-    //     assert_ne!(weight_init.array(), m.weight.array());
-    // }
+        assert_ne!(weight_init.array(), m.weight.array());
+    }
 }
