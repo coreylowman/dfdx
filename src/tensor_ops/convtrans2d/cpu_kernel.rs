@@ -254,7 +254,6 @@ where
         let lhs = lhs.data.as_ref();
 
         let rhs = rhs.data.as_ref();
-        let grad_rhs = grad_rhs.data.as_mut();
         for i_batch in 0..op.batch {
             self.convtrans2d_backward(
                 &op,

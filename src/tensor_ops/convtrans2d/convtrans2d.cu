@@ -129,11 +129,11 @@ __device__ void transpose_filters(
     filters_tr += k1 * op.kernel;
     filters_tr += cg * (op.kernel * op.kernel);
     filters_tr += og * (c_per_g * op.kernel * op.kernel);
-    filters_tr += g * (o_per_g * * c_per_g * op.kernel * op.kernel);
+    filters_tr += g * (o_per_g * c_per_g * op.kernel * op.kernel);
     *filters_tr = filters[i_no];
 }
 
-#define CONV_OP(TYPENAME, UNFOLD_INPUT, UNFOLD_OUTPUT, TR_FILTERS, SUM_TR_FILTERS) \
+#define CONV_OP(TYPENAME, UNFOLD_INPUT, UNFOLD_OUTPUT, TR_FILTERS) \
 extern "C" __global__ void UNFOLD_INPUT( \
     const Conv2DOp op, \
     const TYPENAME *image, \

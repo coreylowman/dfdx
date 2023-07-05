@@ -100,7 +100,7 @@ where
             // generate patches for matmul
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
             let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
-            unsafe { unfold_fn.launch(cfg, (op, lhs.data.as_ref(), &img_strides, &mut patches)) }?;
+            unfold_fn.launch(cfg, (op, lhs.data.as_ref(), &img_strides, &mut patches))?;
 
             // prepare filters for backward operations by
             // swapping dims 0 and 1 and adding a batch dimension
@@ -163,7 +163,6 @@ where
         }
 
         let rhs = rhs.data.as_ref();
-        let grad_rhs = grad_rhs.data.as_mut();
 
         unsafe {
             self.par_stream.wait_for_default()?;
@@ -238,7 +237,7 @@ where
                         &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, 1, k],
                         Default::default(),
-                        grad_rhs.slice_mut(i_batch * op.groups * m * n..),
+                        &mut grad_rhs.slice_mut(i_batch * op.groups * m * n..),
                         [m * n, n, 1],
                     )
                     .unwrap();
