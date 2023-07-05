@@ -285,8 +285,9 @@ where
         let (img, filters) = self;
         assert_eq!(img.shape.1.size(), filters.shape.1.size() * groups.size());
         assert_eq!(filters.shape.2, filters.shape.3);
-        let (batch, _, h, w) = img.shape;
-        let (out_chan, inp_chan, kernel, _) = filters.shape;
+        let (batch, inp_chan, h, w) = img.shape;
+        let (out_chan, inp_chan_over_groups, kernel, _) = filters.shape;
+        assert_eq!(inp_chan / groups, inp_chan_over_groups);
         assert!(out_chan.size() % groups.size() == 0);
         if img.strides != img.shape.strides() || filters.strides != filters.shape.strides() {
             panic!("Image & filter inputs to conv2d must be contiguous");

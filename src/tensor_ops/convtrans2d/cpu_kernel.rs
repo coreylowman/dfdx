@@ -24,7 +24,7 @@ impl Cpu {
         &self,
         op: &ConvTrans2DOp,
         img: &[E],
-        filters: &[E],
+        filters_tr: &[E],
         out: &mut [E],
         buf: &mut [E],
     ) -> Result<(), CpuError>
@@ -33,7 +33,7 @@ impl Cpu {
     {
         {
             let mut i = 0;
-            for c in 0..(op.groups * op.chan_in) {
+            for c in 0..op.chan_in {
                 for k1 in 0..op.kernel {
                     for k2 in 0..op.kernel {
                         for oh in 0..op.h_out {
@@ -75,17 +75,17 @@ impl Cpu {
             }
         }
 
-        // LHS: (G, O/G, C*K*K)
-        // RHS: (G, C*K*K, OH * OW)
-        // OUT: (G, O/G, OH * OW)
+        // filters_tr: (G, O/G, C/G*K*K)
+        // patches: (G, C/G*K*K, OH*OW)
+        // output: (G, O/G, OH*OW)
         let m = op.chan_out / op.groups;
-        let k = op.chan_in * op.kernel * op.kernel;
+        let k = (op.chan_in / op.groups) * op.kernel * op.kernel;
         let n = op.w_out * op.h_out;
         for g in 0..op.groups {
             Self::matmul(
                 (m, k, n),
                 false,
-                filters[g * m * k..].as_ptr(),
+                filters_tr[g * m * k..].as_ptr(),
                 [k, 1],
                 buf[g * k * n..].as_ptr(),
                 [n, 1],
@@ -103,8 +103,8 @@ impl Cpu {
         op: &ConvTrans2DOp,
         img: &[E],
         grad_img: &mut [E],
-        filters_tr: &[E],
-        grad_filters_tr: &mut [E],
+        filters: &[E],
+        grad_filters: &mut [E],
         grad_out: &[E],
         buf: &mut [E],
     ) -> Result<(), CpuError>
@@ -131,17 +131,17 @@ impl Cpu {
         }
 
         {
-            // LHS: (G, C, O/G * K * K)
-            // RHS: (G, O/G * K * K, H * W)
-            // OUT: (G, C, H * W)
-            let m = op.chan_in;
+            // filters: (G, C/G, O/G*K*K)
+            // buf: (G, O/G*K*K, H*W)
+            // grad_img: (G, C/G, H * W)
+            let m = op.chan_in / op.groups;
             let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
             for g in 0..op.groups {
                 Self::matmul(
                     (m, k, n),
                     true,
-                    filters_tr[g * m * k..].as_ptr(),
+                    filters[g * m * k..].as_ptr(),
                     [k, 1],
                     buf[g * k * n..].as_ptr(),
                     [n, 1],
@@ -152,10 +152,10 @@ impl Cpu {
         }
 
         {
-            // LHS: (G, C, H * W)
-            // RHS: (G, H * W, O/G * K * K)
-            // OUT: (G, C, O/G * K * K)
-            let m = op.chan_in;
+            // img: (G, C/G, H * W)
+            // buf: (G, H * W, O/G * K * K)
+            // grad_filters: (G, C/G, O/G * K * K)
+            let m = op.chan_in / op.groups;
             let k = op.h_in * op.w_in;
             let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
             for g in 0..op.groups {
@@ -166,7 +166,7 @@ impl Cpu {
                     [k, 1],
                     buf[g * k * n..].as_ptr(),
                     [1, k],
-                    grad_filters_tr[g * m * n..].as_mut_ptr(),
+                    grad_filters[g * m * n..].as_mut_ptr(),
                     [n, 1],
                 );
             }
@@ -190,27 +190,42 @@ where
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        let patches = (
-            op.groups * op.chan_in,
-            op.kernel,
-            op.kernel,
-            op.h_out,
-            op.w_out,
-        );
+        let patches = (op.chan_in, op.kernel, op.kernel, op.h_out, op.w_out);
         let mut patches = self.try_alloc_zeros::<E>(patches.num_elements())?;
+        let f_tr_shape = [
+            op.groups,
+            op.chan_out / op.groups,
+            op.chan_in / op.groups,
+            op.kernel,
+            op.kernel,
+        ];
+        let mut f_tr = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
+
+        {
+            // transpose filters in f1023
+            let buf = rhs.data.as_ref();
+            let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
+            while let Some((i, [g, o_over_g, c_over_g, k1, k2])) = f_idx.next_with_idx() {
+                let idx = (g * (op.chan_in / op.groups) + c_over_g) * rhs.strides[0]
+                    + o_over_g * rhs.strides[1]
+                    + k1 * rhs.strides[2]
+                    + k2 * rhs.strides[3];
+                f_tr[i] = buf[idx];
+            }
+        }
+
         let [lstride, ostride] = match L::NUM_DIMS {
             3 => [0; 2],
             4 => [lhs.strides[0], out.strides[0]],
             _ => unreachable!(),
         };
         let lhs = lhs.data.as_ref();
-        let rhs = rhs.data.as_ref();
         let out = Arc::make_mut(&mut out.data);
         for i_batch in 0..op.batch {
             self.convtrans2d_forward(
                 &op,
                 &lhs[i_batch * lstride..],
-                rhs,
+                &f_tr,
                 &mut out[i_batch * ostride..],
                 &mut patches,
             )?;
@@ -228,30 +243,8 @@ where
         out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
-        let f_tr_shape = [
-            op.groups,
-            op.chan_in,
-            op.chan_out / op.groups,
-            op.kernel,
-            op.kernel,
-        ];
         let patches_shape = [op.chan_out, op.kernel, op.kernel, op.h_in, op.w_in];
         let mut patches = self.try_alloc_zeros::<E>(patches_shape.num_elements())?;
-        let mut f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
-        let mut grad_f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
-
-        {
-            // transpose filters in f1023
-            let buf = rhs.data.as_ref();
-            let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [g, c, o, k1, k2])) = f_idx.next_with_idx() {
-                let idx = (g * (op.chan_out / op.groups) + o) * rhs.strides[0]
-                    + c * rhs.strides[1]
-                    + k1 * rhs.strides[2]
-                    + k2 * rhs.strides[3];
-                f1023[i] = buf[idx];
-            }
-        }
 
         let [lstride, ostride] = match L::NUM_DIMS {
             3 => [0; 2],
@@ -260,28 +253,18 @@ where
         };
         let lhs = lhs.data.as_ref();
 
+        let rhs = rhs.data.as_ref();
+        let grad_rhs = grad_rhs.data.as_mut();
         for i_batch in 0..op.batch {
             self.convtrans2d_backward(
                 &op,
                 &lhs[i_batch * lstride..],
                 &mut grad_lhs[i_batch * lstride..],
-                &f1023,
-                &mut grad_f1023,
+                rhs,
+                grad_rhs,
                 &grad_out[i_batch * ostride..],
                 &mut patches,
             )?;
-        }
-
-        {
-            // untranspose filters
-            let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [g, c, o, k1, k2])) = f_idx.next_with_idx() {
-                let idx = (g * (op.chan_out / op.groups) + o) * rhs.strides[0]
-                    + c * rhs.strides[1]
-                    + k1 * rhs.strides[2]
-                    + k2 * rhs.strides[3];
-                grad_rhs[idx] += grad_f1023[i];
-            }
         }
 
         Ok(())
