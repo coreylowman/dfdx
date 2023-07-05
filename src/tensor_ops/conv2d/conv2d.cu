@@ -22,21 +22,21 @@ __device__ void unfold_input_into_patches(
     const size_t *strides, // 4d image strides
     T *patches // 6d (Batch, Groups * Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
-    const size_t n = op.batch * op.groups * op.chan_in * op.h_out * op.w_out;
+    const size_t n = op.batch * op.chan_in * op.h_out * op.w_out;
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
         unsigned int idx = i;
         const size_t ow = idx % op.w_out;
         idx /= op.w_out;
         const size_t oh = idx % op.h_out;
         idx /= op.h_out;
-        const size_t c = idx % (op.chan_in * op.groups);
-        idx /= (op.chan_in * op.groups);
+        const size_t c = idx % op.chan_in;
+        idx /= op.chan_in;
         const size_t b = idx % op.batch;
     
         const T *image_i = image + b * strides[0] + c * strides[1];
         T *patches_i = patches + oh * op.w_out + ow;
         patches_i += c * (op.kernel * op.kernel * op.h_out * op.w_out);
-        patches_i += b * (op.groups * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out);
+        patches_i += b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out);
     
         T zero = 0.0;
     
@@ -100,7 +100,8 @@ __device__ void transpose_filters(
     const size_t *strides, // 4d filters strides
     T *filters_tr // 5d (Groups, ChanIn, ChanOut/Groups, KernelSize, KernelSize)
 ) {
-    const size_t n = op.chan_in * op.chan_out * op.kernel * op.kernel;
+    const size_t c_per_g = op.chan_in / op.groups;
+    const size_t n = c_per_g * op.chan_out * op.kernel * op.kernel;
     const size_t o_per_g = op.chan_out / op.groups;
 
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
@@ -109,8 +110,8 @@ __device__ void transpose_filters(
         idx /= op.kernel;
         const size_t k1 = idx % op.kernel;
         idx /= op.kernel;
-        const size_t c = idx % op.chan_in;
-        idx /= op.chan_in;
+        const size_t c = idx % c_per_g;
+        idx /= c_per_g;
         const size_t o = idx % op.chan_out;
         const size_t og = o % o_per_g;
         const size_t g = o / o_per_g;
@@ -120,7 +121,7 @@ __device__ void transpose_filters(
         filters_tr_i += k1 * op.kernel;
         filters_tr_i += og * (op.kernel * op.kernel);
         filters_tr_i += c * (o_per_g * op.kernel * op.kernel);
-        filters_tr_i += g * (op.chan_in * o_per_g * op.kernel * op.kernel);
+        filters_tr_i += g * (c_per_g * o_per_g * op.kernel * op.kernel);
         *filters_tr_i = filters[i_no];
     }
 }
@@ -132,8 +133,9 @@ __device__ void sum_transposed_filters(
     T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
     const size_t *strides // 4d filter strides
 ) {
-    const size_t n = op.chan_out * op.chan_in * op.kernel * op.kernel;
     const size_t o_per_g = op.chan_out / op.groups;
+    const size_t c_per_g = op.chan_in / op.groups;
+    const size_t n = op.chan_out * c_per_g * op.kernel * op.kernel;
 
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
         unsigned int idx = i;
@@ -141,8 +143,8 @@ __device__ void sum_transposed_filters(
         idx /= op.kernel;
         const size_t k1 = idx % op.kernel;
         idx /= op.kernel;
-        const size_t c = idx % op.chan_in;
-        idx /= op.chan_in;
+        const size_t c = idx % c_per_g;
+        idx /= c_per_g;
         const size_t o = idx % op.chan_out;
         const size_t og = o % o_per_g;
         const size_t g = o / o_per_g;
@@ -153,7 +155,7 @@ __device__ void sum_transposed_filters(
         filters_tr_i += k1 * op.kernel;
         filters_tr_i += og * (op.kernel * op.kernel);
         filters_tr_i += c * (o_per_g * op.kernel * op.kernel);
-        filters_tr_i += g * (op.chan_in * o_per_g * op.kernel * op.kernel);
+        filters_tr_i += g * (c_per_g * o_per_g * op.kernel * op.kernel);
     
         T tmp = 0.0;
         for (int b = 0; b < op.batch; b++) {

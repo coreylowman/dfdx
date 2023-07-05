@@ -76,8 +76,7 @@ where
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let patches_item_numel =
-            op.groups * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
+        let patches_item_numel = op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
         let patches_numel = op.batch * patches_item_numel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
@@ -89,16 +88,15 @@ where
 
         unsafe {
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-            let cfg =
-                launch_cfg::<128>((op.batch * op.groups * op.chan_in * op.h_out * op.w_out) as u32);
+            let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
             let params = (op, img.data.as_ref(), &img_strides, &mut patches);
             unfold_fn.launch(cfg, params)?;
 
-            // LHS    (G, O/G, C*K*K)
-            // RHS (B, G, C*K*K, OH*OW)
+            // LHS    (G, O/G, C/G*K*K)
+            // RHS (B, G, C/G*K*K, OH*OW)
             // OUT (B, G, O/G, OH*OW)
             let m = op.chan_out / op.groups;
-            let k = op.chan_in * op.kernel * op.kernel;
+            let k = (op.chan_in / op.groups) * op.kernel * op.kernel;
             let n = op.h_out * op.w_out;
             if op.groups == 1 {
                 // optimizing here for common case
@@ -145,7 +143,7 @@ where
     ) -> Result<(), Self::Err> {
         let patches_item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
         let patches_numel = op.batch * patches_item_numel;
-        let filters_numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
+        let filters_numel = (op.chan_in / op.groups) * op.chan_out * op.kernel * op.kernel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
@@ -177,10 +175,10 @@ where
             self.par_stream.wait_for_default()?;
 
             // img_g += filters * patches
-            // LHS =    (G, C, O/G*K*K)
+            // LHS =    (G, C/G, O/G*K*K)
             // RHS = (B, G, O/G*K*K, H*W)
-            // OUT = (B, G, C, H*W)
-            let m = op.chan_in;
+            // OUT = (B, G, C/G, H*W)
+            let m = op.chan_in / op.groups;
             let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
@@ -217,10 +215,10 @@ where
 
         unsafe {
             // weight_g += img * patches^T
-            // LHS = (B, G, C, H*W)
+            // LHS = (B, G, C/G, H*W)
             // RHS = (B, H*W, G, O/G*K*K)
-            // OUT = (B, G, C, O/G*K*K)
-            let m = op.chan_in;
+            // OUT = (B, G, C/G, O/G*K*K)
+            let m = op.chan_in / op.groups;
             let k = op.h_in * op.w_in;
             let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
             if op.groups == 1 {
