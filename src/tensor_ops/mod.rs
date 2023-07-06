@@ -166,6 +166,7 @@ mod div;
 mod dropout;
 mod exp;
 mod gelu;
+mod gelu_correct;
 mod huber_error;
 mod ln;
 mod log_softmax;
