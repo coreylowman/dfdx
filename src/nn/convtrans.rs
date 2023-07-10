@@ -104,7 +104,8 @@ where
                 |s| &s.weight,
                 |s| &mut s.weight,
                 TensorOptions::reset_with(|t| {
-                    let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
+                    let scale = E::from_f64(G as f64 / (I * K * K) as f64).unwrap();
+                    let b = scale.sqrt();
                     t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
                 }),
             ),
