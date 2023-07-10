@@ -1,7 +1,7 @@
 use crate::{
     shapes::{Dtype, Shape},
     tensor::{
-        numpy::{NpzError, NumpyDtype},
+        numpy::{read_from_npz, write_to_npz, NpzError, NumpyDtype},
         Tensor,
     },
     tensor_ops::Device,
@@ -129,6 +129,18 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
         t.write_to_npz(self, full_path)?;
         Ok(None)
     }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        _opts: ScalarOptions<N>,
+        (n, full_path): (&N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        let n = n
+            .to_f64()
+            .unwrap_or_else(|| panic!("Failed to convert scalar value at {full_path} to f64!"));
+        write_to_npz(self, &[], &[n], full_path)?;
+        Ok(None)
+    }
 }
 
 impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
@@ -145,6 +157,22 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
         (t, full_path): (&mut Tensor<S, E, D>, String),
     ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         t.read_from_npz(self, full_path)?;
+        Ok(None)
+    }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        _opts: ScalarOptions<N>,
+        (n, full_path): (&mut N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        let buf: Vec<f64> = read_from_npz(self, &[], full_path)?;
+        *n = N::from(buf[0]).unwrap_or_else(|| {
+            panic!(
+                "Failed to convert f64 value {} to {} when reading from npz!",
+                buf[0],
+                std::any::type_name::<N>()
+            )
+        });
         Ok(None)
     }
 }

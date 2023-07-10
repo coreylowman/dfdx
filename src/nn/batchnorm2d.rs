@@ -272,14 +272,26 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
                     |s| &mut s.running_var,
                     TensorOptions::detached(|t| t.try_fill_with_ones()),
                 ),
+                Self::scalar(
+                    "epsilon",
+                    |s| &s.epsilon,
+                    |s| &mut s.epsilon,
+                    ScalarOptions::from_default(1e-5),
+                ),
+                Self::scalar(
+                    "momentum",
+                    |s| &s.momentum,
+                    |s| &mut s.momentum,
+                    ScalarOptions::from_default(0.1),
+                ),
             ),
-            |(scale, bias, running_mean, running_var)| BatchNorm2D {
+            |(scale, bias, running_mean, running_var, epsilon, momentum)| BatchNorm2D {
                 scale,
                 bias,
                 running_mean,
                 running_var,
-                epsilon: 1e-5,
-                momentum: 0.1,
+                epsilon,
+                momentum,
             },
         )
     }

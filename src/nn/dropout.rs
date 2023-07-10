@@ -129,7 +129,27 @@ impl Default for Dropout {
     }
 }
 
-impl ZeroSizedModule for Dropout {}
+impl<D: Device<E>, E: Dtype> BuildOnDevice<D, E> for Dropout {
+    type Built = Dropout;
+}
+
+impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for Dropout {
+    type To<E2: Dtype, D2: Device<E2>> = Dropout;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            <Self as TensorCollection<E, D>>::scalar(
+                "p",
+                |s| &s.p,
+                |s| &mut s.p,
+                ScalarOptions::from_default(0.5),
+            ),
+            |p| Dropout { p },
+        )
+    }
+}
 
 impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout {
     type Output = Tensor<S, E, D, NoneTape>;
