@@ -79,6 +79,22 @@ impl<S: Shape, D: UnaryKernel<ScalarSubKernelOp<half::f16>, half::f16>, T: Tape<
     }
 }
 
+#[cfg(feature = "f16")]
+impl<
+        S: Shape,
+        D: UnaryKernel<
+            ScalarSubKernelOp<crate::dtypes::AMP<half::f16>>,
+            crate::dtypes::AMP<half::f16>,
+        >,
+        T: Tape<crate::dtypes::AMP<half::f16>, D>,
+    > TrySub<f32> for Tensor<S, crate::dtypes::AMP<half::f16>, D, T>
+{
+    fn try_sub(self, rhs: f32) -> Result<Self, Self::Err> {
+        let scalar = crate::dtypes::AMP(half::f16::from_f32(rhs));
+        try_unary_op(ScalarSubKernelOp { scalar }, self)
+    }
+}
+
 impl<S: Shape, E: Dtype, D: Storage<E>, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
     for Tensor<S, E, D, LTape>
 where

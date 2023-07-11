@@ -64,6 +64,7 @@ numpy = ["dep:zip", "std"]
 safetensors = ["dep:safetensors", "std", "dep:memmap2"]
 
 test-f16 = ["f16"]
+test-amp-f16 = ["f16"]
 test-f64 = []
 test-integrations = []
 ci-check = ["cudarc?/ci-check"]
