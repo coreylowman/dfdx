@@ -192,6 +192,7 @@ mod bias2d;
 mod conv1d;
 #[cfg(feature = "nightly")]
 mod conv2d;
+#[cfg(feature = "nightly")]
 mod convtrans;
 mod dropout;
 mod ema;
