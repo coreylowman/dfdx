@@ -10,15 +10,6 @@ mod cudnn_kernel;
 #[cfg(test)]
 mod tests;
 
-// #[cfg(all(not(feature = "cudnn"), feature = "cuda"))]
-// mod cuda_kernel;
-//
-// #[cfg(feature = "cudnn")]
-// mod cudnn_kernel;
-
-#[cfg(test)]
-mod tests;
-
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub(super) struct Conv1DOp {
