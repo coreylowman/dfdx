@@ -174,7 +174,6 @@
 //! ```
 
 mod build_module;
-mod gradients_as_model;
 mod num_params;
 mod reset_params;
 pub mod tensor_collection;

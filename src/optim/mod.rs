@@ -34,6 +34,7 @@ mod adam;
 mod optimizer;
 mod rmsprop;
 mod sgd;
+mod serialize;
 
 pub use adam::{Adam, AdamConfig, AdamKernel};
 pub use optimizer::{Momentum, WeightDecay};
