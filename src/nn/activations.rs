@@ -26,7 +26,7 @@ macro_rules! activation_impls {
 
 activation_impls!(ReLU, try_relu, #[doc="Calls [relu()]."]);
 activation_impls!(GeLU, try_gelu, #[doc="Calls [gelu()]."]);
-activation_impls!(GeLUCorrect, try_gelu_correct, #[doc="Calls [gelu_correct()]."]);
+activation_impls!(AccurateGeLU, try_accurate_gelu, #[doc="Calls [accurate_gelu()]."]);
 activation_impls!(Sin, try_sin, #[doc="Calls [sin()]."]);
 activation_impls!(Cos, try_cos, #[doc="Calls [cos()]."]);
 activation_impls!(Ln, try_ln, #[doc="Calls [ln()]."]);
@@ -77,11 +77,11 @@ mod tests {
     }
 
     #[test]
-    fn test_nn_activations_gelu_correct() {
+    fn test_nn_activations_accurate_gelu() {
         let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = GeLUCorrect.forward_mut(t.clone());
-        let r2 = gelu_correct(t);
+        let r1 = AccurateGeLU.forward_mut(t.clone());
+        let r2 = accurate_gelu(t);
         assert_eq!(r1.array(), r2.array());
     }
 

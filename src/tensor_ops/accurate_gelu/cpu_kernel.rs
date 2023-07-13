@@ -27,7 +27,7 @@ impl Erf for f32 {
     }
 }
 
-impl<F: Float + FloatConst + Erf> UnaryDerivative<F> for super::GeLUCorrectKernelOp {
+impl<F: Float + FloatConst + Erf> UnaryDerivative<F> for super::AccurateGeLUKernelOp {
     const DF_USES_FX: bool = false;
     const HAS_CONST_DF: bool = false;
     #[inline(always)]

@@ -8,7 +8,7 @@ use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
-pub struct GeLUCorrectKernelOp;
+pub struct AccurateGeLUKernelOp;
 
 /// [Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). `x * Phi(x)`
 ///
@@ -19,20 +19,22 @@ pub struct GeLUCorrectKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.gelu_correct();
 /// ```
-pub fn gelu_correct<S: Shape, E: Dtype, D: UnaryKernel<GeLUCorrectKernelOp, E>, T: Tape<E, D>>(
+pub fn accurate_gelu<S: Shape, E: Dtype, D: UnaryKernel<AccurateGeLUKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
-    t.gelu_correct()
+    t.accurate_gelu()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<GeLUCorrectKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<AccurateGeLUKernelOp, E>, T: Tape<E, D>>
+    Tensor<S, E, D, T>
+{
     /// See [gelu]
-    pub fn gelu_correct(self) -> Self {
-        self.try_gelu_correct().unwrap()
+    pub fn accurate_gelu(self) -> Self {
+        self.try_accurate_gelu().unwrap()
     }
     /// See [gelu]
-    pub fn try_gelu_correct(self) -> Result<Self, D::Err> {
-        try_unary_op(GeLUCorrectKernelOp, self)
+    pub fn try_accurate_gelu(self) -> Result<Self, D::Err> {
+        try_unary_op(AccurateGeLUKernelOp, self)
     }
 }
 
@@ -41,12 +43,12 @@ mod tests {
     use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
-    fn test_gelu_correct() {
+    fn test_accurate_gelu() {
         let dev: TestDevice = Default::default();
         let x = dev
             .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
             .to_dtype::<TestDtype>();
-        let r = x.leaky_trace().gelu_correct();
+        let r = x.leaky_trace().accurate_gelu();
 
         assert_close_to_literal!(r, [-0.04550027, -0.15865525, 0.0, 0.84134471, 1.9544997,]);
         // NOTE: call .exp() to make sure we cover cases where .gelu() uses the result's gradient
