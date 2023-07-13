@@ -12,7 +12,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
+use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay, SerializeWithModel};
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -163,11 +163,60 @@ impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for A
     }
 }
 
-struct AdamSerializer<M> {
-    config: AdamConfig,
+#[derive(Clone)]
+pub struct AdamSerializer<M> {
+    cfg: AdamConfig,
     t: i32,
     moment1: M,
     moment2: M,
+}
+
+impl<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> TensorCollection<E, D> for AdamSerializer<M> {
+    type To<E2: Dtype, D2: Device<E2>> = AdamSerializer<M::To<E2, D2>>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                // TODO: AdamConfig
+                Self::scalar("t", |s| &s.t, |s| &mut s.t, ScalarOptions::from_default(0)),
+                Self::module("moment1", |s| &s.moment1, |s| &mut s.moment1),
+                Self::module("moment2", |s| &s.moment2, |s| &mut s.moment2),
+            ),
+            |(t, moment1, moment2)| {
+                AdamSerializer {
+                    cfg: AdamConfig::default(),
+                    t,
+                    moment1,
+                    moment2,
+                }
+            }
+        )
+    }
+}
+
+impl<M: TensorCollection<E, D, To<E, D> = M> + Clone, E: Dtype, D: Device<E>> SerializeWithModel<M, E, D> for Adam<M, E, D> {
+    type Serializer = AdamSerializer<M>;
+
+    fn try_to_serializer(&self, model: &M) -> Result<AdamSerializer<M>, D::Err> {
+        Ok(AdamSerializer {
+            cfg: self.cfg,
+            t: self.t,
+            moment1: self.moment1.try_to_serializer(model)?,
+            moment2: self.moment2.try_to_serializer(model)?,
+        })
+    }
+
+    fn try_from_serializer(serializer: &AdamSerializer<M>, model: &M) -> Result<Self, D::Err> {
+        Ok(Adam {
+            cfg: serializer.cfg,
+            t: serializer.t,
+            moment1: Gradients::try_from_serializer(&serializer.moment1, model)?,
+            moment2: Gradients::try_from_serializer(&serializer.moment2, model)?,
+            marker: Default::default()
+        })
+    }
 }
 
 #[cfg(test)]
