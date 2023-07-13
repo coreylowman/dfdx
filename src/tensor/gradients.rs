@@ -44,20 +44,16 @@ impl<E, D: Storage<E>> Gradients<E, D> {
 
 impl<E, D: Storage<E>> Gradients<E, D> {
     /// Retrieves mutable gradient for `t`, allocating one if it isn't present.
-    pub(crate) fn get_or_alloc_mut<S: Shape>(
+    pub fn get_or_alloc_mut<S: Shape>(
         &mut self,
-        t: &Tensor<S, E, D>,
+        t: &impl Tensorlike<S, E, D>,
     ) -> Result<&mut D::Vec, D::Err> {
-        let ghost = t.ghost();
-        self.try_alloc_for(&ghost)?;
-        Ok(self.get_mut(&ghost))
+        self.try_alloc_for(t)?;
+        Ok(self.get_mut(t))
     }
 
     /// Inserts a gradient for `t`
-    pub(crate) fn try_alloc_for<S: Shape>(
-        &mut self,
-        t: &impl Tensorlike<S, E, D>,
-    ) -> Result<(), D::Err> {
+    pub fn try_alloc_for<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> Result<(), D::Err> {
         if let std::collections::btree_map::Entry::Vacant(e) = self.gradient_by_id.entry(t.id()) {
             e.insert(t.try_alloc_grad()?);
         }
@@ -92,7 +88,7 @@ impl<E, D: Storage<E>> Gradients<E, D> {
         self.gradient_by_id.get_mut(&t.id()).unwrap()
     }
 
-    /// Returns a mutable reference to the data associated with `t`.
+    /// Returns an immutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
     pub(crate) fn get_ref<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &D::Vec {
@@ -104,14 +100,14 @@ impl<E, D: Storage<E>> Gradients<E, D> {
     /// # Panics
     /// If no data is associated with `t` yet, this will panic due to an unwrap()
     /// on a .get() to the underlying hashmap.
-    pub fn get<S: Shape, T>(&self, t: &Tensor<S, E, D, T>) -> Tensor<S, E, D> {
-        let buf = self.gradient_by_id.get(&t.id).unwrap().clone();
+    pub fn get<S: Shape, T>(&self, t: &impl Tensorlike<S, E, D>) -> Tensor<S, E, D> {
+        let buf = self.gradient_by_id.get(&t.id()).unwrap().clone();
         Tensor {
             id: unique_id(),
             data: std::sync::Arc::new(buf),
-            shape: t.shape,
-            strides: t.strides,
-            device: t.device.clone(),
+            shape: *t.shape(),
+            strides: t.strides(),
+            device: t.dev().clone(),
             tape: Default::default(),
         }
     }
