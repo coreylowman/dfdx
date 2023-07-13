@@ -13,7 +13,7 @@ pub(crate) fn index_to_i<S: Shape>(shape: &S, strides: &S::Concrete, index: S::C
     }
     strides
         .into_iter()
-        .zip(index.into_iter())
+        .zip(index)
         .map(|(a, b)| a * b)
         .sum()
 }
