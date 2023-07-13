@@ -1,24 +1,25 @@
+#[cfg(any(feature = "safetensor", feature = "numpy"))]
 use std::path::Path;
 
 use crate::{
+    nn::tensor_collection::*,
     shapes::{Dtype, Shape},
     tensor::{Gradients, Tensor},
     tensor_ops::Device,
-    nn::tensor_collection::*,
 };
 
 #[cfg(feature = "numpy")]
 use crate::{
     nn::{LoadFromNpz, SaveToNpz},
-    tensor::{NumpyDtype, numpy::NpzError},
+    tensor::{numpy::NpzError, NumpyDtype},
 };
 
 #[cfg(feature = "numpy")]
-use zip::{ZipWriter, ZipArchive, result::ZipResult};
+use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 #[cfg(feature = "safetensors")]
 use crate::{
-    nn::{SaveToSafetensors, LoadFromSafetensors},
+    nn::{LoadFromSafetensors, SaveToSafetensors},
     tensor::safetensors::SafeDtype,
 };
 
@@ -61,7 +62,7 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Gradients<E, D> {
 
 impl<M, E: Dtype, D: Device<E>> SerializeWithModel<M, E, D> for Gradients<E, D>
 where
-    M: TensorCollection<E, D, To<E, D> = M> + Clone
+    M: TensorCollection<E, D, To<E, D> = M> + Clone,
 {
     fn try_to_model(&self, model: &M) -> Result<M, <D>::Err> {
         let mut f = self;
@@ -85,7 +86,7 @@ where
 
 pub trait SerializeWithModel<M, E: Dtype, D: Device<E>>: Sized
 where
-    M: TensorCollection<E, D> + Clone
+    M: TensorCollection<E, D> + Clone,
 {
     /// Fallible version of [Gradients::to_model]
     fn try_to_model(&self, model: &M) -> Result<M, D::Err>;
@@ -131,7 +132,7 @@ where
     #[cfg(feature = "numpy")]
     fn load<P: AsRef<Path>>(&mut self, path: P, model: &M) -> Result<(), NpzError>
     where
-        E: NumpyDtype
+        E: NumpyDtype,
     {
         let mut data = model.clone();
         data.load(path)?;
@@ -154,16 +155,26 @@ where
 
     /// See [SaveToSafetensors::save_safetensors].
     #[cfg(feature = "safetensors")]
-    fn save_safetensors<P: AsRef<Path>>(&self, path: P, model: &M) -> Result<(), safetensors::SafeTensorError>
-        where E: SafeDtype
+    fn save_safetensors<P: AsRef<Path>>(
+        &self,
+        path: P,
+        model: &M,
+    ) -> Result<(), safetensors::SafeTensorError>
+    where
+        E: SafeDtype,
     {
         self.to_model(model).save_safetensors(path)
     }
 
     /// See [LoadFromSafetensors::load_safetensors].
     #[cfg(feature = "safetensors")]
-    fn load_safetensors<P: AsRef<Path>>(&mut self, path: P, model: &M) -> Result<(), crate::tensor::safetensors::Error>
-        where E: SafeDtype
+    fn load_safetensors<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        model: &M,
+    ) -> Result<(), crate::tensor::safetensors::Error>
+    where
+        E: SafeDtype,
     {
         let mut data = model.clone();
         data.load_safetensors(path)?;
