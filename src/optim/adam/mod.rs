@@ -163,6 +163,13 @@ impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for A
     }
 }
 
+struct AdamSerializer<M> {
+    config: AdamConfig,
+    t: i32,
+    moment1: M,
+    moment2: M,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
