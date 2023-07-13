@@ -100,7 +100,7 @@ impl<E, D: Storage<E>> Gradients<E, D> {
     /// # Panics
     /// If no data is associated with `t` yet, this will panic due to an unwrap()
     /// on a .get() to the underlying hashmap.
-    pub fn get<S: Shape, T>(&self, t: &impl Tensorlike<S, E, D>) -> Tensor<S, E, D> {
+    pub fn get<S: Shape>(&self, t: &impl Tensorlike<S, E, D>) -> Tensor<S, E, D> {
         let buf = self.gradient_by_id.get(&t.id()).unwrap().clone();
         Tensor {
             id: unique_id(),
