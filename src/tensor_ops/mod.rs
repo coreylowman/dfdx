@@ -224,6 +224,7 @@ pub use div::{div, TryDiv};
 pub use dropout::dropout;
 pub use exp::exp;
 pub use gelu::gelu;
+pub use gelu_correct::gelu_correct;
 pub use huber_error::huber_error;
 pub use ln::ln;
 pub use log_softmax::log_softmax;

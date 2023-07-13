@@ -1,9 +1,18 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
+#[cfg(feature = "f16")]
+use half::f16;
 use libm::{erf, erff};
 use num_traits::{Float, FloatConst};
 
 trait Erf {
     fn erf(self) -> Self;
+}
+
+#[cfg(feature = "f16")]
+impl Erf for f16 {
+    fn erf(self) -> Self {
+        f16::from_f32(erff(f16::to_f32(self)))
+    }
 }
 
 impl Erf for f64 {

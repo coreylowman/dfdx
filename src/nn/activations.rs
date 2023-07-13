@@ -77,6 +77,15 @@ mod tests {
     }
 
     #[test]
+    fn test_nn_activations_gelu_correct() {
+        let dev: TestDevice = Default::default();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = GeLUCorrect.forward_mut(t.clone());
+        let r2 = gelu_correct(t);
+        assert_eq!(r1.array(), r2.array());
+    }
+
+    #[test]
     fn test_nn_activations_gelu() {
         let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
