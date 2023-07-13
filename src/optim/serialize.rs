@@ -1,4 +1,4 @@
-#[cfg(any(feature = "safetensor", feature = "numpy"))]
+#[cfg(any(feature = "safetensors", feature = "numpy"))]
 use std::path::Path;
 
 use crate::{
