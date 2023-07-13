@@ -191,6 +191,7 @@ mod batchnorm2d;
 mod bias2d;
 #[cfg(feature = "nightly")]
 mod conv;
+#[cfg(feature = "nightly")]
 mod convtrans;
 mod dropout;
 mod ema;
