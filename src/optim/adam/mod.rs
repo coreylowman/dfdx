@@ -12,7 +12,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay, SerializeWithModel};
+use super::{Optimizer, OptimizerUpdateError, SerializeWithModel, UnusedTensors, WeightDecay};
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -171,7 +171,9 @@ pub struct AdamSerializer<M> {
     moment2: M,
 }
 
-impl<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> TensorCollection<E, D> for AdamSerializer<M> {
+impl<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> TensorCollection<E, D>
+    for AdamSerializer<M>
+{
     type To<E2: Dtype, D2: Device<E2>> = AdamSerializer<M::To<E2, D2>>;
 
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
@@ -184,19 +186,19 @@ impl<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> TensorCollection<E, D> f
                 Self::module("moment1", |s| &s.moment1, |s| &mut s.moment1),
                 Self::module("moment2", |s| &s.moment2, |s| &mut s.moment2),
             ),
-            |(t, moment1, moment2)| {
-                AdamSerializer {
-                    cfg: AdamConfig::default(),
-                    t,
-                    moment1,
-                    moment2,
-                }
-            }
+            |(t, moment1, moment2)| AdamSerializer {
+                cfg: AdamConfig::default(),
+                t,
+                moment1,
+                moment2,
+            },
         )
     }
 }
 
-impl<M: TensorCollection<E, D, To<E, D> = M> + Clone, E: Dtype, D: Device<E>> SerializeWithModel<M, E, D> for Adam<M, E, D> {
+impl<M: TensorCollection<E, D, To<E, D> = M> + Clone, E: Dtype, D: Device<E>>
+    SerializeWithModel<M, E, D> for Adam<M, E, D>
+{
     type Serializer = AdamSerializer<M>;
 
     fn try_to_serializer(&self, model: &M) -> Result<AdamSerializer<M>, D::Err> {
@@ -214,7 +216,7 @@ impl<M: TensorCollection<E, D, To<E, D> = M> + Clone, E: Dtype, D: Device<E>> Se
             t: serializer.t,
             moment1: Gradients::try_from_serializer(&serializer.moment1, model)?,
             moment2: Gradients::try_from_serializer(&serializer.moment2, model)?,
-            marker: Default::default()
+            marker: Default::default(),
         })
     }
 }
