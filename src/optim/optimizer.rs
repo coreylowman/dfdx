@@ -33,6 +33,23 @@ pub(super) fn weight_decay_to_cuda(wd: Option<WeightDecay>) -> (WeightDecayType,
     }
 }
 
+pub(super) fn serialize_weight_decay(wd: Option<WeightDecay>) -> (u64, f64) {
+    match wd {
+        None => (0, 0.0),
+        Some(WeightDecay::L2(x)) => (1, x),
+        Some(WeightDecay::Decoupled(x)) => (2, x),
+    }
+}
+
+pub(super) fn deserialize_weight_decay(serialized: (u64, f64)) -> Option<WeightDecay> {
+    match serialized.0 {
+        0 => None,
+        1 => Some(WeightDecay::L2(serialized.1)),
+        2 => Some(WeightDecay::Decoupled(serialized.1)),
+        _ => panic!("Improperly serialized Weight Decay!")
+    }
+}
+
 /// Momentum used for [super::Sgd] and others
 #[derive(Debug, Clone, Copy)]
 pub enum Momentum {
@@ -54,11 +71,28 @@ pub(super) enum MomentumType {
 }
 
 #[cfg(feature = "cuda")]
-pub(super) fn momentum_to_cuda(wd: Option<Momentum>) -> (MomentumType, f64) {
-    match wd {
+pub(super) fn momentum_to_cuda(momentum: Option<Momentum>) -> (MomentumType, f64) {
+    match momentum {
         None => (MomentumType::None, Default::default()),
         Some(Momentum::Classic(x)) => (MomentumType::Classic, x),
         Some(Momentum::Nesterov(x)) => (MomentumType::Nesterov, x),
+    }
+}
+
+pub(super) fn serialize_momentum(momentum: Option<Momentum>) -> (u64, f64) {
+    match momentum {
+        None => (0, 0.0),
+        Some(Momentum::Classic(x)) => (1, x),
+        Some(Momentum::Nesterov(x)) => (2, x),
+    }
+}
+
+pub(super) fn deserialize_momentum(serialized: (u64, f64)) -> Option<Momentum> {
+    match serialized.0 {
+        0 => None,
+        1 => Some(Momentum::Classic(serialized.1)),
+        2 => Some(Momentum::Nesterov(serialized.1)),
+        _ => panic!("Improperly serialized Weight Decay!")
     }
 }
 

@@ -12,7 +12,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{Optimizer, OptimizerUpdateError, SerializeWithModel, UnusedTensors, WeightDecay};
+use super::{Optimizer, OptimizerUpdateError, SerializeWithModel, UnusedTensors, WeightDecay, optimizer::{serialize_weight_decay, deserialize_weight_decay}};
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -163,9 +163,13 @@ impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for A
     }
 }
 
+/// Used internally to serialize/deserialize Adam optimizers.
 #[derive(Clone)]
 pub struct AdamSerializer<M> {
-    cfg: AdamConfig,
+    lr: f64,
+    betas: [f64; 2],
+    eps: f64,
+    weight_decay: (u64, f64),
     t: i32,
     moment1: M,
     moment2: M,
@@ -181,13 +185,23 @@ impl<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> TensorCollection<E, D>
     ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         visitor.visit_fields(
             (
-                // TODO: AdamConfig
+                (
+                    Self::scalar("lr", |s| &s.lr, |s| &mut s.lr, ScalarOptions::from_default(1e-3)),
+                    Self::scalar("beta0", |s| &s.betas[0], |s| &mut s.betas[0], ScalarOptions::from_default(0.9)),
+                    Self::scalar("beta1", |s| &s.betas[1], |s| &mut s.betas[1], ScalarOptions::from_default(0.99)),
+                    Self::scalar("eps", |s| &s.eps, |s| &mut s.eps, ScalarOptions::from_default(1e-8)),
+                    Self::scalar("wd_tag", |s| &s.weight_decay.0, |s| &mut s.weight_decay.0, ScalarOptions::from_default(0.0)),
+                    Self::scalar("wd_val", |s| &s.weight_decay.1, |s| &mut s.weight_decay.1, ScalarOptions::from_default(0.0)),
+                ),
                 Self::scalar("t", |s| &s.t, |s| &mut s.t, ScalarOptions::from_default(0)),
                 Self::module("moment1", |s| &s.moment1, |s| &mut s.moment1),
                 Self::module("moment2", |s| &s.moment2, |s| &mut s.moment2),
             ),
-            |(t, moment1, moment2)| AdamSerializer {
-                cfg: AdamConfig::default(),
+            |((lr, beta0, beta1, eps, wd_tag, wd_val), t, moment1, moment2)| AdamSerializer {
+                lr,
+                betas: [beta0, beta1],
+                eps,
+                weight_decay: (wd_tag, wd_val),
                 t,
                 moment1,
                 moment2,
@@ -203,7 +217,10 @@ impl<M: TensorCollection<E, D, To<E, D> = M> + Clone, E: Dtype, D: Device<E>>
 
     fn try_to_serializer(&self, model: &M) -> Result<AdamSerializer<M>, D::Err> {
         Ok(AdamSerializer {
-            cfg: self.cfg,
+            lr: self.cfg.lr,
+            betas: self.cfg.betas,
+            eps: self.cfg.eps,
+            weight_decay: serialize_weight_decay(self.cfg.weight_decay),
             t: self.t,
             moment1: self.moment1.try_to_serializer(model)?,
             moment2: self.moment2.try_to_serializer(model)?,
@@ -212,7 +229,12 @@ impl<M: TensorCollection<E, D, To<E, D> = M> + Clone, E: Dtype, D: Device<E>>
 
     fn try_from_serializer(serializer: &AdamSerializer<M>, model: &M) -> Result<Self, D::Err> {
         Ok(Adam {
-            cfg: serializer.cfg,
+            cfg: AdamConfig {
+                lr: serializer.lr,
+                betas: serializer.betas,
+                eps: serializer.eps,
+                weight_decay: deserialize_weight_decay(serializer.weight_decay),
+            },
             t: serializer.t,
             moment1: Gradients::try_from_serializer(&serializer.moment1, model)?,
             moment2: Gradients::try_from_serializer(&serializer.moment2, model)?,
