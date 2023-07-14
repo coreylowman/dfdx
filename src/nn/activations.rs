@@ -26,7 +26,7 @@ macro_rules! activation_impls {
 
 activation_impls!(ReLU, try_relu, #[doc="Calls [relu()]."]);
 activation_impls!(GeLU, try_gelu, #[doc="Calls [gelu()]."]);
-activation_impls!(AccurateGeLU, try_accurate_gelu, #[doc="Calls [accurate_gelu()]."]);
+activation_impls!(AccurateGeLU, try_accurate_gelu, #[doc="Calls [accurate_gelu()]. The GeLU is defined as x * Phi(x) where Phi is the cumulative distribution function of a standard Normal Distribution. It is often implemented with a fast approximation using tanh (see [GeLU])"]);
 activation_impls!(Sin, try_sin, #[doc="Calls [sin()]."]);
 activation_impls!(Cos, try_cos, #[doc="Calls [cos()]."]);
 activation_impls!(Ln, try_ln, #[doc="Calls [ln()]."]);

@@ -10,7 +10,7 @@ use crate::{shapes::*, tensor::*};
 #[derive(Debug, Default, Copy, Clone)]
 pub struct GeLUKernelOp;
 
-/// [Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). `0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))`
+/// [Fast Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). `0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))`
 ///
 /// Examples:
 /// ```rust

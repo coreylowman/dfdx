@@ -10,14 +10,28 @@ use crate::{shapes::*, tensor::*};
 #[derive(Debug, Default, Copy, Clone)]
 pub struct AccurateGeLUKernelOp;
 
-/// [Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). `x * Phi(x)`
+/// [Accurate Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). This is defined as `x * Phi(x)` where `Phi(x)` is the cumulative
+/// distribution function of a standard normal distribution. This can be calculated via the Error
+/// Function `erf(x)` using
+/// ```text
+/// 0.5 * x * (1.0 + erf(x / 2.0.sqrt()))
+/// ```
+/// As an accurate error function is [computationally expensive](https://en.wikipedia.org/wiki/Error_function#Numerical_approximations) it is
+/// possible to approximate the Gaussian Linear Unit with a hyperbolic tangent function `tanh`
+///
+/// ```text
+/// GeLU(x) ~ 0.5 ∗ x ∗ (1.0 + tanh((sqrt(2.0/π) ∗ (x + 0.044715 ∗ x^3)))
+/// ```
+///
+/// See [gelu](crate::tensor_ops::gelu::gelu) to use this approximation
+///
 ///
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
-/// let r = t.gelu_correct();
+/// let r = t.accurate_gelu();
 /// ```
 pub fn accurate_gelu<S: Shape, E: Dtype, D: UnaryKernel<AccurateGeLUKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
@@ -28,11 +42,11 @@ pub fn accurate_gelu<S: Shape, E: Dtype, D: UnaryKernel<AccurateGeLUKernelOp, E>
 impl<S: Shape, E: Dtype, D: UnaryKernel<AccurateGeLUKernelOp, E>, T: Tape<E, D>>
     Tensor<S, E, D, T>
 {
-    /// See [gelu]
+    /// See [accurate_gelu]
     pub fn accurate_gelu(self) -> Self {
         self.try_accurate_gelu().unwrap()
     }
-    /// See [gelu]
+    /// See [accurate_gelu]
     pub fn try_accurate_gelu(self) -> Result<Self, D::Err> {
         try_unary_op(AccurateGeLUKernelOp, self)
     }
