@@ -66,19 +66,20 @@ impl MatMulImpl<half::f16> for Cpu {
         naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
 
         #[cfg(feature = "cpu")]
+        #[allow(clippy::unnecessary_cast)]
         unsafe {
             gemm::gemm(
                 m.size(),
                 n.size(),
                 k.size(),
-                cp,
+                cp as *mut gemm::f16,
                 cstr[1] as isize,
                 cstr[0] as isize,
                 accum,
-                ap,
+                ap as *const gemm::f16,
                 astr[1] as isize,
                 astr[0] as isize,
-                bp,
+                bp as *const gemm::f16,
                 bstr[1] as isize,
                 bstr[0] as isize,
                 if accum {
