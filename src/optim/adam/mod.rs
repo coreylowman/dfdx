@@ -12,7 +12,10 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{Optimizer, OptimizerUpdateError, SerializeWithModel, UnusedTensors, WeightDecay, optimizer::{serialize_weight_decay, deserialize_weight_decay}};
+use super::{
+    optimizer::{deserialize_weight_decay, serialize_weight_decay},
+    Optimizer, OptimizerUpdateError, SerializeWithModel, UnusedTensors, WeightDecay,
+};
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -186,12 +189,42 @@ impl<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> TensorCollection<E, D>
         visitor.visit_fields(
             (
                 (
-                    Self::scalar("lr", |s| &s.lr, |s| &mut s.lr, ScalarOptions::from_default(1e-3)),
-                    Self::scalar("beta0", |s| &s.betas[0], |s| &mut s.betas[0], ScalarOptions::from_default(0.9)),
-                    Self::scalar("beta1", |s| &s.betas[1], |s| &mut s.betas[1], ScalarOptions::from_default(0.99)),
-                    Self::scalar("eps", |s| &s.eps, |s| &mut s.eps, ScalarOptions::from_default(1e-8)),
-                    Self::scalar("wd_tag", |s| &s.weight_decay.0, |s| &mut s.weight_decay.0, ScalarOptions::from_default(0.0)),
-                    Self::scalar("wd_val", |s| &s.weight_decay.1, |s| &mut s.weight_decay.1, ScalarOptions::from_default(0.0)),
+                    Self::scalar(
+                        "lr",
+                        |s| &s.lr,
+                        |s| &mut s.lr,
+                        ScalarOptions::from_default(1e-3),
+                    ),
+                    Self::scalar(
+                        "beta0",
+                        |s| &s.betas[0],
+                        |s| &mut s.betas[0],
+                        ScalarOptions::from_default(0.9),
+                    ),
+                    Self::scalar(
+                        "beta1",
+                        |s| &s.betas[1],
+                        |s| &mut s.betas[1],
+                        ScalarOptions::from_default(0.99),
+                    ),
+                    Self::scalar(
+                        "eps",
+                        |s| &s.eps,
+                        |s| &mut s.eps,
+                        ScalarOptions::from_default(1e-8),
+                    ),
+                    Self::scalar(
+                        "wd_tag",
+                        |s| &s.weight_decay.0,
+                        |s| &mut s.weight_decay.0,
+                        ScalarOptions::from_default(0),
+                    ),
+                    Self::scalar(
+                        "wd_val",
+                        |s| &s.weight_decay.1,
+                        |s| &mut s.weight_decay.1,
+                        ScalarOptions::from_default(0.0),
+                    ),
                 ),
                 Self::scalar("t", |s| &s.t, |s| &mut s.t, ScalarOptions::from_default(0)),
                 Self::module("moment1", |s| &s.moment1, |s| &mut s.moment1),

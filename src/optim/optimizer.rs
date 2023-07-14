@@ -46,7 +46,7 @@ pub(super) fn deserialize_weight_decay(serialized: (u64, f64)) -> Option<WeightD
         0 => None,
         1 => Some(WeightDecay::L2(serialized.1)),
         2 => Some(WeightDecay::Decoupled(serialized.1)),
-        _ => panic!("Improperly serialized Weight Decay!")
+        _ => panic!("Improperly serialized Weight Decay!"),
     }
 }
 
@@ -92,7 +92,7 @@ pub(super) fn deserialize_momentum(serialized: (u64, f64)) -> Option<Momentum> {
         0 => None,
         1 => Some(Momentum::Classic(serialized.1)),
         2 => Some(Momentum::Nesterov(serialized.1)),
-        _ => panic!("Improperly serialized Weight Decay!")
+        _ => panic!("Improperly serialized Weight Decay!"),
     }
 }
 
