@@ -6,9 +6,13 @@ mod cuda_kernel;
 use super::ops::{try_unary_op, UnaryKernel};
 use crate::{shapes::*, tensor::*};
 
+#[allow(unused)]
+#[deprecated(since = "0.12.0", note = "use `FastGeLUKernelOp` instead")]
+pub type GeLUKernelOp = FastGeLUKernelOp;
+
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
-pub struct GeLUKernelOp;
+pub struct FastGeLUKernelOp;
 
 /// [Fast Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). `0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))`
 ///
@@ -19,20 +23,30 @@ pub struct GeLUKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.gelu();
 /// ```
-pub fn gelu<S: Shape, E: Dtype, D: UnaryKernel<GeLUKernelOp, E>, T: Tape<E, D>>(
+pub fn fast_gelu<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
-    t.gelu()
+    t.fast_gelu()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<GeLUKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [gelu]
-    pub fn gelu(self) -> Self {
-        self.try_gelu().unwrap()
+    pub fn fast_gelu(self) -> Self {
+        self.try_fast_gelu().unwrap()
     }
     /// See [gelu]
+    pub fn try_fast_gelu(self) -> Result<Self, D::Err> {
+        try_unary_op(FastGeLUKernelOp, self)
+    }
+
+    #[deprecated(since = "0.12.0", note = "Use `fast_gelu` instead")]
+    pub fn gelu(self) -> Self {
+        self.fast_gelu()
+    }
+
+    #[deprecated(since = "0.12.0", note = "Use `try_fast_gelu` instead")]
     pub fn try_gelu(self) -> Result<Self, D::Err> {
-        try_unary_op(GeLUKernelOp, self)
+        self.try_fast_gelu()
     }
 }
 
@@ -46,7 +60,7 @@ mod tests {
         let x = dev
             .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
             .to_dtype::<TestDtype>();
-        let r = x.leaky_trace().gelu();
+        let r = x.leaky_trace().fast_gelu();
         assert_close_to_literal!(r, [-0.04540229, -0.158808, 0.0, 0.841192, 1.9545977]);
         // NOTE: call .exp() to make sure we cover cases where .gelu() uses the result's gradient
         let g = r.exp().mean().backward();

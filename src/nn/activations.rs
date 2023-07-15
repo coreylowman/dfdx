@@ -25,7 +25,7 @@ macro_rules! activation_impls {
 }
 
 activation_impls!(ReLU, try_relu, #[doc="Calls [relu()]."]);
-activation_impls!(GeLU, try_gelu, #[doc="Calls [gelu()]. This corresponds to `torch.nn.GELU(approximate='tanh')` in pytorch."]);
+activation_impls!(FastGeLU, try_fast_gelu, #[doc="Calls [fast_gelu()]. This corresponds to `torch.nn.GELU(approximate='tanh')` in pytorch."]);
 activation_impls!(
     AccurateGeLU,
     try_accurate_gelu, 
@@ -42,6 +42,9 @@ activation_impls!(Sqrt, try_sqrt, #[doc="Calls [sqrt()]."]);
 activation_impls!(Abs, try_abs, #[doc="Calls [abs()]."]);
 activation_impls!(Softmax, try_softmax, #[doc="Calls [softmax()]."]);
 activation_impls!(LogSoftmax, try_log_softmax, #[doc="Calls [log_softmax()]."]);
+
+#[deprecated(since = "0.12.0", note = "please use `FastGeLU` instead")]
+pub type GeLU = FastGeLU;
 
 /// Calls [prelu()] with constant value - defaults to 0.05
 #[derive(Debug, Clone, Copy)]
@@ -93,9 +96,11 @@ mod tests {
     fn test_nn_activations_gelu() {
         let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = GeLU.forward_mut(t.clone());
-        let r2 = gelu(t);
+        let r1 = FastGeLU.forward_mut(t.clone());
+        let r2 = GeLU.forward_mut(t.clone());
+        let r3 = fast_gelu(t);
         assert_eq!(r1.array(), r2.array());
+        assert_eq!(r1.array(), r3.array());
     }
 
     #[test]
