@@ -41,15 +41,9 @@ where
     }
 }
 
-/// **Requires Nightly** Performs *unbiased* 2d convolutions on 3d and 4d images.
+/// **Requires Nightly** Performs *unbiased* 1d convolutions on 2d and 3d images.
 ///
 /// **Pytorch Equivalent**: `torch.nn.Conv1d(..., bias=False)`
-///
-/// To create a biased conv, combine with [crate::nn::modules::Bias2D]:
-/// ```ignore
-/// # use dfdx::prelude::*;
-/// type BiasedConv = (Conv1D<3, 5, 4>, Bias2D<5>);
-/// ```
 ///
 /// Generics:
 /// - `IN_CHAN`: The number of input channels in an image.

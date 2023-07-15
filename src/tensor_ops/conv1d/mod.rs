@@ -49,7 +49,7 @@ pub(super) trait Conv1DKernel<E: Dtype>: Storage<E> {
     ) -> Result<(), Self::Err>;
 }
 
-/// Apply the 1d convolution to a tensor.
+/// Applies a 1d convolution to a tensor.
 ///
 /// [Const] dims **require nightly**:
 /// ```ignore
@@ -91,7 +91,7 @@ pub trait TryConv1D<Stride, Padding, Dilation, Groups>: Sized {
     type Convolved;
     type Error: std::fmt::Debug;
 
-    /// Applies a 2D convolution to the input tensor.
+    /// Applies a 1D convolution to the input tensor.
     fn conv1d(
         self,
         stride: Stride,
@@ -102,7 +102,7 @@ pub trait TryConv1D<Stride, Padding, Dilation, Groups>: Sized {
         self.try_conv1d(stride, padding, dilation, groups).unwrap()
     }
 
-    /// Fallibly applies a 2D convolution to the input tensor.
+    /// Fallibly applies a 1D convolution to the input tensor.
     fn try_conv1d(
         self,
         stride: Stride,
