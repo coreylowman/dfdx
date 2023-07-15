@@ -2,7 +2,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-struct fast_geluKernelOp {};
+struct FastGuLUKernelOp {};
 
 template <typename T> __device__ T fast_gelu_fwd(T x) {
     T fastCoeff = 0.044715;
