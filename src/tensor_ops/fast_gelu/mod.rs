@@ -62,7 +62,7 @@ mod tests {
     use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
-    fn test_gelu() {
+    fn test_fast_gelu() {
         let dev: TestDevice = Default::default();
         let x = dev
             .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])

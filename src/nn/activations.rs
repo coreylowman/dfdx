@@ -44,7 +44,23 @@ activation_impls!(Softmax, try_softmax, #[doc="Calls [softmax()]."]);
 activation_impls!(LogSoftmax, try_log_softmax, #[doc="Calls [log_softmax()]."]);
 
 #[deprecated(since = "0.12.0", note = "please use `FastGeLU` instead")]
-pub type GeLU = FastGeLU;
+#[derive(Default, Debug, Clone, Copy)]
+pub struct GeLU;
+
+#[allow(deprecated)]
+impl ZeroSizedModule for GeLU {}
+#[allow(deprecated)]
+impl NonMutableModule for GeLU {}
+
+#[allow(deprecated)]
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for GeLU {
+    type Output = Tensor<S, E, D, T>;
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
+        input.try_fast_gelu()
+    }
+}
 
 /// Calls [prelu()] with constant value - defaults to 0.05
 #[derive(Debug, Clone, Copy)]
@@ -72,6 +88,9 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
 mod tests {
     use crate::{nn::*, tests::TestDevice};
 
+    #[allow(deprecated)]
+    use super::GeLU;
+
     use super::*;
 
     #[test]
@@ -93,12 +112,14 @@ mod tests {
     }
 
     #[test]
-    fn test_nn_activations_gelu() {
+    fn test_nn_activations_fast_gelu() {
         let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = FastGeLU.forward_mut(t.clone());
+        #[allow(deprecated)]
         let r2 = GeLU.forward_mut(t.clone());
-        let r3 = fast_gelu(t);
+        let r3 = fast_gelu(t.clone());
+        #[allow(deprecated)]
         let r4 = gelu(t);
         assert_eq!(r1.array(), r2.array());
         assert_eq!(r1.array(), r3.array());
