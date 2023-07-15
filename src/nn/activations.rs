@@ -99,8 +99,10 @@ mod tests {
         let r1 = FastGeLU.forward_mut(t.clone());
         let r2 = GeLU.forward_mut(t.clone());
         let r3 = fast_gelu(t);
+        let r4 = gelu(t);
         assert_eq!(r1.array(), r2.array());
         assert_eq!(r1.array(), r3.array());
+        assert_eq!(r1.array(), r4.array());
     }
 
     #[test]

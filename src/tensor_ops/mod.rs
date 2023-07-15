@@ -224,7 +224,7 @@ pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;
 pub use exp::exp;
-pub use fast_gelu::fast_gelu;
+pub use fast_gelu::{fast_gelu, gelu};
 pub use huber_error::huber_error;
 pub use ln::ln;
 pub use log_softmax::log_softmax;

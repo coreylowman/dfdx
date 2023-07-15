@@ -29,6 +29,13 @@ pub fn fast_gelu<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tap
     t.fast_gelu()
 }
 
+#[deprecate(since = "0.12.0", note = "Use `fast_gelu` instead")]
+pub fn gelu<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    fast_gelu(t)
+}
+
 impl<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [gelu]
     pub fn fast_gelu(self) -> Self {
