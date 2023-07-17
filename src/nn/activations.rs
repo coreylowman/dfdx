@@ -26,11 +26,14 @@ macro_rules! activation_impls {
 
 activation_impls!(ReLU, try_relu, #[doc="Calls [relu()]."]);
 activation_impls!(GeLU, try_gelu, #[doc="Calls [gelu()]."]);
+activation_impls!(ReLU6, try_relu6, #[doc="Calls [relu6()]."]);
+activation_impls!(HardSwish, try_hard_swish, #[doc="Calls [hard_swish()]."]);
 activation_impls!(Sin, try_sin, #[doc="Calls [sin()]."]);
 activation_impls!(Cos, try_cos, #[doc="Calls [cos()]."]);
 activation_impls!(Ln, try_ln, #[doc="Calls [ln()]."]);
 activation_impls!(Exp, try_exp, #[doc="Calls [exp()]."]);
 activation_impls!(Sigmoid, try_sigmoid, #[doc="Calls [sigmoid()]."]);
+activation_impls!(HardSigmoid, try_hard_sigmoid, #[doc="Calls [hard_sigmoid()]."]);
 activation_impls!(Tanh, try_tanh, #[doc="Calls [tanh()]."]);
 activation_impls!(Square, try_square, #[doc="Calls [square()]."]);
 activation_impls!(Sqrt, try_sqrt, #[doc="Calls [sqrt()]."]);
