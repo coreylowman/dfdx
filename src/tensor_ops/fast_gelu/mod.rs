@@ -52,14 +52,14 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>> Ten
         try_unary_op(FastGeLUKernelOp, self)
     }
 
-    /// Use [fast_gelu] instead
-    #[deprecated(since = "0.12.0", note = "Use `fast_gelu` instead")]
+    /// Use [Tensor::fast_gelu] instead
+    #[deprecated(since = "0.12.0", note = "Use `Tensor::fast_gelu` instead")]
     pub fn gelu(self) -> Self {
         self.fast_gelu()
     }
 
-    /// Use [try_fast_gelu] instead
-    #[deprecated(since = "0.12.0", note = "Use `try_fast_gelu` instead")]
+    /// Use [Tensor::try_fast_gelu] instead
+    #[deprecated(since = "0.12.0", note = "Use `Tensor::try_fast_gelu` instead")]
     pub fn try_gelu(self) -> Result<Self, D::Err> {
         self.try_fast_gelu()
     }
