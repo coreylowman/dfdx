@@ -53,7 +53,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>> Ten
     }
 
     /// Use [fast_gelu] instead
-    #[deprecated(since = "0.12.0", note = "Use [fast_gelu](#method.fast_gelu) instead")]
+    #[deprecated(since = "0.12.0", note = "Use `fast_gelu` instead")]
     pub fn gelu(self) -> Self {
         self.fast_gelu()
     }
