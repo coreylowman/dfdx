@@ -43,6 +43,7 @@ activation_impls!(Abs, try_abs, #[doc="Calls [abs()]."]);
 activation_impls!(Softmax, try_softmax, #[doc="Calls [softmax()]."]);
 activation_impls!(LogSoftmax, try_log_softmax, #[doc="Calls [log_softmax()]."]);
 
+/// Use [FastGeLU] instead
 #[deprecated(since = "0.12.0", note = "please use `FastGeLU` instead")]
 #[derive(Default, Debug, Clone, Copy)]
 pub struct GeLU;

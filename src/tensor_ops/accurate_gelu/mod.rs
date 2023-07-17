@@ -23,7 +23,7 @@ pub struct AccurateGeLUKernelOp;
 /// GeLU(x) ~ 0.5 ∗ x ∗ (1.0 + tanh((sqrt(2.0/π) ∗ (x + 0.044715 ∗ x^3)))
 /// ```
 ///
-/// See [gelu](crate::tensor_ops::gelu::gelu) to use this approximation
+/// See [fast_gelu](super::fast_gelu::fast_gelu) to use this approximation
 ///
 ///
 /// Examples:

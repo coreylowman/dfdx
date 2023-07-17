@@ -14,7 +14,12 @@ pub type GeLUKernelOp = FastGeLUKernelOp;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct FastGeLUKernelOp;
 
-/// [Fast Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). `0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))`
+/// [Fast Gaussian Linear Unit (GeLU)](https://paperswithcode.com/method/gelu). A fast version of the gaussiane linear unit
+/// calculated by
+/// ```text
+/// 0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))
+/// ````
+/// See also [accurate_gelu](super::accurate_gelu::accurate_gelu) for the more accurate version.
 ///
 /// Examples:
 /// ```rust
@@ -29,6 +34,7 @@ pub fn fast_gelu<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tap
     t.fast_gelu()
 }
 
+/// Use [fast_gelu] instead
 #[deprecated(since = "0.12.0", note = "Use `fast_gelu` instead")]
 pub fn gelu<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
@@ -37,20 +43,22 @@ pub fn gelu<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, 
 }
 
 impl<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
-    /// See [gelu]
+    /// See [fast_gelu]
     pub fn fast_gelu(self) -> Self {
         self.try_fast_gelu().unwrap()
     }
-    /// See [gelu]
+    /// See [fast_gelu]
     pub fn try_fast_gelu(self) -> Result<Self, D::Err> {
         try_unary_op(FastGeLUKernelOp, self)
     }
 
-    #[deprecated(since = "0.12.0", note = "Use `fast_gelu` instead")]
+    /// Use [fast_gelu] instead
+    #[deprecated(since = "0.12.0", note = "Use [fast_gelu](#method.fast_gelu) instead")]
     pub fn gelu(self) -> Self {
         self.fast_gelu()
     }
 
+    /// Use [try_fast_gelu] instead
     #[deprecated(since = "0.12.0", note = "Use `try_fast_gelu` instead")]
     pub fn try_gelu(self) -> Result<Self, D::Err> {
         self.try_fast_gelu()
