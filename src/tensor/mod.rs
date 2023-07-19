@@ -170,7 +170,7 @@ pub use cuda::{Cuda, CudaError};
 #[cfg(feature = "cuda")]
 pub type AutoDevice = Cuda;
 
-pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
+pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec, TensorToArray};
 pub use storage_traits::{Cache, HasErr, RandomU64, Storage, Synchronize};
 pub use storage_traits::{OnesTensor, SampleTensor, TriangleTensor, ZerosTensor};
 
