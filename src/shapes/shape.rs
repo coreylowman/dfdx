@@ -1,5 +1,8 @@
 use super::{axes::*, ReduceShape, ReduceShapeTo};
 
+#[cfg(feature = "f16")]
+pub use half::f16;
+
 #[cfg(not(feature = "cuda"))]
 pub trait SafeZeros {}
 
@@ -48,7 +51,7 @@ unit!(u128, 1);
 unit!(i128, 1);
 unit!(bool, true);
 #[cfg(feature = "f16")]
-unit!(half::f16, half::f16::ONE);
+unit!(f16, f16::ONE);
 
 /// Represents something that has a [Unit].
 pub trait HasUnitType {
@@ -70,6 +73,7 @@ pub trait Dtype:
     + std::ops::MulAssign
     + std::ops::DivAssign
     + num_traits::FromPrimitive
+    + num_traits::ToPrimitive
 {
 }
 impl Dtype for f32 {}
@@ -87,7 +91,7 @@ impl Dtype for u64 {}
 impl Dtype for u128 {}
 impl Dtype for usize {}
 #[cfg(feature = "f16")]
-impl Dtype for half::f16 {}
+impl Dtype for f16 {}
 
 /// Represents something that has a [Dtype].
 pub trait HasDtype {

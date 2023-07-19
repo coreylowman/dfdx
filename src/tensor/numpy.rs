@@ -20,13 +20,10 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     pub fn write_to_npz<W: Write + Seek>(
         &self,
         w: &mut zip::ZipWriter<W>,
-        mut filename: String,
+        filename: String,
     ) -> ZipResult<()> {
-        if !filename.ends_with(".npy") {
-            filename.push_str(".npy");
-        }
-        w.start_file(filename, Default::default())?;
-        self.write_to(w)?;
+        let buf = self.as_vec();
+        write_to_npz(w, self.shape().concrete().as_ref(), &buf, filename)?;
         Ok(())
     }
 
@@ -34,58 +31,99 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     pub fn read_from_npz<R: Read + Seek>(
         &mut self,
         r: &mut zip::ZipArchive<R>,
-        mut filename: String,
+        filename: String,
     ) -> Result<(), NpzError> {
-        if !filename.ends_with(".npy") {
-            filename.push_str(".npy");
-        }
-        let mut f = r
-            .by_name(&filename)
-            .expect(&std::format!("'{}' not found", filename));
-        self.read_from(&mut f)?;
+        let buf = read_from_npz(r, self.shape().concrete().as_ref(), filename)?;
+        self.copy_from(&buf);
         Ok(())
     }
 
     /// Attemps to load the data from a `.npy` file at `path`
     pub fn load_from_npy<P: AsRef<Path>>(&mut self, path: P) -> Result<(), NpyError> {
         let mut f = BufReader::new(File::open(path)?);
-        self.read_from(&mut f)
+        let buf = read_from_npy(&mut f, self.shape().concrete().as_ref())?;
+        self.copy_from(&buf);
+        Ok(())
     }
 
     /// Saves the tensor to a `.npy` file located at `path`
     pub fn save_to_npy<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = BufWriter::new(File::create(path)?);
-        self.write_to(&mut f)
+        let buf = self.as_vec();
+        write_to_npy(&mut f, self.shape().concrete().as_ref(), &buf)
+    }
+}
+
+pub(crate) fn write_to_npz<W: Write + Seek, E: Dtype + NumpyDtype>(
+    w: &mut zip::ZipWriter<W>,
+    shape: &[usize],
+    data: &[E],
+    mut filename: String,
+) -> io::Result<()> {
+    if !filename.ends_with(".npy") {
+        filename.push_str(".npy");
+    }
+    w.start_file(filename, Default::default())?;
+    write_to_npy(w, shape, data)
+}
+
+pub(crate) fn read_from_npz<R: Read + Seek, E: Dtype + NumpyDtype>(
+    r: &mut zip::ZipArchive<R>,
+    shape: &[usize],
+    mut filename: String,
+) -> Result<Vec<E>, NpyError> {
+    if !filename.ends_with(".npy") {
+        filename.push_str(".npy");
     }
 
-    pub(crate) fn read_from<R: Read>(&mut self, r: &mut R) -> Result<(), NpyError> {
-        let endian = read_header::<R, E>(r, self.shape().concrete().into_iter().collect())?;
-        let numel = self.shape().num_elements();
-        let mut buf = Vec::with_capacity(numel);
-        for _ in 0..numel {
-            buf.push(E::read_endian(r, endian)?);
+    let mut f = match r.by_name(&filename) {
+        Ok(f) => f,
+        Err(ZipError::FileNotFound) => {
+            return Err(NpyError::IoError(io::Error::new(
+                io::ErrorKind::NotFound,
+                ZipError::FileNotFound,
+            )))
         }
-        D::copy_from(self, &buf);
-        Ok(())
+        Err(e) => panic!("Uncaught zip error: {e}"),
+    };
+
+    read_from_npy(&mut f, shape)
+}
+
+fn write_to_npy<W: Write, E: Dtype + NumpyDtype>(
+    w: &mut W,
+    shape: &[usize],
+    data: &[E],
+) -> io::Result<()> {
+    let endian = Endian::Little;
+    write_header::<W, E>(w, endian, shape)?;
+
+    for v in data.iter() {
+        v.write_endian(w, endian)?;
     }
 
-    pub(crate) fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        let endian = Endian::Little;
-        write_header::<W, E>(w, endian, self.shape().concrete().into_iter().collect())?;
-        let numel = self.shape().num_elements();
-        let mut buf = std::vec![Default::default(); numel];
-        D::copy_into(self, &mut buf);
-        for v in buf.iter() {
-            v.write_endian(w, endian)?;
-        }
-        Ok(())
+    Ok(())
+}
+
+fn read_from_npy<R: Read, E: Dtype + NumpyDtype>(
+    r: &mut R,
+    shape: &[usize],
+) -> Result<Vec<E>, NpyError> {
+    let endian = read_header::<R, E>(r, shape)?;
+    let numel = shape.iter().product::<usize>();
+    let mut out = Vec::new();
+
+    for _ in 0..numel {
+        out.push(E::read_endian(r, endian)?);
     }
+
+    Ok(out)
 }
 
 fn write_header<W: Write, E: NumpyDtype>(
     w: &mut W,
     endian: Endian,
-    shape: Vec<usize>,
+    shape: &[usize],
 ) -> io::Result<()> {
     let shape_str = to_shape_str(shape);
 
@@ -121,7 +159,7 @@ fn write_header<W: Write, E: NumpyDtype>(
     Ok(())
 }
 
-fn read_header<R: Read, E: NumpyDtype>(r: &mut R, shape: Vec<usize>) -> Result<Endian, NpyError> {
+fn read_header<R: Read, E: NumpyDtype>(r: &mut R, shape: &[usize]) -> Result<Endian, NpyError> {
     let mut magic = [0; 6];
     r.read_exact(&mut magic)?;
     if magic != MAGIC_NUMBER {
@@ -311,7 +349,7 @@ impl From<std::string::FromUtf8Error> for NpyError {
     }
 }
 
-fn to_shape_str(shape: Vec<usize>) -> String {
+fn to_shape_str(shape: &[usize]) -> String {
     shape
         .iter()
         .map(|v| v.to_string())

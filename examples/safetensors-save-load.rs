@@ -3,10 +3,7 @@
 #[cfg(feature = "safetensors")]
 fn main() {
     use ::safetensors::SafeTensors;
-    use dfdx::{
-        prelude::*,
-        tensor::{AsArray, AutoDevice, Cpu},
-    };
+    use dfdx::prelude::*;
     use memmap2::MmapOptions;
     let dev: Cpu = Default::default();
 
