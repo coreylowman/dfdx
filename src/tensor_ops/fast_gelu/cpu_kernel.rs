@@ -1,7 +1,7 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 use num_traits::{Float, FloatConst};
 
-impl<F: Float + FloatConst> UnaryDerivative<F> for super::GeLUKernelOp {
+impl<F: Float + FloatConst> UnaryDerivative<F> for super::FastGeLUKernelOp {
     const DF_USES_FX: bool = false;
     const HAS_CONST_DF: bool = false;
     #[inline(always)]

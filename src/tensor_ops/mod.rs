@@ -150,6 +150,7 @@ mod utilities;
 pub use utilities::*;
 
 mod abs;
+mod accurate_gelu;
 mod add;
 mod attention_reshape;
 pub(crate) mod axpy;
@@ -165,7 +166,7 @@ mod cos;
 mod div;
 mod dropout;
 mod exp;
-mod gelu;
+mod fast_gelu;
 mod huber_error;
 mod ln;
 mod log_softmax;
@@ -206,6 +207,7 @@ mod upscale2d;
 mod var_to;
 
 pub use abs::abs;
+pub use accurate_gelu::accurate_gelu;
 pub use add::{add, TryAdd};
 pub use attention_reshape::TryAttentionReshape;
 pub use axpy::axpy;
@@ -222,7 +224,9 @@ pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;
 pub use exp::exp;
-pub use gelu::gelu;
+pub use fast_gelu::fast_gelu;
+#[allow(deprecated)]
+pub use fast_gelu::gelu;
 pub use huber_error::huber_error;
 pub use ln::ln;
 pub use log_softmax::log_softmax;
