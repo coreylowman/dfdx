@@ -1,9 +1,9 @@
-use crate::{optim::WeightDecay, shapes::Dtype, tensor::cpu::Cpu};
+use crate::{shapes::Dtype, tensor::cpu::Cpu};
 
-use super::{RMSpropConfig, RMSpropKernel};
+use super::{RMSpropConfig, RMSpropKernel, WeightDecay};
 
 impl<E: num_traits::Float + Dtype> RMSpropKernel<E> for Cpu {
-    fn update(
+    fn rmsprop_kernel(
         &self,
         cfg: &RMSpropConfig,
         param: &mut Self::Vec,

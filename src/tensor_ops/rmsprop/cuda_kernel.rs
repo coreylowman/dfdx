@@ -1,8 +1,8 @@
 use super::RMSpropConfig;
 use crate::{
-    optim::optimizer::*,
     shapes::*,
     tensor::{launch_cfg, Cuda},
+    tensor_ops::optim::*,
 };
 
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
@@ -68,7 +68,7 @@ impl<E: Dtype> super::RMSpropKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn update(
+    fn rmsprop_kernel(
         &self,
         cfg: &RMSpropConfig,
         param: &mut Self::Vec,
