@@ -143,3 +143,6 @@ __device__ __forceinline__ __half absg(__half a) { return __habs(a); }
 __device__ __forceinline__ float copysigng(float a, float b) { return copysignf(a, b); }
 __device__ __forceinline__ double copysigng(double a, double b) { return copysign(a, b); }
 __device__ __forceinline__ __half copysigng(__half a, __half b) { return __float2half(copysignf(__half2float(a), __half2float(b))); }
+__device__ __forceinline__ float erfg(float a) { return erff(a); }
+__device__ __forceinline__ double erfg(double a) { return erf(a); }
+__device__ __forceinline__ __half erfg(__half a) { return __float2half(erff(__half2float(a))); }
