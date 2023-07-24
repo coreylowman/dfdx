@@ -25,7 +25,7 @@ impl HasCudaKernel<f16> for Cuda {
 #[cfg(feature = "f16")]
 impl HasCudaKernel<AMP<f16>> for Cuda {
     const MOD: &'static str = "sum_amp_f16";
-    const FNS: &'static [&'static str] = &["sum_to_fwd_amp_f16", "sum_to_bwd_amp_f16"];
+    const FNS: &'static [&'static str] = &["sum_to_fwd_amp_f16", "sum_to_bwd_f16"];
 }
 
 impl HasCudaKernel<f32> for Cuda {
