@@ -69,7 +69,7 @@ impl RMSpropConfig {
     ) -> Result<(), D::Err> {
         param.device.rmsprop_kernel(
             self,
-            std::sync::Arc::get_mut(&mut param.data).unwrap(),
+            std::sync::Arc::make_mut(&mut param.data),
             momentum,
             square_avg,
             grad_avg,

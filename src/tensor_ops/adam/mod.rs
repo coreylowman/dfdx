@@ -72,7 +72,7 @@ impl AdamConfig {
         param.device.adam_kernel(
             t,
             self,
-            std::sync::Arc::get_mut(&mut param.data).unwrap(),
+            std::sync::Arc::make_mut(&mut param.data),
             moment1,
             moment2,
             grad,

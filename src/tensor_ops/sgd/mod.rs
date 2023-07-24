@@ -102,7 +102,7 @@ impl SgdConfig {
     ) -> Result<(), D::Err> {
         param.device.sgd_kernel(
             self,
-            std::sync::Arc::get_mut(&mut param.data).unwrap(),
+            std::sync::Arc::make_mut(&mut param.data),
             velocity,
             grad,
         )
