@@ -1,11 +1,8 @@
 use super::{AdamConfig, AdamKernel, WeightDecay};
-use crate::{shapes::Dtype, tensor::Cpu};
-
-trait NonMixedPrecision {}
-#[cfg(feature = "f16")]
-impl NonMixedPrecision for crate::dtypes::f16 {}
-impl NonMixedPrecision for f32 {}
-impl NonMixedPrecision for f64 {}
+use crate::{
+    dtypes::{Dtype, NotMixedPrecision},
+    tensor::Cpu,
+};
 
 #[cfg(feature = "f16")]
 impl AdamKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
@@ -54,7 +51,7 @@ impl AdamKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
     }
 }
 
-impl<E: num_traits::Float + Dtype + NonMixedPrecision> AdamKernel<E> for Cpu {
+impl<E: num_traits::Float + Dtype + NotMixedPrecision> AdamKernel<E> for Cpu {
     fn adam_kernel(
         &self,
         t: i32,

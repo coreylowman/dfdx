@@ -1,5 +1,6 @@
 use crate::{
-    shapes::{Axes, Dtype, HasAxes, ReduceShapeTo, Shape},
+    dtypes::{Dtype, NotMixedPrecision},
+    shapes::{Axes, HasAxes, ReduceShapeTo, Shape},
     tensor::{Cpu, Tensor, Tensorlike, ZerosTensor},
     tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
@@ -69,13 +70,7 @@ impl super::SumKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
     }
 }
 
-trait NonMixedPrecision {}
-#[cfg(feature = "f16")]
-impl NonMixedPrecision for crate::dtypes::f16 {}
-impl NonMixedPrecision for f32 {}
-impl NonMixedPrecision for f64 {}
-
-impl<E: Dtype + NonMixedPrecision> super::SumKernel<E> for Cpu {
+impl<E: Dtype + NotMixedPrecision> super::SumKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,

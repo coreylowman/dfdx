@@ -99,3 +99,21 @@ impl Dtype for half::f16 {}
 pub trait HasDtype {
     type Dtype: Dtype;
 }
+
+pub trait NotMixedPrecision {}
+impl NotMixedPrecision for f32 {}
+impl NotMixedPrecision for f64 {}
+impl NotMixedPrecision for i8 {}
+impl NotMixedPrecision for i16 {}
+impl NotMixedPrecision for i32 {}
+impl NotMixedPrecision for i64 {}
+impl NotMixedPrecision for i128 {}
+impl NotMixedPrecision for isize {}
+impl NotMixedPrecision for u8 {}
+impl NotMixedPrecision for u16 {}
+impl NotMixedPrecision for u32 {}
+impl NotMixedPrecision for u64 {}
+impl NotMixedPrecision for u128 {}
+impl NotMixedPrecision for usize {}
+#[cfg(feature = "f16")]
+impl NotMixedPrecision for half::f16 {}

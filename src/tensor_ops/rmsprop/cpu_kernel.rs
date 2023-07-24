@@ -1,12 +1,9 @@
-use crate::{shapes::Dtype, tensor::cpu::Cpu};
+use crate::{
+    dtypes::{Dtype, NotMixedPrecision},
+    tensor::cpu::Cpu,
+};
 
 use super::{RMSpropConfig, RMSpropKernel, WeightDecay};
-
-trait NonMixedPrecision {}
-#[cfg(feature = "f16")]
-impl NonMixedPrecision for crate::dtypes::f16 {}
-impl NonMixedPrecision for f32 {}
-impl NonMixedPrecision for f64 {}
 
 #[cfg(feature = "f16")]
 impl RMSpropKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
@@ -74,7 +71,7 @@ impl RMSpropKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
     }
 }
 
-impl<E: num_traits::Float + Dtype + NonMixedPrecision> RMSpropKernel<E> for Cpu {
+impl<E: num_traits::Float + Dtype + NotMixedPrecision> RMSpropKernel<E> for Cpu {
     fn rmsprop_kernel(
         &self,
         cfg: &RMSpropConfig,

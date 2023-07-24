@@ -1,12 +1,9 @@
-use crate::{shapes::Dtype, tensor::cpu::*};
+use crate::{
+    dtypes::{Dtype, NotMixedPrecision},
+    tensor::cpu::*,
+};
 
 use super::{Momentum, SgdConfig, SgdKernel, WeightDecay};
-
-trait NonMixedPrecision {}
-#[cfg(feature = "f16")]
-impl NonMixedPrecision for crate::dtypes::f16 {}
-impl NonMixedPrecision for f32 {}
-impl NonMixedPrecision for f64 {}
 
 #[cfg(feature = "f16")]
 impl SgdKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
@@ -58,7 +55,7 @@ impl SgdKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
     }
 }
 
-impl<E: Dtype + NonMixedPrecision> SgdKernel<E> for Cpu {
+impl<E: Dtype + NotMixedPrecision> SgdKernel<E> for Cpu {
     fn sgd_kernel(
         &self,
         cfg: &SgdConfig,
