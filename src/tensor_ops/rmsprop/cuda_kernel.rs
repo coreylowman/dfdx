@@ -1,7 +1,6 @@
 use super::RMSpropConfig;
 use crate::{
     dtypes::*,
-    shapes::*,
     tensor::{launch_cfg, Cuda},
     tensor_ops::optim::*,
 };

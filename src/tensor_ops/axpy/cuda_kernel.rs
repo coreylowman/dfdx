@@ -1,6 +1,5 @@
 use crate::{
     dtypes::*,
-    shapes::*,
     tensor::{launch_cfg, Cuda},
 };
 

@@ -2,7 +2,6 @@ use super::SgdConfig;
 
 use crate::{
     dtypes::*,
-    shapes::*,
     tensor::{launch_cfg, Cuda},
     tensor_ops::optim::*,
 };
@@ -47,7 +46,7 @@ impl HasCudaKernel<f16> for Cuda {
 }
 
 #[cfg(feature = "f16")]
-impl HasCudaKernel<f16> for Cuda {
+impl HasCudaKernel<AMP<f16>> for Cuda {
     const MOD: &'static str = "sgd_amp_f16";
     const FWD: &'static str = "sgd_update_amp_f16";
 }

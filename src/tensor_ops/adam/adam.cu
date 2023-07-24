@@ -104,8 +104,8 @@ __device__ void adam_update_amp_f16(
     
         m = m * beta1 + g * (one - beta1);
         v = v * beta2 + g * g * (one - beta2);
-        T m_hat = m * one / (one - powg(beta1, t));
-        T v_hat = v * one / (one - powg(beta2, t));
+        float m_hat = m * one / (one - powg(beta1, t));
+        float v_hat = v * one / (one - powg(beta2, t));
         g = lr * m_hat / (sqrtg(v_hat) + eps);
     
         if (cfg.weight_decay_type == Decoupled) {

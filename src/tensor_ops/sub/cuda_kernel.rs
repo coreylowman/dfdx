@@ -4,6 +4,8 @@ use crate::tensor_ops::cuda_kernels::{cuda_binary, cuda_unary};
 
 #[cfg(feature = "f16")]
 unsafe impl cudarc::driver::DeviceRepr for Scalar<f16> {}
+#[cfg(feature = "f16")]
+unsafe impl cudarc::driver::DeviceRepr for Scalar<AMP<f16>> {}
 unsafe impl cudarc::driver::DeviceRepr for Scalar<f32> {}
 unsafe impl cudarc::driver::DeviceRepr for Scalar<f64> {}
 unsafe impl cudarc::driver::DeviceRepr for Binary {}
