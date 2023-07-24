@@ -19,9 +19,9 @@ pub trait Device<E: Dtype>:
     + super::super::concat_along::ConcatAlongKernel<E>
 
     // optimizers
-    + crate::optim::AdamKernel<E>
-    + crate::optim::SgdKernel<E>
-    + crate::optim::RMSpropKernel<E>
+    + super::super::adam::AdamKernel<E>
+    + super::super::sgd::SgdKernel<E>
+    + super::super::rmsprop::RMSpropKernel<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>
@@ -86,7 +86,8 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::nans_to::NansToKernelOp<E>, E>
     + UnaryKernel<super::super::negate::NegateKernelOp, E>
     + UnaryKernel<super::super::relu::ReLUKernelOp, E>
-    + UnaryKernel<super::super::gelu::GeLUKernelOp, E>
+    + UnaryKernel<super::super::fast_gelu::FastGeLUKernelOp, E>
+    + UnaryKernel<super::super::accurate_gelu::AccurateGeLUKernelOp, E>
     + UnaryKernel<super::super::sigmoid::SigmoidKernelOp, E>
     + UnaryKernel<super::super::sin::SinKernelOp, E>
     + UnaryKernel<super::super::sqrt::SqrtKernelOp, E>

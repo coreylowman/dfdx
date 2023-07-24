@@ -20,7 +20,7 @@ Features at a glance:
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
 ```toml
-dfdx = "0.12.0"
+dfdx = "0.12.1"
 ```
 
 See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).

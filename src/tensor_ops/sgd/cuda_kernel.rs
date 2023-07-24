@@ -1,8 +1,9 @@
 use super::SgdConfig;
+
 use crate::{
-    optim::optimizer::*,
     shapes::*,
     tensor::{launch_cfg, Cuda},
+    tensor_ops::optim::*,
 };
 
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
@@ -58,7 +59,7 @@ impl<E: Dtype> super::SgdKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn update(
+    fn sgd_kernel(
         &self,
         cfg: &SgdConfig,
         param: &mut Self::Vec,

@@ -76,9 +76,16 @@ pub(crate) fn read_from_npz<R: Read + Seek, E: Dtype + NumpyDtype>(
         filename.push_str(".npy");
     }
 
-    let mut f = r
-        .by_name(&filename)
-        .unwrap_or_else(|_| panic!("'{filename}' not found"));
+    let mut f = match r.by_name(&filename) {
+        Ok(f) => f,
+        Err(ZipError::FileNotFound) => {
+            return Err(NpyError::IoError(io::Error::new(
+                io::ErrorKind::NotFound,
+                ZipError::FileNotFound,
+            )))
+        }
+        Err(e) => panic!("Uncaught zip error: {e}"),
+    };
 
     read_from_npy(&mut f, shape)
 }

@@ -1,54 +1,13 @@
-mod cpu_kernel;
-
-#[cfg(feature = "cuda")]
-mod cuda_kernel;
-
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 use crate::{
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
     tensor::*,
-    tensor_ops::Device,
+    tensor_ops::{Device, RMSpropConfig},
 };
 
-use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
-
-/// Configuration of hyperparameters for [RMSprop].
-#[derive(Debug, Clone, Copy)]
-pub struct RMSpropConfig {
-    /// Learning rate. Defaults to `1e-2`.
-    pub lr: f64,
-
-    /// Value for exponential moving average. Defaults to `0.9`.
-    pub alpha: f64,
-
-    /// Epsilon for stability. Defaults to `1e-8`.
-    pub eps: f64,
-
-    /// Optional momentum. Defaults to `None`.
-    pub momentum: Option<f64>,
-
-    /// Whether the avg should be centered by the grad's avg value.
-    /// Defaults to `false`.
-    pub centered: bool,
-
-    /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay>,
-}
-
-impl Default for RMSpropConfig {
-    fn default() -> Self {
-        Self {
-            lr: 1e-2,
-            alpha: 0.9,
-            eps: 1e-8,
-            momentum: None,
-            centered: false,
-            weight_decay: None,
-        }
-    }
-}
+use super::{Optimizer, OptimizerUpdateError, UnusedTensors};
 
 /// RMSprop As described in [Hinton, 2012](http://www.cs.toronto.edu/%7Etijmen/csc321/slides/lecture_slides_lec6.pdf).
 ///
@@ -104,18 +63,6 @@ impl<M, E: Dtype, D: Storage<E>> RMSprop<M, E, D> {
     }
 }
 
-pub trait RMSpropKernel<E: Dtype>: Storage<E> {
-    fn update(
-        &self,
-        cfg: &RMSpropConfig,
-        param: &mut Self::Vec,
-        momentum: &mut Self::Vec,
-        square_avg: &mut Self::Vec,
-        grad_avg: &mut Self::Vec,
-        grad: &Self::Vec,
-    ) -> Result<(), Self::Err>;
-}
-
 impl<M, E: Dtype, D: Device<E>> TensorVisitor<E, D>
     for (&mut RMSprop<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
@@ -144,15 +91,7 @@ impl<M, E: Dtype, D: Device<E>> TensorVisitor<E, D>
                     p.device.try_fill_with_ones(sa)?;
                 }
 
-                RMSpropKernel::update(
-                    &p.device,
-                    &self.0.cfg,
-                    Arc::make_mut(&mut p.data),
-                    m,
-                    sa,
-                    ga,
-                    g,
-                )?;
+                self.0.cfg.try_update(p, m, sa, ga, g)?;
             }
         }
         Ok(None)

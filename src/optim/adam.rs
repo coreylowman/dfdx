@@ -1,56 +1,13 @@
-mod cpu_kernel;
-
-#[cfg(feature = "cuda")]
-mod cuda_kernel;
-
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 use crate::{
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
     tensor::{Gradients, Storage, Tensor},
-    tensor_ops::Device,
+    tensor_ops::{AdamConfig, Device},
 };
 
-use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
-
-/// Configuration of hyperparameters for [Adam].
-///
-/// Changing all default parameters:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// AdamConfig {
-///     lr: 1e-2,
-///     betas: [0.1, 0.2],
-///     eps: 1e-6,
-///     weight_decay: Some(WeightDecay::L2(1e-1)),
-/// };
-/// ```
-#[derive(Debug, Clone, Copy)]
-pub struct AdamConfig {
-    /// Learning rate. Defaults to `1e-3`.
-    pub lr: f64,
-
-    /// Betas from Adam paper. Defaults to `[0.9, 0.999]`.
-    pub betas: [f64; 2],
-
-    /// Epsilon for numerical stability. Defaults to `1e-8`.
-    pub eps: f64,
-
-    /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay>,
-}
-
-impl Default for AdamConfig {
-    fn default() -> Self {
-        Self {
-            lr: 1e-3,
-            betas: [0.9, 0.999],
-            eps: 1e-8,
-            weight_decay: None,
-        }
-    }
-}
+use super::{Optimizer, OptimizerUpdateError, UnusedTensors};
 
 /// An implementation of the Adam optimizer from
 /// [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980)
@@ -95,18 +52,6 @@ impl<M, E: Dtype, D: Storage<E>> Adam<M, E, D> {
     }
 }
 
-pub trait AdamKernel<E: Dtype>: Storage<E> {
-    fn update(
-        &self,
-        t: i32,
-        cfg: &AdamConfig,
-        param: &mut Self::Vec,
-        moment1: &mut Self::Vec,
-        moment2: &mut Self::Vec,
-        grad: &Self::Vec,
-    ) -> Result<(), Self::Err>;
-}
-
 impl<M, D: Device<E>, E: Dtype> TensorVisitor<E, D>
     for (&mut Adam<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
@@ -129,15 +74,7 @@ impl<M, D: Device<E>, E: Dtype> TensorVisitor<E, D>
             Some(g) => {
                 let m_t = self.0.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.0.moment2.get_or_alloc_mut(p)?;
-                AdamKernel::update(
-                    &p.device,
-                    self.0.t,
-                    &self.0.cfg,
-                    Arc::make_mut(&mut p.data),
-                    m_t,
-                    v_t,
-                    g,
-                )?;
+                self.0.cfg.try_update(self.0.t, p, m_t, v_t, g)?;
             }
         }
         Ok(None)

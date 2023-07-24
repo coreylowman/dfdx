@@ -171,20 +171,29 @@ impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTens
 
     fn visit_scalar<N: num_traits::NumCast>(
         &mut self,
-        _: ScalarOptions<N>,
+        opts: ScalarOptions<N>,
         (n, full_path): (&mut N, String),
     ) -> Result<Option<N>, Self::Err> {
-        let data = self.tensor(&full_path)?.data();
-        let mut array = [0; 8];
-        array.copy_from_slice(data);
-        let val = f64::from_le_bytes(array);
-        *n = N::from(val).unwrap_or_else(|| {
-            panic!(
-                "Failed to convert f64 value {val} at {full_path} to {} when reading from safetensors!",
-                std::any::type_name::<N>()
-            )
-        });
-        Ok(None)
+        match self.tensor(&full_path) {
+            Ok(tensor) => {
+                let data = tensor.data();
+                let mut array = [0; 8];
+                array.copy_from_slice(data);
+                let val = f64::from_le_bytes(array);
+                *n = N::from(val).unwrap_or_else(|| {
+                    panic!(
+                        "Failed to convert f64 value {val} at {full_path} to {} when reading from safetensors!",
+                        std::any::type_name::<N>()
+                    )
+                });
+                Ok(None)
+            }
+            Err(SafeTensorError::TensorNotFound(_)) => {
+                *n = opts.default;
+                Ok(None)
+            }
+            Err(x) => Err(Error::SafeTensorError(x)),
+        }
     }
 }
 

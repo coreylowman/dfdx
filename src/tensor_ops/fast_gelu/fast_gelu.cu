@@ -2,10 +2,9 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-struct GeLUKernelOp {};
+struct FastGeLUKernelOp {};
 
-template<typename T>
-__device__ T gelu_fwd(T x) {
+template <typename T> __device__ T fast_gelu_fwd(T x) {
     T fastCoeff = 0.044715;
     T one = 1.0;
     T half = 0.5;
@@ -16,8 +15,7 @@ __device__ T gelu_fwd(T x) {
     return half * x * (one + tanhg(beta * alpha));
 }
 
-template<typename T>
-__device__ T gelu_bwd(T x) {
+template <typename T> __device__ T fast_gelu_bwd(T x) {
     T one = 1.0;
     T three = 3.0;
     T half = 0.5;
@@ -30,7 +28,7 @@ __device__ T gelu_bwd(T x) {
 
     T left = half * x;
     T right = one + tanh_inner;
-    
+
     T left_derivative = half * right;
 
     T tanh_derivative = one - tanh_inner * tanh_inner;
@@ -39,17 +37,17 @@ __device__ T gelu_bwd(T x) {
     return left_derivative + right_derivative;
 }
 
-UNARY_OP(__half, gelu_fwd_f16, gelu_bwd_f16, GeLUKernelOp,
-    gelu_fwd(x),
-    gelu_bwd(x)
+UNARY_OP(__half, fast_gelu_fwd_f16, fast_gelu_bwd_f16, FastGeLUKernelOp,
+    fast_gelu_fwd(x),
+    fast_gelu_bwd(x)
 )
 
-UNARY_OP(float, gelu_fwd_f32, gelu_bwd_f32, GeLUKernelOp,
-    gelu_fwd(x),
-    gelu_bwd(x)
+UNARY_OP(float, fast_gelu_fwd_f32, fast_gelu_bwd_f32, FastGeLUKernelOp,
+    fast_gelu_fwd(x),
+    fast_gelu_bwd(x)
 )
 
-UNARY_OP(double, gelu_fwd_f64, gelu_bwd_f64, GeLUKernelOp,
-    gelu_fwd(x),
-    gelu_bwd(x)
+UNARY_OP(double, fast_gelu_fwd_f64, fast_gelu_bwd_f64, FastGeLUKernelOp,
+    fast_gelu_fwd(x),
+    fast_gelu_bwd(x)
 )

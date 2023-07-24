@@ -1,4 +1,5 @@
 use crate::{
+    prelude::numpy::NpyError,
     shapes::{Dtype, Shape},
     tensor::{
         numpy::{read_from_npz, write_to_npz, NpzError, NumpyDtype},
@@ -162,18 +163,26 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
 
     fn visit_scalar<N: num_traits::NumCast>(
         &mut self,
-        _opts: ScalarOptions<N>,
+        opts: ScalarOptions<N>,
         (n, full_path): (&mut N, String),
     ) -> Result<Option<N>, Self::Err> {
-        let buf: Vec<f64> = read_from_npz(self, &[], full_path)?;
-        *n = N::from(buf[0]).unwrap_or_else(|| {
-            panic!(
-                "Failed to convert f64 value {} to {} when reading from npz!",
-                buf[0],
-                std::any::type_name::<N>()
-            )
-        });
-        Ok(None)
+        match read_from_npz::<_, f64>(self, &[], full_path) {
+            Ok(buf) => {
+                *n = N::from(buf[0]).unwrap_or_else(|| {
+                    panic!(
+                        "Failed to convert f64 value {} to {} when reading from npz!",
+                        buf[0],
+                        std::any::type_name::<N>()
+                    )
+                });
+                Ok(None)
+            }
+            Err(NpyError::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                *n = opts.default;
+                Ok(None)
+            }
+            Err(x) => Err(x.into()),
+        }
     }
 }
 
