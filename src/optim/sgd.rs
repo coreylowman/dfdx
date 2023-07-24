@@ -1,91 +1,13 @@
-mod cpu_kernel;
-
-#[cfg(feature = "cuda")]
-mod cuda_kernel;
-
 use std::marker::PhantomData;
 
 use crate::{
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
     tensor::{Gradients, Storage, Tensor},
-    tensor_ops::Device,
+    tensor_ops::{Device, SgdConfig},
 };
 
 use super::optimizer::*;
-
-/// Configuration of hyperparameters for [Sgd].
-///
-/// Using different learning rate:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// SgdConfig {
-///     lr: 1e-1,
-///     momentum: None,
-///     weight_decay: None,
-/// };
-/// ```
-///
-/// Using classic momentum:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// SgdConfig {
-///     lr: 1e-2,
-///     momentum: Some(Momentum::Classic(0.5)),
-///     weight_decay: None,
-/// };
-/// ```
-///
-/// Using nesterov momentum:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// SgdConfig {
-///     lr: 1e-3,
-///     momentum: Some(Momentum::Nesterov(0.25)),
-///     weight_decay: None,
-/// };
-/// ```
-///
-/// Using L2 weight decay:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// SgdConfig {
-///     lr: 1e-3,
-///     momentum: None,
-///     weight_decay: Some(WeightDecay::L2(1e-2)),
-/// };
-/// ```
-///
-/// Using decoupled weight decay:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// SgdConfig {
-///     lr: 1e-3,
-///     momentum: None,
-///     weight_decay: Some(WeightDecay::Decoupled(1e-2)),
-/// };
-/// ```
-#[derive(Debug, Clone, Copy)]
-pub struct SgdConfig {
-    /// Learning rate. Defaults to `1e-2`
-    pub lr: f64,
-
-    /// Optional momentum. Defaults to `None`.
-    pub momentum: Option<Momentum>,
-
-    /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay>,
-}
-
-impl Default for SgdConfig {
-    fn default() -> Self {
-        Self {
-            lr: 1e-2,
-            momentum: None,
-            weight_decay: None,
-        }
-    }
-}
 
 /// Implementation of Stochastic Gradient Descent. Based on [pytorch's implementation](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html)
 ///
@@ -132,16 +54,6 @@ impl<M, E: Dtype, D: Storage<E>> Sgd<M, E, D> {
     }
 }
 
-pub trait SgdKernel<E: Dtype>: Storage<E> {
-    fn update(
-        &self,
-        cfg: &SgdConfig,
-        param: &mut Self::Vec,
-        velocity: &mut Self::Vec,
-        grad: &Self::Vec,
-    ) -> Result<(), Self::Err>;
-}
-
 impl<E: Dtype, D: Device<E>, M> TensorVisitor<E, D>
     for (&mut Sgd<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
@@ -163,13 +75,7 @@ impl<E: Dtype, D: Device<E>, M> TensorVisitor<E, D>
             None => self.2.add(p),
             Some(g) => {
                 let v = self.0.velocity.get_or_alloc_mut(p)?;
-                SgdKernel::update(
-                    &p.device,
-                    &self.0.cfg,
-                    std::sync::Arc::make_mut(&mut p.data),
-                    v,
-                    g,
-                )?;
+                self.0.cfg.try_update(p, v, g)?;
             }
         }
         Ok(None)

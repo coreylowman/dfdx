@@ -1,13 +1,9 @@
-use crate::{
-    optim::optimizer::{Momentum, WeightDecay},
-    shapes::Dtype,
-    tensor::cpu::*,
-};
+use crate::{shapes::Dtype, tensor::cpu::*};
 
-use super::{SgdConfig, SgdKernel};
+use super::{Momentum, SgdConfig, SgdKernel, WeightDecay};
 
 impl<E: Dtype> SgdKernel<E> for Cpu {
-    fn update(
+    fn sgd_kernel(
         &self,
         cfg: &SgdConfig,
         param: &mut Self::Vec,

@@ -3,10 +3,10 @@
 use dfdx::{
     losses::mse_loss,
     nn::builders::*,
-    optim::{Momentum, Optimizer, Sgd, SgdConfig},
+    optim::{Optimizer, Sgd},
     shapes::Rank2,
     tensor::{AsArray, AutoDevice, SampleTensor, Tensor, Trace},
-    tensor_ops::Backward,
+    tensor_ops::{Backward, Momentum, SgdConfig},
 };
 
 // first let's declare our neural network to optimze

@@ -2,12 +2,7 @@
 
 use std::time::Instant;
 
-use dfdx::{
-    losses::huber_loss,
-    optim::{Momentum, Sgd, SgdConfig},
-    prelude::*,
-    tensor::AutoDevice,
-};
+use dfdx::{losses::huber_loss, optim::Sgd, prelude::*, tensor::AutoDevice};
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
