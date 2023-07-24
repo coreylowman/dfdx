@@ -27,7 +27,7 @@ unsafe impl<F: cudarc::driver::DeviceRepr> cudarc::driver::DeviceRepr for AMP<F>
 
 #[cfg(feature = "cuda")]
 impl<F: cudarc::types::CudaTypeName> cudarc::types::CudaTypeName for AMP<F> {
-    const NAME: &'static str = F::TYPE_NAME;
+    const NAME: &'static str = F::NAME;
 }
 
 #[cfg(feature = "cudnn")]

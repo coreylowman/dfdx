@@ -75,8 +75,7 @@ ADAM(__half, adam_update_f16);
 ADAM(float, adam_update_f32);
 ADAM(double, adam_update_f64);
 
-
-__device__ void adam_update_amp_f16(
+extern "C" __global__ void adam_update_amp_f16(
     const AdamConfig cfg,
     const size_t numel,
     const int t_int,
