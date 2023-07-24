@@ -2,7 +2,11 @@
 
 use std::time::Instant;
 
-use dfdx::{optim::Sgd, prelude::*, tensor::AutoDevice};
+use dfdx::{
+    optim::{Momentum, Sgd, SgdConfig},
+    prelude::*,
+    tensor::AutoDevice,
+};
 
 const BATCH: usize = 64;
 const STATE: usize = 4;

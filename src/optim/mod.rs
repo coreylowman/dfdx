@@ -40,6 +40,9 @@ pub use optimizer::{Optimizer, OptimizerUpdateError, UnusedTensors};
 pub use rmsprop::RMSprop;
 pub use sgd::Sgd;
 
+// re-exports
+pub use crate::tensor_ops::{AdamConfig, Momentum, RMSpropConfig, SgdConfig, WeightDecay};
+
 pub mod prelude {
     pub use super::{Optimizer, OptimizerUpdateError, UnusedTensors};
 }
