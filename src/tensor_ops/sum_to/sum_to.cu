@@ -80,3 +80,53 @@ extern "C" __global__ void BWD( \
 SUM(__half, sum_to_fwd_f16, sum_to_bwd_f16);
 SUM(float, sum_to_fwd_f32, sum_to_bwd_f32);
 SUM(double, sum_to_fwd_f64, sum_to_bwd_f64);
+
+extern "C" __global__ void sum_to_fwd_amp_f16(
+    const size_t numel,
+    const size_t num_dims,
+    const __half elems_per_thread,
+    const size_t chunk_len,
+    const size_t *info,
+    const __half *inp,
+    __half *out
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i >= numel) {
+        return;
+    }
+
+    const size_t *dims = info;
+    const size_t *strides = info + num_dims;
+
+    unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
+    chunk_sum(chunk_len, inp[inp_i] * elems_per_thread, out);
+}
+
+// Accepts pre-broadcasted strides for both input & output.
+// So both inp & out are expected to be broadcasted to the same size.
+extern "C" __global__ void sum_to_bwd_amp_f16(
+    const size_t numel,
+    const size_t num_dims,
+    const __half elems_per_thread,
+    const size_t *info,
+    __half *grad_inp,
+    const __half *grad_out
+) {
+    unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (inp_i >= numel) {
+        return;
+    }
+
+    const size_t *dims = info;
+    const size_t *inp_strides = info + num_dims;
+    const size_t *out_strides = info + 2 * num_dims;
+
+    unsigned int out_i = restrided(inp_i, num_dims, dims, inp_strides, out_strides);
+
+    // NOTE: since size of output is less than input, only 1 thread will be writing to inp
+    // at a time. this means we don't have to worry about multiple concurrent writes
+    // like we do with fwd.
+    grad_inp[inp_i] += grad_out[out_i] * elems_per_thread;
+}

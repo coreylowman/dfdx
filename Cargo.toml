@@ -48,7 +48,7 @@ indicatif = "0.17.3"
 glob = { version = "0.3.1", optional = true }
 
 [features]
-default = ["std", "fast-alloc", "cpu"]
+default = ["std", "fast-alloc", "cpu", "f16"]
 nightly = ["half?/use-intrinsics", "gemm?/nightly"]
 
 std = ["cudarc?/std", "rand_distr/std_math", "gemm?/std"]

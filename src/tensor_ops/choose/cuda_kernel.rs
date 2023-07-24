@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Storage, Tensor},
 };
@@ -12,7 +13,13 @@ pub(crate) trait HasCudaKernel<E> {
 }
 
 #[cfg(feature = "f16")]
-impl HasCudaKernel<half::f16> for Cuda {
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const MOD: &'static str = "choose_f16";
+    const FNS: &'static [&'static str] = &["choose_fwd_f16", "choose_bwd_f16"];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
     const MOD: &'static str = "choose_f16";
     const FNS: &'static [&'static str] = &["choose_fwd_f16", "choose_bwd_f16"];
 }

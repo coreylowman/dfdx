@@ -2,6 +2,7 @@ use cudarc::cudnn::{self, Conv2dBackwardData, Conv2dBackwardFilter, Conv2dForwar
 use cudarc::driver::DeviceSlice;
 
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{Cuda, Tensor, Tensorlike},
 };
@@ -10,7 +11,9 @@ use std::sync::Arc;
 
 trait HasCudnnKernel<E> {}
 #[cfg(feature = "f16")]
-impl HasCudnnKernel<half::f16> for Cuda {}
+impl HasCudnnKernel<f16> for Cuda {}
+#[cfg(feature = "f16")]
+impl HasCudnnKernel<AMP<f16>> for Cuda {}
 impl HasCudnnKernel<f32> for Cuda {}
 impl HasCudnnKernel<f64> for Cuda {}
 

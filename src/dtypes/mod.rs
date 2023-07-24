@@ -53,7 +53,7 @@ unit!(u128, 1);
 unit!(i128, 1);
 unit!(bool, true);
 #[cfg(feature = "f16")]
-unit!(half::f16, half::f16::ONE);
+unit!(f16, f16::ONE);
 
 /// Represents something that has a [Unit].
 pub trait HasUnitType {
@@ -93,7 +93,7 @@ impl Dtype for u64 {}
 impl Dtype for u128 {}
 impl Dtype for usize {}
 #[cfg(feature = "f16")]
-impl Dtype for half::f16 {}
+impl Dtype for f16 {}
 
 /// Represents something that has a [Dtype].
 pub trait HasDtype {
@@ -116,4 +116,4 @@ impl NotMixedPrecision for u64 {}
 impl NotMixedPrecision for u128 {}
 impl NotMixedPrecision for usize {}
 #[cfg(feature = "f16")]
-impl NotMixedPrecision for half::f16 {}
+impl NotMixedPrecision for f16 {}

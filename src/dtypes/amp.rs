@@ -17,6 +17,28 @@ impl<F: std::fmt::Display> std::fmt::Display for AMP<F> {
     }
 }
 
+impl<F: super::SafeZeros> super::SafeZeros for AMP<F> {}
+
+#[cfg(feature = "cuda")]
+unsafe impl<F: cudarc::driver::ValidAsZeroBits> cudarc::driver::ValidAsZeroBits for AMP<F> {}
+
+#[cfg(feature = "cuda")]
+unsafe impl<F: cudarc::driver::DeviceRepr> cudarc::driver::DeviceRepr for AMP<F> {}
+
+#[cfg(feature = "cuda")]
+impl<F: cudarc::types::CudaTypeName> cudarc::types::CudaTypeName for AMP<F> {
+    const NAME: &'static str = F::TYPE_NAME;
+}
+
+#[cfg(feature = "cudnn")]
+impl<F: cudarc::cudnn::CudnnDataType> cudarc::cudnn::CudnnDataType for AMP<F> {
+    type Scalar = F::Scalar;
+    const DATA_TYPE: cudarc::cudnn::sys::cudnnDataType_t = F::DATA_TYPE;
+    fn into_scaling_parameter(self) -> Self::Scalar {
+        self.0.into_scaling_parameter()
+    }
+}
+
 impl<F: std::ops::Add<F, Output = F>> std::ops::Add<AMP<F>> for AMP<F> {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
@@ -199,9 +221,6 @@ impl<F: num_traits::ToPrimitive> num_traits::ToPrimitive for AMP<F> {
         self.0.to_f64()
     }
 }
-
-#[cfg(feature = "f16")]
-impl crate::shapes::SafeZeros for AMP<half::f16> {}
 
 #[cfg(feature = "f16")]
 impl crate::shapes::Unit for AMP<half::f16> {
