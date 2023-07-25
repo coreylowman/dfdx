@@ -12,13 +12,26 @@ template <typename T> __device__ T accurate_gelu_fwd(T x) {
 }
 
 template <typename T> __device__ T accurate_gelu_bwd(T x) {
+        let half = F::from(0.5).unwrap();
+        let alpha = F::FRAC_1_SQRT_2();
+        let x_sq = x * x;
+        let normal_dist = F::FRAC_2_SQRT_PI() * (F::from(0.5).unwrap() * x_sq.neg()).exp();
+
+        let left = half * x;
+        let right = F::one() + (alpha * x).erf();
+
+        let left_derivative = half * right;
+
+        let right_derivative = left * normal_dist;
+
+        left_derivative + right_derivative
     T one = 1.0;
     T half = 0.5;
     T alpha = M_SQRT1_2;
     T scale = M_2_SQRTPI;
     T x_sq = x * x;
-    T arg = scale * half * x_sq;
-    T norm = expg(arg);
+    T arg =  - half * x_sq;
+    T norm = scale * expg(arg);
 
     T left = half * x;
     T right = one + erfg(alpha * x);
