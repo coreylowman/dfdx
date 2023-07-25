@@ -64,11 +64,17 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
                     |s| &mut s.beta,
                     TensorOptions::reset_to_zeros(),
                 ),
+                Self::scalar(
+                    "epsilon",
+                    |s| &s.epsilon,
+                    |s| &mut s.epsilon,
+                    ScalarOptions::from_default(1e-5),
+                ),
             ),
-            |(gamma, beta)| LayerNorm1D {
+            |(gamma, beta, epsilon)| LayerNorm1D {
                 gamma,
                 beta,
-                epsilon: 1e-5,
+                epsilon,
             },
         )
     }

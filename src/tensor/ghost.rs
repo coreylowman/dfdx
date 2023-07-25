@@ -17,7 +17,7 @@ pub struct GhostTensor<S: Shape, E, D: Storage<E>> {
 impl<S: Shape, E, D: Storage<E>, T> Tensor<S, E, D, T> {
     /// Creates a ghost tensor that doesn't hold a reference
     /// to the tensor's data.
-    pub(crate) fn ghost(&self) -> GhostTensor<S, E, D> {
+    pub fn ghost(&self) -> GhostTensor<S, E, D> {
         GhostTensor {
             id: self.id,
             len: self.device.len(&self.data),

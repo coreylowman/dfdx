@@ -1,7 +1,7 @@
 use crate::{
-    optim::optimizer::*,
     shapes::*,
     tensor::{launch_cfg, Cuda},
+    tensor_ops::optim::*,
 };
 
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
@@ -58,7 +58,7 @@ impl<E: Dtype> super::AdamKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn update(
+    fn adam_kernel(
         &self,
         t: i32,
         cfg: &super::AdamConfig,

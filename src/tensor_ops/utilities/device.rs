@@ -19,9 +19,9 @@ pub trait Device<E: Dtype>:
     + super::super::concat_along::ConcatAlongKernel<E>
 
     // optimizers
-    + crate::optim::AdamKernel<E>
-    + crate::optim::SgdKernel<E>
-    + crate::optim::RMSpropKernel<E>
+    + super::super::adam::AdamKernel<E>
+    + super::super::sgd::SgdKernel<E>
+    + super::super::rmsprop::RMSpropKernel<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>

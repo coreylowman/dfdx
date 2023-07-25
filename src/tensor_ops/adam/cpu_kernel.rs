@@ -1,8 +1,8 @@
-use super::{AdamConfig, AdamKernel};
-use crate::{optim::WeightDecay, shapes::Dtype, tensor::Cpu};
+use super::{AdamConfig, AdamKernel, WeightDecay};
+use crate::{shapes::Dtype, tensor::Cpu};
 
 impl<E: num_traits::Float + Dtype> AdamKernel<E> for Cpu {
-    fn update(
+    fn adam_kernel(
         &self,
         t: i32,
         cfg: &AdamConfig,

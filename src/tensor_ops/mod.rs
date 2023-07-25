@@ -151,6 +151,7 @@ pub use utilities::*;
 
 mod abs;
 mod accurate_gelu;
+mod adam;
 mod add;
 mod attention_reshape;
 pub(crate) mod axpy;
@@ -181,6 +182,7 @@ mod mul;
 mod nans_to;
 mod negate;
 mod normalize;
+pub(super) mod optim;
 mod permute_to;
 mod pow;
 mod prelu;
@@ -188,8 +190,10 @@ mod realize_to;
 mod recip;
 mod relu;
 mod reshape_to;
+mod rmsprop;
 mod roll;
 mod select_and_gather;
+mod sgd;
 mod sigmoid;
 mod sin;
 mod slice;
@@ -208,6 +212,7 @@ mod var_to;
 
 pub use abs::abs;
 pub use accurate_gelu::accurate_gelu;
+pub use adam::AdamConfig;
 pub use add::{add, TryAdd};
 pub use attention_reshape::TryAttentionReshape;
 pub use axpy::axpy;
@@ -241,6 +246,7 @@ pub use mul::{mul, TryMul};
 pub use nans_to::nans_to;
 pub use negate::negate;
 pub use normalize::normalize;
+pub use optim::*;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
 pub use prelu::{leakyrelu, prelu, TryPReLU};
@@ -248,8 +254,10 @@ pub use realize_to::RealizeTo;
 pub use recip::recip;
 pub use relu::relu;
 pub use reshape_to::ReshapeTo;
+pub use rmsprop::RMSpropConfig;
 pub use roll::Roll;
 pub use select_and_gather::{GatherTo, SelectTo};
+pub use sgd::SgdConfig;
 pub use sigmoid::sigmoid;
 pub use sin::sin;
 pub use slice::slice;
@@ -277,7 +285,7 @@ pub use conv2d::TryConv2D;
 #[cfg(feature = "nightly")]
 mod convtrans2d;
 #[cfg(feature = "nightly")]
-pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
+pub use convtrans2d::TryConvTrans2D;
 
 #[cfg(feature = "nightly")]
 mod pool2d;
