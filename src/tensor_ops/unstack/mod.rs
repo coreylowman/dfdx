@@ -14,7 +14,7 @@ mod cpu_kernel;
 /// let tensor: Tensor<Rank3<2, 3, 4>, f32, _> = dev.zeros();
 /// let result: Vec<Tensor<Rank2<3, 4>, f32, _>> = tensor.unstack();
 /// ```
-pub trait TryUnstack<const N: usize>: Sized {
+pub trait TryUnstack: Sized {
     type Unstacked;
     type Err: std::fmt::Debug;
 
@@ -26,8 +26,7 @@ pub trait TryUnstack<const N: usize>: Sized {
     fn try_unstack(self) -> Result<Self::Unstacked, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: UnstackKernel<E>, T, const N: usize> TryUnstack<N>
-    for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: UnstackKernel<E>, T> TryUnstack for Tensor<S, E, D, T>
 where
     S: SubDim,
     T: Tape<E, D>,
@@ -45,28 +44,63 @@ pub trait SubDim: Shape {
     fn sub_dim(&self) -> Self::Smaller;
 }
 
-impl<const N: usize> SubDim<Const<N>> for (Const<N>,) {
-    type Smaller = ();
-
-    fn sub_dim(&self) -> Self::Smaller {
-        ()
-    }
-}
-
-// impl<D1: Dim> SubDim for (D1,) {
+// impl<const N: usize> SubDim<Const<N>> for (Const<N>,) {
 //     type Smaller = ();
+
 //     fn sub_dim(&self) -> Self::Smaller {
 //         ()
 //     }
 // }
 
-impl<const N: usize> SubDim for (Const<N>,) {
+impl<D1: Dim> SubDim for (D1,) {
     type Smaller = ();
-
     fn sub_dim(&self) -> Self::Smaller {
         ()
     }
 }
+
+impl<D1: Dim, D2: Dim> SubDim for (D1, D2) {
+    type Smaller = (D2,);
+    fn sub_dim(&self) -> Self::Smaller {
+        (self.1,)
+    }
+}
+
+impl<D1: Dim, D2: Dim, D3: Dim> SubDim for (D1, D2, D3) {
+    type Smaller = (D2, D3);
+    fn sub_dim(&self) -> Self::Smaller {
+        (self.1, self.2)
+    }
+}
+
+impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim> SubDim for (D1, D2, D3, D4) {
+    type Smaller = (D2, D3, D4);
+    fn sub_dim(&self) -> Self::Smaller {
+        (self.1, self.2, self.3)
+    }
+}
+
+impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim> SubDim for (D1, D2, D3, D4, D5) {
+    type Smaller = (D2, D3, D4, D5);
+    fn sub_dim(&self) -> Self::Smaller {
+        (self.1, self.2, self.3, self.4)
+    }
+}
+
+impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim> SubDim for (D1, D2, D3, D4, D5, D6) {
+    type Smaller = (D2, D3, D4, D5, D6);
+    fn sub_dim(&self) -> Self::Smaller {
+        (self.1, self.2, self.3, self.4, self.5)
+    }
+}
+
+// impl<const N: usize> SubDim for (Const<N>,) {
+//     type Smaller = ();
+
+//     fn sub_dim(&self) -> Self::Smaller {
+//         ()
+//     }
+// }
 
 pub trait UnstackKernel<E: Dtype>: Storage<E> {
     fn forward<S: Shape>(
@@ -127,10 +161,26 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         {
-            let x: Tensor<Rank1<2>, TestDtype, _> = dev.sample_normal();
-            dbg!(&x);
-            let y = x.unstack();
-            dbg!(&y);
+            let stacked: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
+            let unstacked = stacked.clone().unstack();
+            assert_eq!(unstacked.len(), 3);
+            for (index, item) in unstacked.into_iter().enumerate() {
+                assert_eq!(item.shape(), &());
+                assert_eq!(item.data[0], stacked.data[index]);
+            }
+        }
+
+        {
+            let stacked: Tensor<Rank2<4, 3>, TestDtype, _> = dev.sample_normal();
+            let unstacked = stacked.clone().unstack();
+            assert_eq!(unstacked.len(), 4);
+            for (index, item) in unstacked.into_iter().enumerate() {
+                assert_eq!(item.shape(), &(Const::<3>,));
+                // assert_eq!(item.data[0], stacked.data[index * 3]);
+                for (i, &value) in item.data.iter().enumerate() {
+                    assert_eq!(value, stacked.data[index * 3 + i]);
+                }
+            }
         }
     }
 }
