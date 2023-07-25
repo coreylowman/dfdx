@@ -67,6 +67,7 @@ mod tests {
         assert_close_to_literal!(r, [-0.04550027, -0.15865525, 0.0, 0.84134471, 1.9544997,]);
         // NOTE: call .exp() to make sure we cover cases where .gelu() uses the result's gradient
         let g = r.exp().mean().backward();
+        println!("result {}", g.get(&x));
         assert_close_to_literal!(
             g.get(&x),
             [-0.024835737, -0.03132311, 0.1, 0.5490418, 1.59559]
