@@ -29,7 +29,7 @@ pub trait TryUnstack<const N: usize>: Sized {
 impl<S: Shape, E: Dtype, D: UnstackKernel<E>, T, const N: usize> TryUnstack<N>
     for Tensor<S, E, D, T>
 where
-    S: SubDim<Const<N>>,
+    S: SubDim,
     T: Tape<E, D>,
 {
     type Err = D::Err;
@@ -40,27 +40,41 @@ where
     }
 }
 
-pub trait SubDim<D: Dim>: Shape {
+pub trait SubDim: Shape {
     type Smaller: Shape;
-    fn sub_dim(&self, dim: D) -> Self::Smaller;
+    fn sub_dim(&self) -> Self::Smaller;
 }
 
 impl<const N: usize> SubDim<Const<N>> for (Const<N>,) {
     type Smaller = ();
 
-    fn sub_dim(&self, dim: Const<N>) -> Self::Smaller {
+    fn sub_dim(&self) -> Self::Smaller {
+        ()
+    }
+}
+
+// impl<D1: Dim> SubDim for (D1,) {
+//     type Smaller = ();
+//     fn sub_dim(&self) -> Self::Smaller {
+//         ()
+//     }
+// }
+
+impl<const N: usize> SubDim for (Const<N>,) {
+    type Smaller = ();
+
+    fn sub_dim(&self) -> Self::Smaller {
         ()
     }
 }
 
 pub trait UnstackKernel<E: Dtype>: Storage<E> {
-    fn forward<S: Shape, const N: usize>(
+    fn forward<S: Shape>(
         &self,
-        num: Const<N>,
         inp: &Tensor<S, E, Self>,
     ) -> Result<Vec<Tensor<S::Smaller, E, Self>>, Self::Err>
     where
-        S: SubDim<Const<N>>;
+        S: SubDim;
     fn backward(
         &self,
         grad_inp: &mut Self::Vec,
@@ -68,16 +82,15 @@ pub trait UnstackKernel<E: Dtype>: Storage<E> {
     ) -> Result<(), Self::Err>;
 }
 
-fn try_unstack<S: Shape, E: Dtype, D: UnstackKernel<E>, T: Tape<E, D>, const N: usize>(
+fn try_unstack<S: Shape, E: Dtype, D: UnstackKernel<E>, T: Tape<E, D>>(
     tensor: Tensor<S, E, D, T>,
 ) -> Result<Vec<Tensor<S::Smaller, E, D, T>>, D::Err>
 where
-    S: SubDim<Const<N>>,
+    S: SubDim,
 {
     let (input, mut tape): (Tensor<S, E, D>, T) = tensor.split_tape();
     let device = input.device.clone();
-    // let tensors = device.forward(input.shape().rank(), input)?;
-    let tensors = device.forward(Const::<N>::from_size(2).unwrap(), &input)?;
+    let tensors = device.forward(&input)?;
 
     let out_ghosts: Vec<_> = tensors.iter().map(|t| t.ghost()).collect();
     let inp_ghost = input.ghost();

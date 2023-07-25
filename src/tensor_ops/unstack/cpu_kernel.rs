@@ -5,15 +5,14 @@ use crate::{
 
 use std::vec::Vec;
 impl<E: Dtype> super::UnstackKernel<E> for Cpu {
-    fn forward<S: Shape, const N: usize>(
+    fn forward<S: Shape>(
         &self,
-        num: Const<N>,
         inp: &Tensor<S, E, Self>,
     ) -> Result<Vec<Tensor<S::Smaller, E, Self>>, Self::Err>
     where
-        S: super::SubDim<Const<N>>,
+        S: super::SubDim,
     {
-        let shape: S::Smaller = inp.shape().sub_dim(num);
+        let shape: S::Smaller = inp.shape().sub_dim();
         let mut item_strides = shape.strides();
         for i in 0..S::Smaller::NUM_DIMS {
             item_strides[i] = inp.strides[i + 1];
