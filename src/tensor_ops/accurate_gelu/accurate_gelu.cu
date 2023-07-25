@@ -8,22 +8,24 @@ template <typename T> __device__ T accurate_gelu_fwd(T x) {
     T one = 1.0;
     T half = 0.5;
     T alpha = M_SQRT1_2;
-    return half * x * (one + erfg(x * alpha))
+    return half * x * (one + erfg(x * alpha));
 }
 
 template <typename T> __device__ T accurate_gelu_bwd(T x) {
     T one = 1.0;
     T half = 0.5;
     T alpha = M_SQRT1_2;
+    T scale = M_2_SQRTPI;
     T x_sq = x * x;
-    T norm = expg(M_2_SQRTPI * half * x_sq);
+    T arg = scale * half * x_sq;
+    T norm = expg(arg);
 
     T left = half * x;
-    T right = one + erfg(alph * x);
+    T right = one + erfg(alpha * x);
 
     T left_derivative = half * right;
 
-    T right_derivative = left * normal_dist;
+    T right_derivative = left * norm;
 
     return left_derivative + right_derivative;
 }

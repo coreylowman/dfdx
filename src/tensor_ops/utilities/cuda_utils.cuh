@@ -137,6 +137,9 @@ __device__ __forceinline__ __half logg(__half a) { return hlog(a); }
 __device__ __forceinline__ float expg(float a) { return expf(a); }
 __device__ __forceinline__ double expg(double a) { return exp(a); }
 __device__ __forceinline__ __half expg(__half a) { return hexp(a); }
+__device__ __forceinline__ float erfg(float a) { return erff(a); }
+__device__ __forceinline__ double erfg(double a) { return erf(a); }
+__device__ __forceinline__ __half erfg(__half a) { return erff(float(a)); }
 __device__ __forceinline__ float absg(float a) { return fabsf(a); }
 __device__ __forceinline__ double absg(double a) { return fabs(a); }
 __device__ __forceinline__ __half absg(__half a) { return __habs(a); }
