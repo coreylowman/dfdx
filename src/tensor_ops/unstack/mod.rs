@@ -176,7 +176,18 @@ mod tests {
             assert_eq!(unstacked.len(), 4);
             for (index, item) in unstacked.into_iter().enumerate() {
                 assert_eq!(item.shape(), &(Const::<3>,));
-                // assert_eq!(item.data[0], stacked.data[index * 3]);
+                for (i, &value) in item.data.iter().enumerate() {
+                    assert_eq!(value, stacked.data[index * 3 + i]);
+                }
+            }
+        }
+
+        {
+            let stacked: Tensor<(usize, usize), TestDtype, _> = dev.sample_normal_like(&(4, 3));
+            let unstacked = stacked.clone().unstack();
+            assert_eq!(unstacked.len(), 4);
+            for (index, item) in unstacked.into_iter().enumerate() {
+                assert_eq!(item.shape(), &(3,));
                 for (i, &value) in item.data.iter().enumerate() {
                     assert_eq!(value, stacked.data[index * 3 + i]);
                 }
