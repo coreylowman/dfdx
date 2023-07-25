@@ -14,7 +14,7 @@ mod cpu_kernel;
 /// let tensor: Tensor<Rank3<2, 3, 4>, f32, _> = dev.zeros();
 /// let result: Vec<Tensor<Rank2<3, 4>, f32, _>> = tensor.unstack();
 /// ```
-pub trait TryUnstack: Sized {
+pub trait TryUnstack<const N: usize>: Sized {
     type Unstacked;
     type Err: std::fmt::Debug;
 
@@ -26,7 +26,8 @@ pub trait TryUnstack: Sized {
     fn try_unstack(self) -> Result<Self::Unstacked, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: UnstackKernel<E>, T> TryUnstack for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: UnstackKernel<E>, T, const N: usize> TryUnstack<N>
+    for Tensor<S, E, D, T>
 where
     S: SubDim<Const<N>>,
     T: Tape<E, D>,
@@ -44,39 +45,39 @@ pub trait SubDim<D: Dim>: Shape {
     fn sub_dim(&self, dim: D) -> Self::Smaller;
 }
 
-impl<D1: Dim> SubDim<D1> for (D1,) {
+impl<const N: usize> SubDim<Const<N>> for (Const<N>,) {
     type Smaller = ();
 
-    fn sub_dim(&self, dim: D1) -> Self::Smaller {
+    fn sub_dim(&self, dim: Const<N>) -> Self::Smaller {
         ()
     }
 }
 
 pub trait UnstackKernel<E: Dtype>: Storage<E> {
-    fn forward<S: Shape, Num: Dim>(
+    fn forward<S: Shape, const N: usize>(
         &self,
-        num: Num,
-        inp: Tensor<S, E, Self>,
+        num: Const<N>,
+        inp: &Tensor<S, E, Self>,
     ) -> Result<Vec<Tensor<S::Smaller, E, Self>>, Self::Err>
     where
-        S: SubDim<Num>;
+        S: SubDim<Const<N>>;
     fn backward(
         &self,
-        grad_inp: Vec<&mut Self::Vec>,
-        grad_out: &Self::Vec,
+        grad_inp: &mut Self::Vec,
+        grad_out: Vec<&Self::Vec>,
     ) -> Result<(), Self::Err>;
 }
 
-fn try_unstack<S: Shape, E: Dtype, D: UnstackKernel<E>, T>(
+fn try_unstack<S: Shape, E: Dtype, D: UnstackKernel<E>, T: Tape<E, D>, const N: usize>(
     tensor: Tensor<S, E, D, T>,
 ) -> Result<Vec<Tensor<S::Smaller, E, D, T>>, D::Err>
 where
     S: SubDim<Const<N>>,
-    T: Tape<E, D>,
 {
-    let (input, tape): (Tensor<S, E, D>, T) = tensor.split_tape();
+    let (input, mut tape): (Tensor<S, E, D>, T) = tensor.split_tape();
     let device = input.device.clone();
-    let tensors = device.forward(input.dim(), input)?;
+    // let tensors = device.forward(input.shape().rank(), input)?;
+    let tensors = device.forward(Const::<N>::from_size(2).unwrap(), &input)?;
 
     let out_ghosts: Vec<_> = tensors.iter().map(|t| t.ghost()).collect();
     let inp_ghost = input.ghost();
@@ -85,11 +86,38 @@ where
             grads.try_alloc_for(t)?;
         }
         grads.try_alloc_for(&inp_ghost)?;
-        let (grad_out, grad_inp) = grads.many_and_ref(&out_ghosts, &inp_ghost);
+        let (grad_out, grad_inp) = grads.many_mut_and_ref(&out_ghosts, &inp_ghost);
         device.backward(grad_inp, grad_out)
     });
-    Ok(tensors
-        .into_iter()
-        .map(|t| t.put_tape(tape.clone()))
-        .collect())
+
+    let mut tensors = tensors.into_iter();
+    let first = tensors.next().map(|t| t.put_tape(tape));
+    let others = tensors
+        .map(|t| t.put_tape(Default::default()))
+        .collect::<Vec<_>>();
+
+    let mut result = Vec::new();
+    if let Some(first) = first {
+        result.push(first);
+    }
+    result.extend(others);
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{tensor_ops::*, tests::*};
+
+    #[test]
+    fn test_valid_unstacks() {
+        let dev: TestDevice = Default::default();
+
+        {
+            let x: Tensor<Rank1<2>, TestDtype, _> = dev.sample_normal();
+            dbg!(&x);
+            let y = x.unstack();
+            dbg!(&y);
+        }
+    }
 }
