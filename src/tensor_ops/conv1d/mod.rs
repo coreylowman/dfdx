@@ -4,9 +4,6 @@ mod cpu_kernel;
 #[cfg(all(not(feature = "cudnn"), feature = "cuda"))]
 mod cuda_kernel;
 
-#[cfg(feature = "cudnn")]
-mod cudnn_kernel;
-
 #[cfg(test)]
 mod tests;
 
