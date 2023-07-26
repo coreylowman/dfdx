@@ -186,27 +186,11 @@ impl<T: 'static + Copy, F: num_traits::AsPrimitive<T>> num_traits::AsPrimitive<T
     }
 }
 
-#[cfg(feature = "f16")]
-impl num_traits::AsPrimitive<AMP<half::f16>> for half::f16 {
-    fn as_(self) -> AMP<half::f16> {
-        AMP(self)
+impl<T: num_traits::AsPrimitive<E>, E> num_traits::AsPrimitive<AMP<E>> for T {
+    fn as_(self) -> AMP<E> {
+        AMP(self.as_())
     }
 }
-
-#[cfg(feature = "f16")]
-impl num_traits::AsPrimitive<AMP<half::f16>> for f32 {
-    fn as_(self) -> AMP<half::f16> {
-        AMP(half::f16::from_f32(self))
-    }
-}
-
-#[cfg(feature = "f16")]
-impl num_traits::AsPrimitive<AMP<half::f16>> for f64 {
-    fn as_(self) -> AMP<half::f16> {
-        AMP(half::f16::from_f64(self))
-    }
-}
-
 impl<F: num_traits::ToPrimitive> num_traits::ToPrimitive for AMP<F> {
     fn to_i64(&self) -> Option<i64> {
         self.0.to_i64()
