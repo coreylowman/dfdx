@@ -186,11 +186,27 @@ impl<T: 'static + Copy, F: num_traits::AsPrimitive<T>> num_traits::AsPrimitive<T
     }
 }
 
-impl<T: num_traits::AsPrimitive<E>, E> num_traits::AsPrimitive<AMP<E>> for T {
-    fn as_(self) -> AMP<E> {
-        AMP(self.as_())
+#[cfg(feature = "f16")]
+impl num_traits::AsPrimitive<AMP<half::f16>> for half::f16 {
+    fn as_(self) -> AMP<half::f16> {
+        AMP(self)
     }
 }
+
+#[cfg(feature = "f16")]
+impl num_traits::AsPrimitive<AMP<half::f16>> for f32 {
+    fn as_(self) -> AMP<half::f16> {
+        AMP(half::f16::from_f32(self))
+    }
+}
+
+#[cfg(feature = "f16")]
+impl num_traits::AsPrimitive<AMP<half::f16>> for f64 {
+    fn as_(self) -> AMP<half::f16> {
+        AMP(half::f16::from_f64(self))
+    }
+}
+
 impl<F: num_traits::ToPrimitive> num_traits::ToPrimitive for AMP<F> {
     fn to_i64(&self) -> Option<i64> {
         self.0.to_i64()
@@ -206,13 +222,11 @@ impl<F: num_traits::ToPrimitive> num_traits::ToPrimitive for AMP<F> {
     }
 }
 
-#[cfg(feature = "f16")]
-impl crate::shapes::Unit for AMP<half::f16> {
-    const ONE: Self = AMP(half::f16::ONE);
+impl<F: crate::shapes::Unit> crate::shapes::Unit for AMP<F> {
+    const ONE: Self = AMP(F::ONE);
 }
 
-#[cfg(feature = "f16")]
-impl crate::shapes::Dtype for AMP<half::f16> {}
+impl<F: crate::shapes::Dtype> crate::shapes::Dtype for AMP<F> {}
 
 impl<F: num_traits::Zero> num_traits::Zero for AMP<F> {
     fn zero() -> Self {
