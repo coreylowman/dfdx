@@ -44,14 +44,6 @@ pub trait SubDim: Shape {
     fn sub_dim(&self) -> Self::Smaller;
 }
 
-// impl<const N: usize> SubDim<Const<N>> for (Const<N>,) {
-//     type Smaller = ();
-
-//     fn sub_dim(&self) -> Self::Smaller {
-//         ()
-//     }
-// }
-
 impl<D1: Dim> SubDim for (D1,) {
     type Smaller = ();
     fn sub_dim(&self) -> Self::Smaller {
@@ -93,14 +85,6 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim> SubDim for (D1, D2, D
         (self.1, self.2, self.3, self.4, self.5)
     }
 }
-
-// impl<const N: usize> SubDim for (Const<N>,) {
-//     type Smaller = ();
-
-//     fn sub_dim(&self) -> Self::Smaller {
-//         ()
-//     }
-// }
 
 pub trait UnstackKernel<E: Dtype>: Storage<E> {
     fn forward<S: Shape>(
@@ -199,10 +183,9 @@ mod tests {
     fn test_unstack_backwards() {
         let dev: TestDevice = Default::default();
 
-        // Generate a tensor with the shape (2, 3)
-        let stacked: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
+        let stacked: Tensor<Rank2<4, 3>, TestDtype, _> = dev.sample_normal();
 
-        // Block to compute gradients using 'unstack'
+        // Block to compute gradients using 'unstack'.
         let grads_unstack: Vec<Tensor<Rank1<3>, _, _, _>> = {
             let sum = stacked
                 .leaky_trace()
@@ -218,33 +201,33 @@ mod tests {
                     }
                 })
                 .unwrap();
-            let grad = sum.backward();
 
-            let stacked_grad = grad.get(&stacked);
+            let grads = sum.backward();
+            let grad = grads.get(&stacked);
 
-            (0..2)
+            (0..4)
                 .map(|i| {
                     let idx: Tensor<Rank0, usize, _> = dev.tensor(i);
-                    stacked_grad.clone().select(idx)
+                    grad.clone().select(idx)
                 })
                 .collect()
         };
 
-        // Block to compute ground-truth gradients
+        // Block to compute ground-truth gradients.
         let grads_truth: Vec<Tensor<Rank1<3>, _, _, _>> = {
-            let stacked_grad = stacked.leaky_trace().exp().sum().backward();
+            let sum = stacked.leaky_trace().exp().sum();
+            let grads = sum.backward();
 
-            let stacked_grad = stacked_grad.get(&stacked);
+            let grad = grads.get(&stacked);
 
-            (0..2)
+            (0..4)
                 .map(|i| {
                     let idx: Tensor<Rank0, usize, _> = dev.tensor(i);
-                    stacked_grad.clone().select(idx)
+                    grad.clone().select(idx)
                 })
                 .collect()
         };
 
-        // Compare the gradients computed using 'unstack' with the ground-truth gradients
         for (grad_unstack, grad_truth) in grads_unstack.into_iter().zip(grads_truth.into_iter()) {
             assert_eq!(grad_unstack.array(), grad_truth.array());
         }

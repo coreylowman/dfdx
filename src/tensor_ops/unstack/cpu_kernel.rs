@@ -18,7 +18,6 @@ impl<E: Dtype> super::UnstackKernel<E> for Cpu {
             item_strides[i] = inp.strides[i + 1];
         }
 
-        // let num_items = num.size();
         let num_items = inp.shape().concrete()[0];
         let item_size = inp.data.len() / num_items;
 
