@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use crate::dtypes::*;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 

@@ -1,4 +1,5 @@
 use super::{BinarySubKernelOp as Binary, ScalarSubKernelOp as Scalar};
+#[allow(unused_imports)]
 use crate::dtypes::*;
 use crate::tensor_ops::cuda_kernels::{cuda_binary, cuda_unary};
 

@@ -1,4 +1,5 @@
 use super::*;
+#[allow(unused_imports)]
 use crate::dtypes::*;
 use crate::tensor::cuda::Cuda;
 use cudarc::driver::{DeviceRepr, LaunchAsync};
