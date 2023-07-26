@@ -13,9 +13,9 @@ impl<E: Dtype> super::UnstackKernel<E> for Cpu {
         S: super::SubDim,
     {
         let shape: S::Smaller = inp.shape().sub_dim();
-        let mut item_strides = shape.strides();
+        let mut strides = shape.strides();
         for i in 0..S::Smaller::NUM_DIMS {
-            item_strides[i] = inp.strides[i + 1];
+            strides[i] = inp.strides[i + 1];
         }
 
         let num_items = inp.shape().concrete()[0];
@@ -29,8 +29,8 @@ impl<E: Dtype> super::UnstackKernel<E> for Cpu {
             tensors.push(Tensor {
                 id: unique_id(),
                 data: std::sync::Arc::new(data),
-                shape: shape.clone(),
-                strides: item_strides.clone(),
+                shape,
+                strides,
                 device: self.clone(),
                 tape: Default::default(),
             });

@@ -46,9 +46,7 @@ pub trait SubDim: Shape {
 
 impl<D1: Dim> SubDim for (D1,) {
     type Smaller = ();
-    fn sub_dim(&self) -> Self::Smaller {
-        ()
-    }
+    fn sub_dim(&self) -> Self::Smaller {}
 }
 
 impl<D1: Dim, D2: Dim> SubDim for (D1, D2) {
