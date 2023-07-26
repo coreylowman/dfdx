@@ -1,6 +1,6 @@
 use super::RMSpropConfig;
 use crate::{
-    shapes::*,
+    dtypes::*,
     tensor::{launch_cfg, Cuda},
     tensor_ops::optim::*,
 };
@@ -49,9 +49,15 @@ trait HasCudaKernel<E> {
 }
 
 #[cfg(feature = "f16")]
-impl HasCudaKernel<half::f16> for Cuda {
+impl HasCudaKernel<f16> for Cuda {
     const MOD: &'static str = "rmsprop_f16";
     const FWD: &'static str = "rmsprop_update_f16";
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const MOD: &'static str = "rmsprop_amp_f16";
+    const FWD: &'static str = "rmsprop_update_amp_f16";
 }
 
 impl HasCudaKernel<f32> for Cuda {

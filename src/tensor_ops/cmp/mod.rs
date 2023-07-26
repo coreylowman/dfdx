@@ -239,6 +239,20 @@ macro_rules! impl_cmp_kernel_op {
             }
         }
 
+        #[cfg(feature = "f16")]
+        impl<
+                S: Shape,
+                D: ScalarCmpKernel<$KernelOp, crate::dtypes::AMP<half::f16>>,
+                T: Tape<crate::dtypes::AMP<half::f16>, D>,
+            > $TraitName<f32> for Tensor<S, crate::dtypes::AMP<half::f16>, D, T>
+        {
+            type Output = Tensor<S, bool, D, NoneTape>;
+            #[doc = $doc]
+            fn $TryFnName(&self, other: f32) -> Result<Self::Output, D::Err> {
+                try_scalar_cmp_op(self, crate::dtypes::AMP(half::f16::from_f32(other)))
+            }
+        }
+
         impl<S: Shape, E, D: ScalarCmpKernel<$KernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
             #[doc = $doc]
             #[deprecated = "You can now use the non-scalar method for both tensors & scalars."]

@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor},
     tensor_ops::reduction_utils::*,
@@ -17,8 +18,15 @@ trait HasCudaKernel<E> {
 }
 
 #[cfg(feature = "f16")]
-impl HasCudaKernel<half::f16> for Cuda {
-    const INIT: half::f16 = half::f16::INFINITY;
+impl HasCudaKernel<f16> for Cuda {
+    const INIT: f16 = f16::INFINITY;
+    const MOD: &'static str = "min_f16";
+    const FNS: &'static [&'static str] = &["min_to_fwd_f16", "min_to_bwd_f16", "fill_with_f16"];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const INIT: AMP<f16> = AMP::<f16>::INFINITY;
     const MOD: &'static str = "min_f16";
     const FNS: &'static [&'static str] = &["min_to_fwd_f16", "min_to_bwd_f16", "fill_with_f16"];
 }

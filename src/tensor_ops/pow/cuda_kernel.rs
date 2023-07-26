@@ -1,5 +1,6 @@
 use super::PowfKernelOp;
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::*,
     tensor_ops::{cuda_kernels::cuda_unary, ops::UnaryKernel},
@@ -7,16 +8,20 @@ use crate::{
 use std::borrow::Cow;
 
 #[cfg(feature = "f16")]
-unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<half::f16> {}
+unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f16> {}
+#[cfg(feature = "f16")]
+unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<AMP<f16>> {}
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f32> {}
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f64> {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
 
 #[cfg(feature = "f16")]
+cuda_unary!(PowfKernelOp<f16>, f16, PTX, "pow_fwd_f16", "pow_bwd_f16");
+#[cfg(feature = "f16")]
 cuda_unary!(
-    PowfKernelOp<half::f16>,
-    half::f16,
+    PowfKernelOp<AMP<f16>>,
+    AMP<f16>,
     PTX,
     "pow_fwd_f16",
     "pow_bwd_f16"

@@ -9,9 +9,16 @@ trait Erf {
 }
 
 #[cfg(feature = "f16")]
+impl Erf for crate::dtypes::AMP<f16> {
+    fn erf(self) -> Self {
+        crate::dtypes::AMP(f16::from_f32(erff(self.0.to_f32())))
+    }
+}
+
+#[cfg(feature = "f16")]
 impl Erf for f16 {
     fn erf(self) -> Self {
-        f16::from_f32(erff(f16::to_f32(self)))
+        f16::from_f32(erff(self.to_f32()))
     }
 }
 

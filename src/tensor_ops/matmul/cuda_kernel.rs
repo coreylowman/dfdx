@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{cuda::Cuda, Tensor},
 };
@@ -55,6 +56,81 @@ fn gemm_cfg<M: Dim, K: Dim, N: Dim, E: Dtype>(
             ldc: out_stride as i32,
         };
         (cfg, false)
+    }
+}
+
+#[cfg(feature = "f16")]
+impl Gemm<AMP<f16>> for CudaBlas {
+    unsafe fn gemm<A: DevicePtr<AMP<f16>>, B: DevicePtr<AMP<f16>>, C: DevicePtrMut<AMP<f16>>>(
+        &self,
+        cfg: GemmConfig<AMP<f16>>,
+        a: &A,
+        b: &B,
+        c: &mut C,
+    ) -> Result<(), CublasError> {
+        let alpha: f32 = cfg.alpha.0.to_f32();
+        let beta: f32 = cfg.beta.0.to_f32();
+        cudarc::cublas::result::gemm_ex(
+            *self.handle(),
+            cfg.transa,
+            cfg.transb,
+            cfg.m,
+            cfg.n,
+            cfg.k,
+            (&alpha) as *const f32 as *const _,
+            *a.device_ptr() as *const _,
+            cudarc::cublas::sys::cudaDataType_t::CUDA_R_16F,
+            cfg.lda,
+            *b.device_ptr() as *const _,
+            cudarc::cublas::sys::cudaDataType_t::CUDA_R_16F,
+            cfg.ldb,
+            (&beta) as *const f32 as *const _,
+            *c.device_ptr_mut() as *mut _,
+            cudarc::cublas::sys::cudaDataType_t::CUDA_R_16F,
+            cfg.ldc,
+            cudarc::cublas::sys::cublasComputeType_t::CUBLAS_COMPUTE_32F,
+            cudarc::cublas::sys::cublasGemmAlgo_t::CUBLAS_GEMM_DEFAULT,
+        )
+    }
+
+    unsafe fn gemm_strided_batched<
+        A: DevicePtr<AMP<f16>>,
+        B: DevicePtr<AMP<f16>>,
+        C: DevicePtrMut<AMP<f16>>,
+    >(
+        &self,
+        cfg: StridedBatchedConfig<AMP<f16>>,
+        a: &A,
+        b: &B,
+        c: &mut C,
+    ) -> Result<(), CublasError> {
+        let alpha: f32 = cfg.gemm.alpha.0.to_f32();
+        let beta: f32 = cfg.gemm.beta.0.to_f32();
+        cudarc::cublas::result::gemm_strided_batched_ex(
+            *self.handle(),
+            cfg.gemm.transa,
+            cfg.gemm.transb,
+            cfg.gemm.m,
+            cfg.gemm.n,
+            cfg.gemm.k,
+            (&alpha) as *const f32 as *const _,
+            *a.device_ptr() as *const _,
+            cudarc::cublas::sys::cudaDataType_t::CUDA_R_16F,
+            cfg.gemm.lda,
+            cfg.stride_a,
+            *b.device_ptr() as *const _,
+            cudarc::cublas::sys::cudaDataType_t::CUDA_R_16F,
+            cfg.gemm.ldb,
+            cfg.stride_b,
+            (&beta) as *const f32 as *const _,
+            *c.device_ptr_mut() as *mut _,
+            cudarc::cublas::sys::cudaDataType_t::CUDA_R_16F,
+            cfg.gemm.ldc,
+            cfg.stride_c,
+            cfg.batch_size,
+            cudarc::cublas::sys::cublasComputeType_t::CUBLAS_COMPUTE_32F,
+            cudarc::cublas::sys::cublasGemmAlgo_t::CUBLAS_GEMM_DEFAULT,
+        )
     }
 }
 

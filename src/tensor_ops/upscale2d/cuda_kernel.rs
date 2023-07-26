@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor},
 };
@@ -26,12 +27,22 @@ trait HasCudaKernel<E, Mode> {
     const BWD: &'static str;
 }
 #[cfg(feature = "f16")]
-impl HasCudaKernel<half::f16, NearestNeighbor> for Cuda {
+impl HasCudaKernel<f16, NearestNeighbor> for Cuda {
     const FWD: &'static str = "nearest_upscale2d_fwd_f16";
     const BWD: &'static str = "nearest_upscale2d_bwd_f16";
 }
 #[cfg(feature = "f16")]
-impl HasCudaKernel<half::f16, Bilinear> for Cuda {
+impl HasCudaKernel<f16, Bilinear> for Cuda {
+    const FWD: &'static str = "bilinear_upscale2d_fwd_f16";
+    const BWD: &'static str = "bilinear_upscale2d_bwd_f16";
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>, NearestNeighbor> for Cuda {
+    const FWD: &'static str = "nearest_upscale2d_fwd_f16";
+    const BWD: &'static str = "nearest_upscale2d_bwd_f16";
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>, Bilinear> for Cuda {
     const FWD: &'static str = "bilinear_upscale2d_fwd_f16";
     const BWD: &'static str = "bilinear_upscale2d_bwd_f16";
 }

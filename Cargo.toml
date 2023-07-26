@@ -30,7 +30,7 @@ spin = { version = "0.9.8", default-features = false, features = ["spin_mutex", 
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false }
 zip = { version = "0.6.6", default-features = false, optional = true }
-cudarc = { version = "0.9.11", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc"] }
+cudarc = { version = "0.9.13", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc"] }
 num-traits = { version = "0.2.15", default-features = false }
 safetensors = { version = "0.3", default-features = false, optional = true }
 memmap2 = { version = "0.5", default-features = false, optional = true }
@@ -65,6 +65,7 @@ numpy = ["dep:zip", "std"]
 safetensors = ["dep:safetensors", "std", "dep:memmap2"]
 
 test-f16 = ["f16"]
+test-amp-f16 = ["f16"]
 test-f64 = []
 test-integrations = []
 ci-check = ["cudarc?/ci-check"]

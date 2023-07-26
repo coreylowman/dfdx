@@ -183,6 +183,7 @@ extern crate alloc;
 extern crate no_std_compat as std;
 
 pub mod data;
+pub mod dtypes;
 pub mod feature_flags;
 pub mod losses;
 pub mod nn;
@@ -252,7 +253,11 @@ pub(crate) mod tests {
     #[cfg(all(feature = "test-f64", feature = "test-f16"))]
     compile_error!("f64 and f16 cannot be tested at the same time");
 
-    #[cfg(all(not(feature = "test-f16"), not(feature = "test-f64")))]
+    #[cfg(all(
+        not(feature = "test-amp-f16"),
+        not(feature = "test-f16"),
+        not(feature = "test-f64")
+    ))]
     pub type TestDtype = f32;
 
     #[cfg(feature = "test-f16")]
@@ -260,6 +265,9 @@ pub(crate) mod tests {
 
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
+
+    #[cfg(feature = "test-amp-f16")]
+    pub type TestDtype = crate::dtypes::AMP<half::f16>;
 
     pub trait AssertClose {
         type Elem: std::fmt::Display + std::fmt::Debug + Copy;
@@ -279,6 +287,22 @@ pub(crate) mod tests {
             if let Some((l, r)) = self.get_far_pair(rhs, tolerance) {
                 panic!("lhs != rhs | {l} != {r}\n\n{self:?}\n\n{rhs:?}");
             }
+        }
+    }
+
+    impl<F: Copy + std::fmt::Debug + std::fmt::Display + AssertClose> AssertClose
+        for crate::dtypes::AMP<F>
+    {
+        type Elem = crate::dtypes::AMP<F::Elem>;
+        const DEFAULT_TOLERANCE: Self::Elem = crate::dtypes::AMP(F::DEFAULT_TOLERANCE);
+        fn get_far_pair(
+            &self,
+            rhs: &Self,
+            tolerance: Self::Elem,
+        ) -> Option<(Self::Elem, Self::Elem)> {
+            self.0
+                .get_far_pair(&rhs.0, tolerance.0)
+                .map(|(l, r)| (crate::dtypes::AMP(l), crate::dtypes::AMP(r)))
         }
     }
 

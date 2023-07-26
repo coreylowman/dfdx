@@ -1,4 +1,6 @@
 use super::*;
+#[allow(unused_imports)]
+use crate::dtypes::*;
 use crate::tensor::cuda::Cuda;
 use cudarc::driver::{DeviceRepr, LaunchAsync};
 
@@ -20,7 +22,12 @@ trait HasCudaKernel<E: Unit> {
 }
 
 #[cfg(feature = "f16")]
-impl HasCudaKernel<half::f16> for Cuda {
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const FN: &'static str = "attention_reshape_f16";
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
     const FN: &'static str = "attention_reshape_f16";
 }
 

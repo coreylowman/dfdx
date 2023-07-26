@@ -1,4 +1,6 @@
 use super::AccurateGeLUKernelOp;
+#[allow(unused_imports)]
+use crate::dtypes::*;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 
 unsafe impl cudarc::driver::DeviceRepr for super::AccurateGeLUKernelOp {}
@@ -8,7 +10,15 @@ const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/accurate_gelu.ptx"));
 #[cfg(feature = "f16")]
 cuda_unary!(
     AccurateGeLUKernelOp,
-    half::f16,
+    AMP<f16>,
+    PTX,
+    "accurate_gelu_fwd_f16",
+    "accurate_gelu_bwd_f16"
+);
+#[cfg(feature = "f16")]
+cuda_unary!(
+    AccurateGeLUKernelOp,
+    f16,
     PTX,
     "accurate_gelu_fwd_f16",
     "accurate_gelu_bwd_f16"
