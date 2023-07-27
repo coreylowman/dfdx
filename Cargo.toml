@@ -1,6 +1,6 @@
 [package]
 name = "dfdx"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 rust-version = "1.65"
