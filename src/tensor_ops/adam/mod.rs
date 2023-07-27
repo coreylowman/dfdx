@@ -10,7 +10,7 @@ use crate::{
 
 use super::WeightDecay;
 
-/// Configuration of hyperparameters for [Adam].
+/// Configuration of hyperparameters for [crate::optim::Adam].
 ///
 /// Changing all default parameters:
 /// ```rust

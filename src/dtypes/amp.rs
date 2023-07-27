@@ -1,5 +1,10 @@
 use rand::{distributions::Distribution, Rng};
 
+/// Wrapper type around the storage type. Use like `AMP<f16>` or `AMP<bf16>`.
+///
+/// This causes some tensor operations to cast the type to a higher precision
+/// and then back. For example calling sum on a `AMP<f16>` tensor will cast it to
+/// `f32`, sum it, and then cast it back to `f16`.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct AMP<F>(pub F);

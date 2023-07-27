@@ -1,3 +1,12 @@
+//! Module for data type related traits and structs. Contains things like [Unit], [Dtype], and [AMP].
+//!
+//! When the `f16` feature is enabled, this exports the [f16] type.
+//!
+//! # AMP
+//!
+//! [AMP](https://pytorch.org/docs/stable/amp.html) is a technique for mixed precision training.
+//! This is a data type in dfdx, you can use it like any normal dtype like [`AMP<f16>`] or [`AMP<bf16>`].
+
 mod amp;
 
 pub use amp::AMP;
@@ -5,9 +14,11 @@ pub use amp::AMP;
 #[cfg(feature = "f16")]
 pub use half::f16;
 
+/// Represents a type where all 0 bits is a valid pattern.
 #[cfg(not(feature = "cuda"))]
 pub trait SafeZeros {}
 
+/// Represents a type where all 0 bits is a valid pattern.
 #[cfg(feature = "cuda")]
 pub trait SafeZeros: cudarc::driver::ValidAsZeroBits + cudarc::driver::DeviceRepr {}
 
@@ -100,6 +111,7 @@ pub trait HasDtype {
     type Dtype: Dtype;
 }
 
+/// Marker trait for types that are **not** [AMP].
 pub trait NotMixedPrecision {}
 impl NotMixedPrecision for f32 {}
 impl NotMixedPrecision for f64 {}

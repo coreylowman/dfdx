@@ -13,12 +13,12 @@
 //!
 //! # Shapes & Tensors
 //!
-//! *See [shapes] and [tensor] for more information.*
+//! *See [dtypes], [shapes], and [tensor] for more information.*
 //!
 //! At its core a [`tensor::Tensor`] is just a nd-array. Just like
 //! rust arrays there are two parts:
-//! 1. Shape
-//! 2. Dtype
+//! 1. Shape ([shapes])
+//! 2. Dtype ([dtypes])
 //!
 //! dfdx represents shapes as **tuples** of dimensions ([`shapes::Dim`]),
 //! where a dimension can either be known at:
@@ -31,6 +31,7 @@
 //! - `(usize,)` - 1d shape with a runtime known dimension
 //! - `(usize, Const<5>)` - 2d shape with both types of dimensions
 //! - `(Const<3>, usize, Const<5>)` - 3d shape!
+//! - `Rank3<3, 5, 7>` - Equivalent to `(Const<3>, Const<5>, Const<7>)`
 //!
 //! Here are some comparisons between representing nd arrays in rust vs dfdx:
 //!
