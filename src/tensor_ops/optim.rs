@@ -28,13 +28,13 @@ pub(super) fn weight_decay_to_cuda(wd: Option<WeightDecay>) -> (WeightDecayType,
     }
 }
 
-/// Momentum used for [super::Sgd] and others
+/// Momentum used for [crate::optim::Sgd] and others
 #[derive(Debug, Clone, Copy)]
 pub enum Momentum {
     /// Momentum that is applied to the velocity of a parameter directly.
     Classic(f64),
 
-    /// Momentum that is applied to both velocity and gradients. See [super::Sgd] nesterov paper for more.
+    /// Momentum that is applied to both velocity and gradients. See [crate::optim::Sgd] nesterov paper for more.
     Nesterov(f64),
 }
 

@@ -10,7 +10,7 @@ use crate::{
 
 use super::WeightDecay;
 
-/// Configuration of hyperparameters for [RMSprop].
+/// Configuration of hyperparameters for [crate::optim::RMSprop].
 #[derive(Debug, Clone, Copy)]
 pub struct RMSpropConfig {
     /// Learning rate. Defaults to `1e-2`.
@@ -59,6 +59,7 @@ pub trait RMSpropKernel<E: Dtype>: Storage<E> {
 }
 
 impl RMSpropConfig {
+    /// Update a single tensor using RMSprop.
     pub fn try_update<S: Shape, E: Dtype, D: RMSpropKernel<E>>(
         &self,
         param: &mut Tensor<S, E, D>,
