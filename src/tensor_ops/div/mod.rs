@@ -48,7 +48,8 @@ where
 
 /// Fallible version of [std::ops::Div]. See [div]
 pub trait TryDiv<Rhs = Self>: HasErr {
-    fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
+    type Output;
+    fn try_div(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
 impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, R> TryDiv<Tensor<S, E, D, R>>
@@ -57,6 +58,7 @@ where
     D: BinaryKernel<BinaryDivKernelOp, E>,
     LhsTape: Merge<R>,
 {
+    type Output = Self;
     /// See [div]
     fn try_div(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
         try_binary_op(BinaryDivKernelOp, self, rhs)
@@ -66,6 +68,7 @@ where
 impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarDivKernelOp<E>, E>, T: Tape<E, D>> TryDiv<E>
     for Tensor<S, E, D, T>
 {
+    type Output = Self;
     /// See [div]
     fn try_div(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarDivKernelOp { scalar: rhs }, self)
@@ -76,6 +79,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarDivKernelOp<E>, E>, T: Tape<E, D>>
 impl<S: Shape, D: UnaryKernel<ScalarDivKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
     TryDiv<f32> for Tensor<S, half::f16, D, T>
 {
+    type Output = Self;
     /// See [div]
     fn try_div(self, rhs: f32) -> Result<Self, Self::Err> {
         let scalar = half::f16::from_f32(rhs);
@@ -93,6 +97,7 @@ impl<
         T: Tape<crate::dtypes::AMP<half::f16>, D>,
     > TryDiv<f32> for Tensor<S, crate::dtypes::AMP<half::f16>, D, T>
 {
+    type Output = Self;
     /// See [div]
     fn try_div(self, rhs: f32) -> Result<Self, Self::Err> {
         let scalar = crate::dtypes::AMP(half::f16::from_f32(rhs));
@@ -105,7 +110,7 @@ impl<S: Shape, E: Dtype, D: Storage<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Div<
 where
     Self: TryDiv<Rhs>,
 {
-    type Output = Self;
+    type Output = <Self as TryDiv<Rhs>>::Output;
     /// See [div]
     fn div(self, rhs: Rhs) -> Self::Output {
         self.try_div(rhs).unwrap()
