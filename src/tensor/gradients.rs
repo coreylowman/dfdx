@@ -199,19 +199,30 @@ impl<E: std::fmt::Debug, D: Storage<E>> std::fmt::Debug for OwnedTape<E, D> {
     }
 }
 
+impl<E, D: Storage<E>> From<Gradients<E, D>> for OwnedTape<E, D> {
+    fn from(gradients: Gradients<E, D>) -> Self {
+        Self {
+            operations: Default::default(),
+            gradients,
+        }
+    }
+}
+
 impl<E, D: Storage<E>> OwnedTape<E, D> {
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
-    pub(crate) fn execute(mut self) -> Result<Gradients<E, D>, D::Err> {
+    pub(crate) fn execute(&mut self) -> Result<Gradients<E, D>, D::Err> {
         // We must ensure that the operations are sorted in execution time order.
         // Otherwise an backward operation may not be executed in the right order
         // if multiple tapes were merged together.
         self.operations.sort_by_key(|(k, _)| *k);
+        // In case the same operation is present multiple times, we dedup it.
+        self.operations.dedup_by_key(|(k, _)| *k);
         for (_, operation) in self.operations.drain(..).rev() {
             (operation)(&mut self.gradients)?;
         }
-        Ok(self.gradients)
+        Ok(std::mem::replace(&mut self.gradients, Gradients::leaky()))
     }
 }
 
@@ -280,5 +291,45 @@ impl<E, D: Storage<E>> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
         }
         self.operations.append(&mut other.operations);
         self
+    }
+}
+
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Merge<NoneTape> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
+    fn merge(self, _: NoneTape) -> Self {
+        self
+    }
+}
+
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Merge<Self> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
+    fn merge(self, other: Self) -> Self {
+        if !std::sync::Arc::ptr_eq(&self, &other) {
+            let mut lhs = self.lock().unwrap();
+            let mut rhs = other.lock().unwrap();
+            lhs.gradients
+                .gradient_by_id
+                .append(&mut rhs.gradients.gradient_by_id);
+            if let Some(leafs) = &mut rhs.gradients.leaf_ids {
+                lhs.gradients
+                    .leaf_ids
+                    .get_or_insert_with(Default::default)
+                    .append(leafs);
+            }
+            lhs.operations.append(&mut rhs.operations);
+        }
+        self
+    }
+}
+
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Tape<E, D> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
+    const OWNS_TAPE: bool = true;
+    fn add_backward_op<F>(&mut self, operation: F)
+    where
+        F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>,
+    {
+        let mut tape = self.lock().unwrap();
+        tape.add_backward_op(operation);
     }
 }

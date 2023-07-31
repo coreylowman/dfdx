@@ -28,3 +28,21 @@ impl<E: 'static + Clone, D: OneFillStorage<E>> Backward<E, D>
         Ok(grads)
     }
 }
+
+#[cfg(feature = "std")]
+impl<E: 'static + Clone, D: OneFillStorage<E>> Backward<E, D>
+    for Tensor<Rank0, E, D, std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>>>
+{
+    fn try_backward(self) -> Result<Gradients<E, D>, Self::Err> {
+        let (t, tape) = self.split_tape();
+        let t_ghost = t.ghost();
+        let mut tape = tape.lock().unwrap();
+        tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&t_ghost)?;
+            t.device.try_fill_with_ones(grads.get_mut(&t_ghost))
+        });
+        let mut grads = tape.execute()?;
+        grads.drop_non_leafs();
+        Ok(grads)
+    }
+}
