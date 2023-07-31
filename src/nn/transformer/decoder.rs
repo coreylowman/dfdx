@@ -174,7 +174,7 @@ where
 impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, Tgt, Mem>
     Module<(Tgt, Mem)> for TransformerDecoderBlock<M, H, F, E, D>
 where
-    Tgt: SplitTape + TryAdd<Tgt::NoTape> + HasErr<Err = D::Err>,
+    Tgt: SplitTape + TryAdd<Tgt::NoTape, Output = Tgt> + HasErr<Err = D::Err>,
     Mem: Clone,
     MultiHeadAttention<M, H, M, M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>
         + Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,

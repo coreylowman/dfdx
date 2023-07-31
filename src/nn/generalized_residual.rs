@@ -53,33 +53,33 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D
     }
 }
 
-impl<T: WithEmptyTape, F: Module<T>, R: Module<T, Output = F::Output, Error = F::Error>> Module<T>
+impl<T: WithEmptyTape, F: Module<T>, R: Module<T, Error = F::Error>> Module<T>
     for GeneralizedResidual<F, R>
 where
-    F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
+    F::Output: TryAdd<R::Output> + HasErr<Err = F::Error>,
 {
-    type Output = F::Output;
+    type Output = <F::Output as TryAdd<R::Output>>::Output;
     type Error = F::Error;
 
     fn try_forward(&self, x: T) -> Result<Self::Output, F::Error> {
-        self.f
-            .try_forward(x.with_empty_tape())?
-            .try_add(self.r.try_forward(x)?)
+        let f = self.f.try_forward(x.with_empty_tape())?;
+        let r = self.r.try_forward(x)?;
+        f.try_add(r)
     }
 }
 
-impl<T: WithEmptyTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output, Error = F::Error>>
-    ModuleMut<T> for GeneralizedResidual<F, R>
+impl<T: WithEmptyTape, F: ModuleMut<T>, R: ModuleMut<T, Error = F::Error>> ModuleMut<T>
+    for GeneralizedResidual<F, R>
 where
-    F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
+    F::Output: TryAdd<R::Output> + HasErr<Err = F::Error>,
 {
-    type Output = F::Output;
+    type Output = <F::Output as TryAdd<R::Output>>::Output;
     type Error = F::Error;
 
     fn try_forward_mut(&mut self, x: T) -> Result<Self::Output, F::Error> {
-        self.f
-            .try_forward_mut(x.with_empty_tape())?
-            .try_add(self.r.try_forward_mut(x)?)
+        let f = self.f.try_forward_mut(x.with_empty_tape())?;
+        let r = self.r.try_forward_mut(x)?;
+        f.try_add(r)
     }
 }
 

@@ -50,7 +50,8 @@ where
 
 /// Fallible version of [std::ops::Add]. See [add]
 pub trait TryAdd<Rhs = Self>: HasErr {
-    fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
+    type Output;
+    fn try_add(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
 impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, R> TryAdd<Tensor<S, E, D, R>>
@@ -59,6 +60,7 @@ where
     D: BinaryKernel<BinaryAddKernelOp, E>,
     LhsTape: Merge<R>,
 {
+    type Output = Self;
     /// See [add]
     fn try_add(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
         try_binary_op(BinaryAddKernelOp, self, rhs)
@@ -68,6 +70,7 @@ where
 impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<E, D>> TryAdd<E>
     for Tensor<S, E, D, T>
 {
+    type Output = Self;
     /// See [add]
     fn try_add(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarAddKernelOp { scalar: rhs }, self)
@@ -78,6 +81,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<E, D>>
 impl<S: Shape, D: UnaryKernel<ScalarAddKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
     TryAdd<f32> for Tensor<S, half::f16, D, T>
 {
+    type Output = Self;
     /// See [add]
     fn try_add(self, rhs: f32) -> Result<Self, Self::Err> {
         let scalar = half::f16::from_f32(rhs);
@@ -95,6 +99,7 @@ impl<
         T: Tape<crate::dtypes::AMP<half::f16>, D>,
     > TryAdd<f32> for Tensor<S, crate::dtypes::AMP<half::f16>, D, T>
 {
+    type Output = Self;
     /// See [add]
     fn try_add(self, rhs: f32) -> Result<Self, Self::Err> {
         let scalar = crate::dtypes::AMP(half::f16::from_f32(rhs));
@@ -107,7 +112,7 @@ impl<S: Shape, E: Dtype, D: Storage<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Add<
 where
     Self: TryAdd<Rhs>,
 {
-    type Output = Self;
+    type Output = <Self as TryAdd<Rhs>>::Output;
     /// See [add]
     fn add(self, rhs: Rhs) -> Self::Output {
         self.try_add(rhs).unwrap()
