@@ -2,11 +2,7 @@
 #![allow(clippy::type_complexity)]
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::{
-    boxed::Box,
-    sync::{Arc, Mutex},
-    vec::Vec,
-};
+use std::{boxed::Box, vec::Vec};
 
 use super::tensorlike::Tensorlike;
 use super::{storage_traits::Storage, unique_id, Tensor, UniqueId};
@@ -298,15 +294,17 @@ impl<E, D: Storage<E>> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
     }
 }
 
-impl<E, D: Storage<E>> Merge<NoneTape> for Arc<Mutex<OwnedTape<E, D>>> {
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Merge<NoneTape> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
     fn merge(self, _: NoneTape) -> Self {
         self
     }
 }
 
-impl<E, D: Storage<E>> Merge<Self> for Arc<Mutex<OwnedTape<E, D>>> {
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Merge<Self> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
     fn merge(self, other: Self) -> Self {
-        if !Arc::ptr_eq(&self, &other) {
+        if !std::sync::Arc::ptr_eq(&self, &other) {
             let mut lhs = self.lock().unwrap();
             let mut rhs = other.lock().unwrap();
             lhs.gradients
@@ -324,7 +322,8 @@ impl<E, D: Storage<E>> Merge<Self> for Arc<Mutex<OwnedTape<E, D>>> {
     }
 }
 
-impl<E, D: Storage<E>> Tape<E, D> for Arc<Mutex<OwnedTape<E, D>>> {
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Tape<E, D> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
     const OWNS_TAPE: bool = true;
     fn add_backward_op<F>(&mut self, operation: F)
     where

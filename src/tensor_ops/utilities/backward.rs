@@ -1,6 +1,5 @@
 use crate::shapes::Rank0;
 use crate::tensor::*;
-use std::sync::{Arc, Mutex};
 
 /// Runs backprop algorithm with all operations contained in the tape that `t` has.
 ///
@@ -30,8 +29,9 @@ impl<E: 'static + Clone, D: OneFillStorage<E>> Backward<E, D>
     }
 }
 
+#[cfg(feature = "std")]
 impl<E: 'static + Clone, D: OneFillStorage<E>> Backward<E, D>
-    for Tensor<Rank0, E, D, Arc<Mutex<OwnedTape<E, D>>>>
+    for Tensor<Rank0, E, D, std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>>>
 {
     fn try_backward(self) -> Result<Gradients<E, D>, Self::Err> {
         let (t, tape) = self.split_tape();
