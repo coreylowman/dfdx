@@ -77,7 +77,7 @@ impl<E, D: Storage<E>> Gradients<E, D> {
     }
 
     /// Returns a reference to the underlying gradient if found.
-    pub(crate) fn get_ref_checked<S: Shape, T>(&self, t: &Tensor<S, E, D, T>) -> Option<&D::Vec> {
+    pub fn get_ref_checked<S: Shape, T>(&self, t: &Tensor<S, E, D, T>) -> Option<&D::Vec> {
         self.gradient_by_id.get(&t.id)
     }
 
