@@ -68,6 +68,11 @@ impl<E, D: Storage<E>> Gradients<E, D> {
         self.drop_non_leafs();
     }
 
+    /// Marks all existing gradients as leaf gradients.
+    pub fn retain_current_grads_as_leafs(&mut self) {
+        self.leaf_ids = Some(self.gradient_by_id.keys().copied().collect());
+    }
+
     /// Keeps all gradients marked previously by [Gradients::retain_leafs], and drops all
     /// others.
     pub fn drop_non_leafs(&mut self) {
