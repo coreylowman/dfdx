@@ -18,9 +18,8 @@ pub use half::f16;
 pub mod complex {
     use core::ops::{Deref, DerefMut};
 
-    use cudarc::driver::DeviceRepr;
     #[cfg(feature = "cuda")]
-    use cudarc::driver::ValidAsZeroBits;
+    use cudarc::driver::{DeviceRepr, ValidAsZeroBits};
     use num_complex::Complex32;
     use num_traits::{FromPrimitive, ToPrimitive};
 
