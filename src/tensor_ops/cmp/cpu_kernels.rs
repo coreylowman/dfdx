@@ -48,37 +48,37 @@ impl<Op: CmpOpCpuKernel<E>, E: Unit> ScalarCmpKernel<Op, E> for Cpu {
     }
 }
 
-impl<E: Unit> CmpOpCpuKernel<E> for EqKernelOp {
+impl<E: Unit + PartialOrd> CmpOpCpuKernel<E> for EqKernelOp {
     fn func(lhs: E, rhs: E) -> bool {
         lhs == rhs
     }
 }
 
-impl<E: Unit> CmpOpCpuKernel<E> for NeKernelOp {
+impl<E: Unit + PartialOrd> CmpOpCpuKernel<E> for NeKernelOp {
     fn func(lhs: E, rhs: E) -> bool {
         lhs != rhs
     }
 }
 
-impl<E: Unit> CmpOpCpuKernel<E> for GtKernelOp {
+impl<E: Unit + PartialOrd> CmpOpCpuKernel<E> for GtKernelOp {
     fn func(lhs: E, rhs: E) -> bool {
         lhs > rhs
     }
 }
 
-impl<E: Unit> CmpOpCpuKernel<E> for GeKernelOp {
+impl<E: Unit + PartialOrd> CmpOpCpuKernel<E> for GeKernelOp {
     fn func(lhs: E, rhs: E) -> bool {
         lhs >= rhs
     }
 }
 
-impl<E: Unit> CmpOpCpuKernel<E> for LtKernelOp {
+impl<E: Unit + PartialOrd> CmpOpCpuKernel<E> for LtKernelOp {
     fn func(lhs: E, rhs: E) -> bool {
         lhs < rhs
     }
 }
 
-impl<E: Unit> CmpOpCpuKernel<E> for LeKernelOp {
+impl<E: Unit + PartialOrd> CmpOpCpuKernel<E> for LeKernelOp {
     fn func(lhs: E, rhs: E) -> bool {
         lhs <= rhs
     }
