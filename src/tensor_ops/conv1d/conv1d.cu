@@ -63,7 +63,7 @@ __device__ void unfold_output_into_patches(
 
     const T *image_i =
         image_out + b * (op.chan_out * op.l_out) + o * (op.l_out);
-    T *patches_i = patches + y + ;
+    T *patches_i = patches + y;
     patches_i += o * (op.kernel * op.l_in);
     patches_i += b * (op.chan_out * op.kernel * op.l_in);
 
@@ -107,7 +107,7 @@ __device__ void transpose_filters(
     const size_t g = o / o_per_g;
 
     auto i_no = o * strides[0] + cg * strides[1] + k1 * strides[2];
-    T *filters_tr_i = filters_tr + k2;
+    T *filters_tr_i = filters_tr;
     filters_tr_i += k1 * op.kernel;
     filters_tr_i += og * (op.kernel);
     filters_tr_i += cg * (o_per_g * op.kernel);

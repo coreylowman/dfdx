@@ -54,7 +54,7 @@ impl Cpu {
             }
         }
 
-        // (G, O / G, C * K * K) * (G, C * K * K, OH * OW) = (G, O / G, OH * OW)
+        // (G, O / G, C * K) * (G, C * K * K, OL) = (G, O / G, OL)
         let m = op.chan_out / op.groups;
         let k = op.chan_in * op.kernel;
 

@@ -93,7 +93,7 @@ where
             unfold_fn.launch(cfg, params)?;
 
             // LHS    (G, O/G, C/G*K)
-            // RHS (B, G, C/G*K*K, OL)
+            // RHS (B, G, C/G*K, OL)
             // OUT (B, G, O/G, OL)
             let m = op.chan_out / op.groups;
             let k = (op.chan_in / op.groups) * op.kernel;
@@ -176,9 +176,9 @@ where
             self.par_stream.wait_for_default()?;
 
             // img_g += filters * patches
-            // LHS =    (G, C/G, O/G*K*K)
-            // RHS = (B, G, O/G*K*K, H*W)
-            // OUT = (B, G, C/G, H*W)
+            // LHS =    (G, C/G, O/G*K)
+            // RHS = (B, G, O/G*K, L)
+            // OUT = (B, G, C/G, L)
             let m = op.chan_in / op.groups;
             let k = (op.chan_out / op.groups) * op.kernel;
             let n = op.l_in;
@@ -217,7 +217,7 @@ where
         unsafe {
             // weight_g += img * patches^T
             // LHS = (B, G, C/G, L)
-            // RHS = (B, H*W, G, O/G*K)
+            // RHS = (B, L, G, O/G*K)
             // OUT = (B, G, C/G, O/G*K)
             let m = op.chan_in / op.groups;
             let k = op.l_in;
