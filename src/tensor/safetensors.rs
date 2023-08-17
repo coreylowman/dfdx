@@ -11,6 +11,22 @@ pub trait SafeDtype: Sized {
     fn safe_dtype() -> SDtype;
 }
 
+#[cfg(feature = "f16")]
+impl SafeDtype for crate::dtypes::f16 {
+    type Array = [u8; 2];
+    fn from_le_bytes(bytes: &[u8], index: usize) -> Self {
+        Self::from_le_bytes(bytes[index..index + 2].try_into().unwrap())
+    }
+
+    fn to_le_bytes(self) -> Self::Array {
+        self.to_le_bytes()
+    }
+
+    fn safe_dtype() -> SDtype {
+        SDtype::F16
+    }
+}
+
 impl SafeDtype for f32 {
     type Array = [u8; 4];
     fn from_le_bytes(bytes: &[u8], index: usize) -> Self {
@@ -41,36 +57,21 @@ impl SafeDtype for f64 {
     }
 }
 
-#[derive(Debug)]
-pub enum Error {
-    SafeTensorError(SafeTensorError),
-    MismatchedDimension((Vec<usize>, Vec<usize>)),
-    IoError(std::io::Error),
-}
-
-impl From<SafeTensorError> for Error {
-    fn from(safe_error: SafeTensorError) -> Error {
-        Error::SafeTensorError(safe_error)
-    }
-}
-impl From<std::io::Error> for Error {
-    fn from(io_error: std::io::Error) -> Error {
-        Error::IoError(io_error)
-    }
-}
-
 impl<S: Shape, E: Dtype + SafeDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Loads data from the [SafeTensors] Storage<E> with the given `key`
-    pub fn load_safetensor(&mut self, tensors: &SafeTensors, key: &str) -> Result<(), Error> {
-        let tensor = tensors.tensor(key)?;
-        let v = tensor.data();
+    pub fn load_safetensor(
+        &mut self,
+        tensors: &SafeTensors,
+        key: &str,
+    ) -> Result<(), SafeTensorError> {
+        let tensor_view = tensors.tensor(key)?;
+        let v = tensor_view.data();
         let num_bytes = std::mem::size_of::<E>();
-        if tensor.shape() != self.shape.concrete().into() {
-            return Err(Error::MismatchedDimension((
-                tensor.shape().to_vec(),
-                self.shape.concrete().into(),
-            )));
-        }
+        assert_eq!(
+            tensor_view.shape(),
+            self.shape.concrete().into(),
+            "SafeTensors shape did not match tensor shape"
+        );
         if (v.as_ptr() as usize) % num_bytes == 0 {
             // SAFETY This is safe because we just checked that this
             // was correctly aligned.
