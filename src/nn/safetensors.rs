@@ -1,9 +1,6 @@
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{
-        safetensors::{Error, SafeDtype},
-        CopySlice, Tensor,
-    },
+    tensor::{safetensors::SafeDtype, CopySlice, Tensor},
     tensor_ops::Device,
 };
 use memmap2::MmapOptions;
@@ -136,7 +133,7 @@ pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollect
     /// let mut model = dev.build_module::<Linear<15, 5>, f32>();
     /// model.load_safetensors("model.safetensors").unwrap();
     /// ```
-    fn load_safetensors<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
+    fn load_safetensors<P: AsRef<Path>>(&mut self, path: P) -> Result<(), SafeTensorError> {
         let f = std::fs::File::open(path)?;
         let buffer = unsafe { MmapOptions::new().map(&f)? };
         let mut tensors = SafeTensors::deserialize(&buffer)?;
@@ -156,7 +153,7 @@ impl<E: Dtype + SafeDtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromSafe
 
 impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTensors<'data> {
     type Viewer = (ViewTensorMut, ViewTensorName);
-    type Err = Error;
+    type Err = SafeTensorError;
     type E2 = E;
     type D2 = D;
 
@@ -192,7 +189,7 @@ impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTens
                 *n = opts.default;
                 Ok(None)
             }
-            Err(x) => Err(Error::SafeTensorError(x)),
+            Err(x) => Err(x),
         }
     }
 }
