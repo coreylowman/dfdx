@@ -699,7 +699,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: 3,\n right: 4"]
+    #[should_panic = "left: 3\n right: 4"]
     fn test_dynamic_matmul_matmat_fail() {
         let dev: TestDevice = Default::default();
         let x: Tensor<(Const<3>, usize), f32, _> = dev.zeros_like(&(Const, 3));
@@ -708,7 +708,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: 3,\n right: 4"]
+    #[should_panic = "left: 3\n right: 4"]
     fn test_dynamic_matmul_matmatbr_fail() {
         let dev: TestDevice = Default::default();
         let x: Tensor<(Const<1>, Const<3>, usize), f32, _> = dev.zeros_like(&(Const, Const, 3));
@@ -717,7 +717,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: 3,\n right: 4"]
+    #[should_panic = "left: 3\n right: 4"]
     fn test_dynamic_matmul_matmat_batch_fail() {
         let dev: TestDevice = Default::default();
         let x: Tensor<(Const<1>, Const<3>, usize), f32, _> = dev.zeros_like(&(Const, Const, 3));
@@ -726,7 +726,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: 3,\n right: 4"]
+    #[should_panic = "left: 3\n right: 4"]
     fn test_dynamic_matmul_matmat_4d_fail() {
         let dev: TestDevice = Default::default();
         let x: Tensor<(Const<1>, Const<5>, Const<3>, usize), f32, _> =
@@ -737,7 +737,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: 1,\n right: 2"]
+    #[should_panic = "left: 1\n right: 2"]
     fn test_dynamic_batch_batch3_fail() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.zeros_like(&(1, 2, 3));
@@ -746,7 +746,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: 1,\n right: 2"]
+    #[should_panic = "left: 1\n right: 2"]
     fn test_dynamic_batch_batch4_fail() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.zeros_like(&(1, 1, 2, 3));
@@ -755,7 +755,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: 1,\n right: 2"]
+    #[should_panic = "left: 1\n right: 2"]
     fn test_dynamic_seq_batch4_fail() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.zeros_like(&(1, 1, 2, 3));
