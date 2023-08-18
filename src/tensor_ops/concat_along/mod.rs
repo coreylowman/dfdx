@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: `10`,\n right: `7`"]
+    #[should_panic = "left: 10,\n right: 7"]
     fn test_concat_shape_fails() {
         let a = (5, 10);
         let b = (3, 7);

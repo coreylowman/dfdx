@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: `10`,\n right: `7`"]
+    #[should_panic = "left: 10,\n right: 7"]
     fn test_concat_shape_fails() {
         (5, 10).concat_shape(&(3, 7));
     }
