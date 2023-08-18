@@ -8,8 +8,14 @@
 //! This is a data type in dfdx, you can use it like any normal dtype like [`AMP<f16>`] or [`AMP<bf16>`].
 
 mod amp;
+mod from_le_bytes;
+mod safetensors_dtype;
+mod to_le_bytes;
 
 pub use amp::AMP;
+pub use from_le_bytes::FromLeBytes;
+pub use safetensors_dtype::SafeTensorsDtype;
+pub use to_le_bytes::ToLeBytes;
 
 #[cfg(feature = "f16")]
 pub use half::f16;
@@ -35,6 +41,9 @@ pub trait Unit:
     + Sync
     + std::marker::Unpin
     + SafeZeros
+    + ToLeBytes
+    + FromLeBytes
+    + SafeTensorsDtype
 {
     const ONE: Self;
 }
