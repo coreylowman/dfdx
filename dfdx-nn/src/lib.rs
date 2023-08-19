@@ -20,6 +20,7 @@ mod pool_global_min;
 mod relu;
 mod reshape;
 mod residual_add;
+mod rmsprop;
 mod sgd;
 mod transformer;
 
@@ -27,6 +28,7 @@ pub use dfdx_nn_core::*;
 pub use dfdx_nn_derives::*;
 
 pub use adam::Adam;
+pub use rmsprop::RMSprop;
 pub use sgd::Sgd;
 
 pub use batch_norm2d::{BatchNorm2D, BatchNorm2DConfig, BatchNorm2DConstConfig};
