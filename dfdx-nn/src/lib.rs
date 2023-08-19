@@ -1,5 +1,6 @@
 #![feature(generic_const_exprs)]
 
+mod adam;
 mod batch_norm2d;
 mod bias1d;
 mod bias2d;
@@ -25,6 +26,9 @@ mod transformer;
 pub use dfdx_nn_core::*;
 pub use dfdx_nn_derives::*;
 
+pub use adam::Adam;
+pub use sgd::Sgd;
+
 pub use batch_norm2d::{BatchNorm2D, BatchNorm2DConfig, BatchNorm2DConstConfig};
 pub use bias1d::{Bias1D, Bias1DConfig, Bias1DConstConfig};
 pub use bias2d::{Bias2D, Bias2DConfig, Bias2DConstConfig};
@@ -44,7 +48,7 @@ pub use pool_global_min::MinPoolGlobal;
 pub use relu::ReLU;
 pub use reshape::Reshape;
 pub use residual_add::ResidualAdd;
-pub use sgd::Sgd;
+
 pub use transformer::{
     DecoderBlock, DecoderBlockConfig, EncoderBlock, EncoderBlockConfig, Transformer,
     TransformerConfig,
