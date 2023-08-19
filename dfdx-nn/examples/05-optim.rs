@@ -2,25 +2,31 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::builders::*,
-    optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
     tensor::{AsArray, AutoDevice, SampleTensor, Tensor, Trace},
-    tensor_ops::Backward,
+    tensor_ops::{Backward, Momentum, SgdConfig},
+};
+
+use dfdx_nn::{
+    BuildModuleExt, LinearConstConfig, Module, Optimizer, ReLU, Sequential, Sgd, Tanh, ZeroGrads,
 };
 
 // first let's declare our neural network to optimze
-type Mlp = (
-    (Linear<5, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    (Linear<32, 2>, Tanh),
-);
+#[derive(Default, Clone, Sequential)]
+struct Mlp {
+    l1: LinearConstConfig<5, 32>,
+    act1: ReLU,
+    l2: LinearConstConfig<32, 32>,
+    act2: ReLU,
+    l3: LinearConstConfig<32, 2>,
+    act3: Tanh,
+}
 
 fn main() {
     let dev = AutoDevice::default();
 
     // First randomly initialize our model
-    let mut mlp = dev.build_module::<Mlp, f32>();
+    let mut mlp = dev.build_module_ext::<f32>(Mlp::default());
 
     // Then we allocate some gradients for it, so we don't re-allocate all the time
     let mut grads = mlp.alloc_grads();

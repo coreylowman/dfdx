@@ -10,8 +10,6 @@ use dfdx::{
 fn main() {
     let dev = AutoDevice::default();
     let a = dev.tensor([1.0f32, 2.0, 3.0]);
-    // NOTE: Cuda currently does not support broadcasting.
-    // Its usage results in errors and wrong outputs.
 
     // to broadcast, use `Broadcast::broadcast()` and specify
     // the output type. the axes that are broadcast are inferred for you!

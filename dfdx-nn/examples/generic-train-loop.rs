@@ -1,6 +1,7 @@
 /// This advanced example shows how to work with dfdx in a generic
 /// training setting.
-use dfdx::{optim::Sgd, prelude::*, tensor::AutoDevice};
+use dfdx::{prelude::*, tensor::AutoDevice};
+use dfdx_nn::*;
 
 /// Our generic training function. Works with any model/optimizer/loss function!
 fn classification_train<
@@ -12,9 +13,9 @@ fn classification_train<
     Lbl,
     // Our model just needs to implement these two things! ModuleMut for forward
     // and TensorCollection for optimizer/alloc_grads/zero_grads
-    Model: ModuleMut<Inp::Traced, Error = D::Err> + TensorCollection<E, D>,
+    Model: Module<Inp::Traced, Error = D::Err> + ZeroGrads<E, D> + UpdateParams<E, D>,
     // optimizer, pretty straight forward
-    Opt: Optimizer<Model, D, E>,
+    Opt: Optimizer<Model, E, D>,
     // our data will just be any iterator over these items. easy!
     Data: Iterator<Item = (Inp, Lbl)>,
     // Our loss function that takes the model's output & label and returns
@@ -51,9 +52,9 @@ fn classification_train<
 fn main() {
     let dev = AutoDevice::default();
 
-    type Model = Linear<10, 2>;
+    type Model = LinearConstConfig<10, 2>;
     type Dtype = f32;
-    let mut model = dev.build_module::<Model, Dtype>();
+    let mut model = dev.build_module_ext::<Dtype>(Model::default());
     let mut opt = Sgd::new(&model, Default::default());
 
     // just some random data

@@ -1,7 +1,6 @@
 //! Intro to Gradients and Tapes
 
 use dfdx::{
-    nn::ZeroGrads,
     shapes::{Rank0, Rank2},
     tensor::{AsArray, AutoDevice, Gradients, NoneTape, OwnedTape, SampleTensor, Tensor, Trace},
     tensor_ops::{Backward, MeanTo, TryMatMul},
@@ -17,8 +16,10 @@ fn main() {
     let a: Tensor<Rank2<3, 4>, f32, _, NoneTape> = dev.sample_normal();
 
     // the first step to tracing is to allocate some gradients
-    // for the tensors we want to track
-    let grads = a.alloc_grads();
+    // for the tensors we want to track.
+    // For this case we will craete Gradients using the leaky method,
+    // which will keep gradients from ALL temporary tensors
+    let grads = Gradients::leaky();
 
     // then we pass these gradients into the tensor with .trace().
     // NOTE: the tape has changed from a `NoneTape` to an `OwnedTape`.
@@ -41,6 +42,6 @@ fn main() {
     let a_grad: [[f32; 4]; 3] = gradients.get(&a).array();
     dbg!(a_grad);
 
-    // NOTE: this will panic, because we didn't allocate gradients for `weight`
-    // let weight_grad: [[f32; 2]; 4] = gradients.get(&weight).array();
+    let weight_grad: [[f32; 2]; 4] = gradients.get(&weight).array();
+    dbg!(weight_grad);
 }

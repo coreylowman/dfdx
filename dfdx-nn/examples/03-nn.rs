@@ -1,20 +1,20 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    nn::builders::*,
     shapes::{Const, Rank1, Rank2},
     tensor::{AsArray, AutoDevice, SampleTensor, Tensor, ZerosTensor},
 };
 
+use dfdx_nn::{BuildModuleExt, LinearConstConfig, Module, ReLU, ResetParams};
+
 fn main() {
     let dev = AutoDevice::default();
 
-    // `nn::builders` exposes many different neural network types, like the Linear layer!
-    type Model = Linear<4, 2>;
+    // `dfdx_nn` exposes many different neural network types, like the Linear layer!
+    type Model = LinearConstConfig<4, 2>;
 
     // you can use DeviceBuildExt::build_module to construct an initialized model.
-    // the type of this is actually one of the structures under `nn::modules`.
-    let mut m = dev.build_module::<Model, f32>();
+    let mut m = dev.build_module_ext::<f32>(Model::default());
 
     // `ResetParams::reset_params` also allows you to re-randomize the weights
     m.reset_params();
@@ -36,7 +36,7 @@ fn main() {
     let _: Tensor<(usize, Const<2>), f32, _> = m.forward(dev.zeros_like(&(batch_size, Const)));
 
     // you can also combine multiple modules with tuples
-    type Mlp = (Linear<4, 2>, ReLU, Linear<2, 1>);
+    type Mlp = (LinearConstConfig<4, 2>, ReLU, LinearConstConfig<2, 1>);
     let mlp = Mlp::build_on_device(&dev);
 
     // and of course forward passes the input through each module sequentially:
