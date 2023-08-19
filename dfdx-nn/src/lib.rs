@@ -5,6 +5,7 @@ mod batch_norm2d;
 mod bias1d;
 mod bias2d;
 mod conv2d;
+mod dropout;
 mod flatten2d;
 mod generalized_add;
 mod layer_norm1d;
@@ -35,6 +36,7 @@ pub use batch_norm2d::{BatchNorm2D, BatchNorm2DConfig, BatchNorm2DConstConfig};
 pub use bias1d::{Bias1D, Bias1DConfig, Bias1DConstConfig};
 pub use bias2d::{Bias2D, Bias2DConfig, Bias2DConstConfig};
 pub use conv2d::{Conv2D, Conv2DConfig, Conv2DConstConfig};
+pub use dropout::{Dropout, DropoutOneIn};
 pub use flatten2d::Flatten2D;
 pub use generalized_add::GeneralizedAdd;
 pub use layer_norm1d::{LayerNorm1D, LayerNorm1DConfig, LayerNorm1DConstConfig};
@@ -50,7 +52,6 @@ pub use pool_global_min::MinPoolGlobal;
 pub use relu::ReLU;
 pub use reshape::Reshape;
 pub use residual_add::ResidualAdd;
-
 pub use transformer::{
     DecoderBlock, DecoderBlockConfig, EncoderBlock, EncoderBlockConfig, Transformer,
     TransformerConfig,
