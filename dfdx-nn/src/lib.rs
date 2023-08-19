@@ -1,6 +1,7 @@
 #![feature(generic_const_exprs)]
 
 mod abs;
+mod batch_norm1d;
 mod batch_norm2d;
 mod bias1d;
 mod bias2d;
@@ -46,6 +47,7 @@ pub use optim::rmsprop::RMSprop;
 pub use optim::sgd::Sgd;
 
 pub use abs::Abs;
+pub use batch_norm1d::{BatchNorm1D, BatchNorm1DConfig, BatchNorm1DConstConfig};
 pub use batch_norm2d::{BatchNorm2D, BatchNorm2DConfig, BatchNorm2DConstConfig};
 pub use bias1d::{Bias1D, Bias1DConfig, Bias1DConstConfig};
 pub use bias2d::{Bias2D, Bias2DConfig, Bias2DConstConfig};
