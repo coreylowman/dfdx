@@ -37,7 +37,7 @@ impl<Embed: Dim, NumHeads: Dim, K: Dim, V: Dim> MultiHeadAttentionConfig<Embed, 
 }
 
 impl<M: Dim, H: Dim, K: Dim, V: Dim, E, D, S1, S2, T>
-    dfdx_nn_core::Module<(
+    Module<(
         Tensor<(S1, M), E, D, T>,
         Tensor<(S2, M), E, D>,
         Tensor<(S2, M), E, D>,
@@ -73,7 +73,7 @@ where
 }
 
 impl<M: Dim, H: Dim, K: Dim, V: Dim, E, D, B, S1, S2, T>
-    dfdx_nn_core::Module<(
+    Module<(
         Tensor<(B, S1, M), E, D, T>,
         Tensor<(B, S2, M), E, D>,
         Tensor<(B, S2, M), E, D>,
@@ -134,13 +134,12 @@ where
     }
 }
 
-impl<M: Dim, H: Dim, K: Dim, V: Dim, E, D, Src> dfdx_nn_core::Module<Src>
-    for MultiHeadAttention<M, H, K, V, E, D>
+impl<M: Dim, H: Dim, K: Dim, V: Dim, E, D, Src> Module<Src> for MultiHeadAttention<M, H, K, V, E, D>
 where
     E: Dtype,
     D: Device<E>,
     Src: SplitTape,
-    Self: dfdx_nn_core::Module<(Src, Src::NoTape, Src::NoTape), Output = Src, Error = D::Err>,
+    Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src, Error = D::Err>,
 {
     type Output = Src;
     type Error = D::Err;

@@ -77,17 +77,15 @@ impl<Model: Dim, NumHeads: Dim, F: Dim> DecoderBlockConfig<Model, NumHeads, F> {
     }
 }
 
-impl<M: Dim, H: Dim, F: Dim, E: Dtype, D: Device<E>, Tgt, Mem> dfdx_nn_core::Module<(Tgt, Mem)>
+impl<M: Dim, H: Dim, F: Dim, E: Dtype, D: Device<E>, Tgt, Mem> Module<(Tgt, Mem)>
     for DecoderBlock<M, H, F, E, D>
 where
     Tgt: WithEmptyTape + SplitTape + TryAdd<Tgt::NoTape, Output = Tgt> + HasErr<Err = D::Err>,
     Mem: Clone,
-    ResidualAdd<MultiHeadAttention<M, H, M, M, E, D>>:
-        dfdx_nn_core::Module<Tgt, Output = Tgt, Error = D::Err>,
-    MultiHeadAttention<M, H, M, M, E, D>:
-        dfdx_nn_core::Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,
-    LayerNorm1D<M, E, D>: dfdx_nn_core::Module<Tgt, Output = Tgt, Error = D::Err>,
-    ResidualAdd<FeedForward<M, F, E, D>>: dfdx_nn_core::Module<Tgt, Output = Tgt, Error = D::Err>,
+    ResidualAdd<MultiHeadAttention<M, H, M, M, E, D>>: Module<Tgt, Output = Tgt, Error = D::Err>,
+    MultiHeadAttention<M, H, M, M, E, D>: Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,
+    LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
+    ResidualAdd<FeedForward<M, F, E, D>>: Module<Tgt, Output = Tgt, Error = D::Err>,
 {
     type Output = Tgt;
     type Error = D::Err;
@@ -138,10 +136,10 @@ impl<Model: Dim, NumHeads: Dim, F: Dim> TransformerConfig<Model, NumHeads, F> {
 }
 
 impl<M: Dim, H: Dim, F: Dim, E: Dtype, D: Device<E>, Src: SplitTape, Tgt: PutTape<Src::Tape>>
-    dfdx_nn_core::Module<(Src, Tgt)> for Transformer<M, H, F, E, D>
+    Module<(Src, Tgt)> for Transformer<M, H, F, E, D>
 where
-    Vec<EncoderBlock<M, H, F, E, D>>: dfdx_nn_core::Module<Src, Output = Src, Error = D::Err>,
-    DecoderBlock<M, H, F, E, D>: dfdx_nn_core::Module<
+    Vec<EncoderBlock<M, H, F, E, D>>: Module<Src, Output = Src, Error = D::Err>,
+    DecoderBlock<M, H, F, E, D>: Module<
         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
         Output = <Tgt as PutTape<Src::Tape>>::Output,
         Error = D::Err,

@@ -17,13 +17,8 @@ pub struct GeneralizedAdd<T, U>(
     pub U,
 );
 
-// TODO derive
-impl<
-        E: Dtype,
-        D: Device<E>,
-        T: dfdx_nn_core::BuildOnDevice<E, D>,
-        U: dfdx_nn_core::BuildOnDevice<E, D>,
-    > dfdx_nn_core::BuildOnDevice<E, D> for GeneralizedAdd<T, U>
+impl<E: Dtype, D: Device<E>, T: BuildOnDevice<E, D>, U: BuildOnDevice<E, D>> BuildOnDevice<E, D>
+    for GeneralizedAdd<T, U>
 {
     type Built = GeneralizedAdd<T::Built, U::Built>;
     fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
@@ -33,11 +28,8 @@ impl<
     }
 }
 
-impl<
-        X: WithEmptyTape,
-        T: dfdx_nn_core::Module<X>,
-        U: dfdx_nn_core::Module<X, Error = T::Error>,
-    > dfdx_nn_core::Module<X> for GeneralizedAdd<T, U>
+impl<X: WithEmptyTape, T: Module<X>, U: Module<X, Error = T::Error>> Module<X>
+    for GeneralizedAdd<T, U>
 where
     T::Output: TryAdd<U::Output, Err = T::Error>,
 {
