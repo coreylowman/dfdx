@@ -4,6 +4,30 @@ use dfdx::{
     tensor_ops::{Device, SgdConfig},
 };
 
+/// Implementation of Stochastic Gradient Descent. Based on [pytorch's implementation](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html)
+///
+/// Nesterov Momentum is implemented as described in
+/// [On the importance of initialization and momentum in deep learning](https://proceedings.mlr.press/v28/sutskever13.html).
+///
+/// Weight decay is implemented as described in
+/// [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101)
+/// Both L2 weight_decay and decoupled weight_decay are available.
+///
+/// # Example Usage
+///
+/// ```rust
+/// # use dfdx::{prelude::*, optim::*};
+/// # let dev: Cpu = Default::default();
+/// # type Model = Tensor<Rank0, f32, Cpu>;
+/// # let mut model: Model = dev.zeros();
+/// let mut opt: Sgd<Model, f32, Cpu> = Sgd::new(&model, SgdConfig {
+///     lr: 1e-3,
+///     momentum: Some(Momentum::Classic(0.5)),
+///     weight_decay: Some(WeightDecay::L2(0.01)),
+/// });
+/// ```
+///
+/// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug, Clone)]
 pub struct Sgd<M, E: Dtype, D: Storage<E>> {
     pub cfg: SgdConfig,
