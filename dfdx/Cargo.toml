@@ -71,14 +71,6 @@ test-integrations = []
 ci-check = ["cudarc?/ci-check"]
 
 [[bench]]
-name = "batchnorm2d"
-harness = false
-
-[[bench]]
-name = "conv2d"
-harness = false
-
-[[bench]]
 name = "sum"
 harness = false
 
