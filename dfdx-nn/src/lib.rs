@@ -1,6 +1,7 @@
 #![feature(generic_const_exprs)]
 
 mod abs;
+mod add_into;
 mod batch_norm1d;
 mod batch_norm2d;
 mod bias1d;
@@ -36,6 +37,7 @@ mod residual_add;
 mod sigmoid;
 mod sin;
 mod softmax;
+mod split_into;
 mod sqrt;
 mod square;
 mod tanh;
@@ -49,6 +51,7 @@ pub use optim::rmsprop::RMSprop;
 pub use optim::sgd::Sgd;
 
 pub use abs::Abs;
+pub use add_into::AddInto;
 pub use batch_norm1d::{BatchNorm1D, BatchNorm1DConfig, BatchNorm1DConstConfig};
 pub use batch_norm2d::{BatchNorm2D, BatchNorm2DConfig, BatchNorm2DConstConfig};
 pub use bias1d::{Bias1D, Bias1DConfig, Bias1DConstConfig};
@@ -83,6 +86,7 @@ pub use residual_add::ResidualAdd;
 pub use sigmoid::Sigmoid;
 pub use sin::Sin;
 pub use softmax::Softmax;
+pub use split_into::SplitInto;
 pub use sqrt::Sqrt;
 pub use square::Square;
 pub use tanh::Tanh;
