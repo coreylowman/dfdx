@@ -42,6 +42,7 @@ mod sqrt;
 mod square;
 mod tanh;
 mod transformer;
+mod upscale2d;
 
 pub use dfdx_nn_core::*;
 pub use dfdx_nn_derives::*;
@@ -94,3 +95,4 @@ pub use transformer::{
     DecoderBlock, DecoderBlockConfig, EncoderBlock, EncoderBlockConfig, Transformer,
     TransformerConfig,
 };
+pub use upscale2d::{Upscale2D, Upscale2DBy, Upscale2DByConst, Upscale2DConst};

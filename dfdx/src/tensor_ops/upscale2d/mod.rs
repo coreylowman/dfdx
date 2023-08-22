@@ -42,12 +42,12 @@ impl Upscale2DOp {
 
 /// Upscaling method to be used with [TryUpscale2D], can be either
 /// [NearestNeighbor] or [Bilinear].
-pub trait UpscaleMethod: Default {}
+pub trait UpscaleMethod: Default + Copy + Clone + std::fmt::Debug {}
 
 /// Upscales images using a pixel's nearest neighbor.
 ///
 /// **pytorch equivalent** `F.interpolate(..., mode="nearest")`
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct NearestNeighbor;
 impl UpscaleMethod for NearestNeighbor {}
 
@@ -55,7 +55,7 @@ impl UpscaleMethod for NearestNeighbor {}
 /// a pixels neighbors
 ///
 /// **pytorch equivalent**: `F.interpolate(..., mode="bilinear", align_corners=True)`
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct Bilinear;
 impl UpscaleMethod for Bilinear {}
 
@@ -162,7 +162,7 @@ impl<
         E: Dtype,
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
-        T: 'static + Tape<E, D>,
+        T: Tape<E, D>,
     > GenericUpscale2D<M> for Tensor<(C, H, W), E, D, T>
 {
     type Output<OH: Dim, OW: Dim> = Tensor<(C, OH, OW), E, D, T>;

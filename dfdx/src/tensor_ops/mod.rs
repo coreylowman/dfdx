@@ -271,7 +271,9 @@ pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use to_dtype::to_dtype;
 pub use tri::{lower_tri, upper_tri};
-pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
+pub use upscale2d::{
+    Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, Upscale2DKernel, UpscaleMethod,
+};
 pub use var_to::VarTo;
 
 #[cfg(feature = "nightly")]
