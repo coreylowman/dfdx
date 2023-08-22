@@ -15,7 +15,7 @@ use dfdx_nn::{BuildModuleExt, LinearConfig, Module, ReLU, Sequential, Tanh};
 /// 4. act2
 /// 5. linear3
 #[derive(Debug, Clone, Sequential)]
-struct Mlp {
+struct MlpConfig {
     // Linear with compile time input size & runtime known output size
     linear1: LinearConfig<Const<784>, usize>,
     act1: ReLU,
@@ -30,7 +30,7 @@ fn main() {
     let dev = AutoDevice::default();
 
     // We can't use `Default::default()` anymore because we need the runtime values.
-    let arch = Mlp {
+    let arch = MlpConfig {
         linear1: LinearConfig::new(Const, 512),
         act1: Default::default(),
         linear2: LinearConfig::new(512, 256),
@@ -40,6 +40,13 @@ fn main() {
 
     // Same way of building it.
     let m = dev.build_module_ext::<f32>(arch);
+
+    // The built module has fields that are named exactly the same as the config struct.
+    dbg!(&m.linear1);
+    dbg!(&m.act1);
+    dbg!(&m.linear2);
+    dbg!(&m.act2);
+    dbg!(&m.linear3);
 
     // Calling Module::forward on it.
     let x: Tensor<Rank2<10, 784>, f32, _> = dev.sample_normal();
