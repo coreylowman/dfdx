@@ -2,10 +2,11 @@
 //! outputs using `SplitInto`.
 
 use dfdx::{
-    nn::builders::{DeviceBuildExt, Linear, Module, SplitInto},
     shapes::Rank1,
     tensor::{AsArray, AutoDevice, Tensor, TensorFrom},
 };
+
+use dfdx_nn::{BuildModuleExt, LinearConstConfig, Module, SplitInto};
 
 fn main() {
     let dev = AutoDevice::default();
@@ -13,8 +14,8 @@ fn main() {
     // SplitInto accepts a tuple of modules. Each one of the items in the
     // tuple must accept the same type of input.
     // Note that here, both of the linears have the same size input (1)
-    type Model = SplitInto<(Linear<1, 3>, Linear<1, 5>)>;
-    let m = dev.build_module::<Model, f32>();
+    type Model = SplitInto<(LinearConstConfig<1, 3>, LinearConstConfig<1, 5>)>;
+    let m = dev.build_module_ext::<f32>(Model::default());
 
     // when we forward data through, we get a tuple back!
     let (y1, y2): (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<5>, f32, _>) =

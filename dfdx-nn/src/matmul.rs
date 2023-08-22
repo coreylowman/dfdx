@@ -1,8 +1,8 @@
 use crate::*;
 use dfdx::{
-    prelude::{Device, Dim, Dtype, HasErr, HasShape, Shape, Tape, Tensor},
+    prelude::{Device, Dim, Dtype, HasShape, Shape, Tape, Tensor},
     shapes::Const,
-    tensor_ops::TryMatMul,
+    tensor_ops::{PermuteTo, TryMatMul},
 };
 use rand_distr::Uniform;
 
@@ -18,7 +18,7 @@ impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for MatMulConfi
     type Built = MatMul<I, O, E, D>;
     fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
         Ok(MatMul {
-            weight: device.try_zeros_like(&(self.inp, self.out))?,
+            weight: device.try_zeros_like(&(self.out, self.inp))?,
         })
     }
 }
@@ -27,7 +27,7 @@ impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for MatMulConfi
 pub struct MatMul<I: Dim, O: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
     #[serialize]
-    pub weight: Tensor<(I, O), Elem, Dev>,
+    pub weight: Tensor<(O, I), Elem, Dev>,
 }
 
 // NOTE: others can simply #[derive(ResetParams)]
@@ -36,7 +36,7 @@ where
     E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,
 {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        let (i, _) = self.weight.shape();
+        let (_o, i) = self.weight.shape();
         let scale = E::from_f64(1.0 / (i.size() as f64).sqrt()).unwrap();
         self.weight.try_fill_with_distr(Uniform::new(-scale, scale))
     }
@@ -45,11 +45,11 @@ where
 impl<S: Shape, I: Dim, O: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
     for MatMul<I, O, E, D>
 where
-    Tensor<S, E, D, T>: TryMatMul<Tensor<(I, O), E, D>>,
+    Tensor<S, E, D, T>: TryMatMul<Tensor<(I, O), E, D, T>, Err = D::Err>,
 {
-    type Output = <Tensor<S, E, D, T> as TryMatMul<Tensor<(I, O), E, D>>>::Output;
-    type Error = <Tensor<S, E, D, T> as HasErr>::Err;
+    type Output = <Tensor<S, E, D, T> as TryMatMul<Tensor<(I, O), E, D, T>>>::Output;
+    type Error = D::Err;
     fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
-        x.try_matmul(self.weight.clone())
+        x.try_matmul(self.weight.retaped::<T>().try_permute()?)
     }
 }

@@ -1,14 +1,18 @@
-use dfdx::{
-    nn::ZeroGrads,
-    prelude::*,
-    tensor::{AutoDevice, Gradients},
-};
+use dfdx::prelude::*;
+
+use dfdx_nn::*;
 
 fn main() {
     let dev = AutoDevice::default();
 
-    type Model = (Linear<2, 5>, ReLU, Linear<5, 10>, Tanh, Linear<10, 20>);
-    let model = dev.build_module::<Model, f32>();
+    type Model = (
+        LinearConstConfig<2, 5>,
+        ReLU,
+        LinearConstConfig<5, 10>,
+        Tanh,
+        LinearConstConfig<10, 20>,
+    );
+    let model = dev.build_module_ext::<f32>(Model::default());
 
     let x: Tensor<Rank2<10, 2>, f32, _> = dev.sample_normal();
 
@@ -28,5 +32,5 @@ fn main() {
 
     // finally, we can use ZeroGrads to zero out the accumulated gradients
     model.zero_grads(&mut grads);
-    assert_eq!(grads.get(&model.0.weight).array(), [[0.0; 2]; 5]);
+    assert_eq!(grads.get(&model.0.matmul.weight).array(), [[0.0; 2]; 5]);
 }

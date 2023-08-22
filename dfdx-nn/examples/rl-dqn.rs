@@ -2,12 +2,9 @@
 
 use std::time::Instant;
 
-use dfdx::{
-    losses::huber_loss,
-    optim::{Momentum, Sgd, SgdConfig},
-    prelude::*,
-    tensor::AutoDevice,
-};
+use dfdx::{losses::huber_loss, prelude::*};
+
+use dfdx_nn::*;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
@@ -15,15 +12,15 @@ const ACTION: usize = 2;
 
 // our simple 2 layer feedforward network with ReLU activations
 type QNetwork = (
-    (Linear<STATE, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    Linear<32, ACTION>,
+    (LinearConstConfig<STATE, 32>, ReLU),
+    (LinearConstConfig<32, 32>, ReLU),
+    LinearConstConfig<32, ACTION>,
 );
 
 fn main() {
     let dev = AutoDevice::default();
     // initialize model
-    let mut q_net = dev.build_module::<QNetwork, f32>();
+    let mut q_net = dev.build_module_ext::<f32>(QNetwork::default());
     let mut target_q_net = q_net.clone();
 
     let mut grads = q_net.alloc_grads();

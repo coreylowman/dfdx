@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use dfdx::prelude::*;
+use dfdx_nn::*;
 
 #[cfg(feature = "cuda")]
 type Dev = Cuda;
@@ -8,7 +9,7 @@ type Dev = Cuda;
 #[cfg(not(feature = "cuda"))]
 type Dev = Cpu;
 
-type Model = BatchNorm2D<512>;
+type Model = BatchNorm2DConstConfig<512>;
 type Dtype = f32;
 type InputShape = Rank4<64, 512, 28, 28>;
 
@@ -20,7 +21,7 @@ fn main() {
     println!();
 
     let dev: Dev = Default::default();
-    let mut m = dev.build_module::<Model, Dtype>();
+    let mut m = dev.build_module_ext::<Dtype>(Model::default());
     let mut grads = m.alloc_grads();
 
     loop {

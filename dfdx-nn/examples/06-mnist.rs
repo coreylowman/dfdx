@@ -23,7 +23,9 @@ use indicatif::ProgressIterator;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
 
-use dfdx::{data::*, optim::Adam, prelude::*, tensor::AutoDevice};
+use dfdx::{data::*, prelude::*, tensor::AutoDevice};
+
+use dfdx_nn::*;
 
 struct MnistTrainSet(Mnist);
 
@@ -52,10 +54,10 @@ impl ExactSizeDataset for MnistTrainSet {
 
 // our network structure
 type Mlp = (
-    (Linear<784, 512>, ReLU),
-    (Linear<512, 128>, ReLU),
-    (Linear<128, 32>, ReLU),
-    Linear<32, 10>,
+    (LinearConstConfig<784, 512>, ReLU),
+    (LinearConstConfig<512, 128>, ReLU),
+    (LinearConstConfig<128, 32>, ReLU),
+    LinearConstConfig<32, 10>,
 );
 
 // training batch size
@@ -76,7 +78,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model, gradients, and optimizer
-    let mut model = dev.build_module::<Mlp, f32>();
+    let mut model = dev.build_module_ext::<f32>(Mlp::default());
     let mut grads = model.alloc_grads();
     let mut opt = Adam::new(&model, Default::default());
 

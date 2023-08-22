@@ -2,27 +2,24 @@
 
 use std::time::Instant;
 
-use dfdx::{
-    optim::{Momentum, Sgd, SgdConfig},
-    prelude::*,
-    tensor::AutoDevice,
-};
+use dfdx::{prelude::*, tensor::AutoDevice};
+use dfdx_nn::*;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
 const ACTION: usize = 2;
 
 type PolicyNetwork = (
-    (Linear<STATE, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    Linear<32, ACTION>,
+    (LinearConstConfig<STATE, 32>, ReLU),
+    (LinearConstConfig<32, 32>, ReLU),
+    LinearConstConfig<32, ACTION>,
 );
 
 fn main() {
     let dev = AutoDevice::default();
 
     // initiliaze model - all weights are 0s
-    let mut pi_net = dev.build_module::<PolicyNetwork, f32>();
+    let mut pi_net = dev.build_module_ext::<f32>(PolicyNetwork::default());
     let mut target_pi_net = pi_net.clone();
 
     let mut grads = pi_net.alloc_grads();

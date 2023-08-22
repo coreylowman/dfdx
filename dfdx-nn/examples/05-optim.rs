@@ -13,7 +13,8 @@ use dfdx_nn::{
 
 // first let's declare our neural network to optimze
 #[derive(Default, Clone, Sequential)]
-struct Mlp {
+#[built(Mlp)]
+struct MlpConfig {
     l1: LinearConstConfig<5, 32>,
     act1: ReLU,
     l2: LinearConstConfig<32, 32>,
@@ -26,7 +27,7 @@ fn main() {
     let dev = AutoDevice::default();
 
     // First randomly initialize our model
-    let mut mlp = dev.build_module_ext::<f32>(Mlp::default());
+    let mut mlp = dev.build_module_ext::<f32>(MlpConfig::default());
 
     // Then we allocate some gradients for it, so we don't re-allocate all the time
     let mut grads = mlp.alloc_grads();

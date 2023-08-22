@@ -1,10 +1,8 @@
-#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
-
-#[cfg(feature = "nightly")]
 fn main() {
     use std::time::Instant;
 
     use dfdx::prelude::*;
+    use dfdx_nn::*;
 
     #[cfg(feature = "cuda")]
     type Dev = Cuda;
@@ -12,7 +10,7 @@ fn main() {
     #[cfg(not(feature = "cuda"))]
     type Dev = Cpu;
 
-    type Model = Conv2D<128, 256, 4>;
+    type Model = Conv2DConstConfig<128, 256, 4>;
     type Dtype = f32;
     type InputShape = Rank4<64, 128, 28, 28>;
 
@@ -23,7 +21,7 @@ fn main() {
     println!();
 
     let dev: Dev = Default::default();
-    let mut m = dev.build_module::<Model, Dtype>();
+    let mut m = dev.build_module_ext::<Dtype>(Model::default());
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
@@ -46,9 +44,4 @@ fn main() {
 
         println!("infer={infer_dur:?}, fwd={fwd_dur:?} bwd={bwd_dur:?}");
     }
-}
-
-#[cfg(not(feature = "nightly"))]
-fn main() {
-    panic!("Run with `cargo +nightly run ...` to run this example.");
 }
