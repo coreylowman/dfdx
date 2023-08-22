@@ -50,6 +50,8 @@ pub use dfdx_nn_derives::*;
 pub use optim::adam::Adam;
 pub use optim::rmsprop::RMSprop;
 pub use optim::sgd::Sgd;
+// re-exports
+pub use dfdx::tensor_ops::{AdamConfig, Momentum, RMSpropConfig, SgdConfig, WeightDecay};
 
 pub use abs::Abs;
 pub use add_into::AddInto;
