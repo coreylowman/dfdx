@@ -157,7 +157,7 @@ mod tensor_impls;
 
 pub(crate) use ghost::GhostTensor;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
-pub(crate) use tensorlike::Tensorlike;
+pub use tensorlike::Tensorlike;
 
 pub use cpu::{Cpu, CpuError};
 #[cfg(not(feature = "cuda"))]

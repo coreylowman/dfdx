@@ -47,7 +47,8 @@ where
 
 /// Fallible version of [std::ops::Mul]. See [mul].
 pub trait TryMul<Rhs = Self>: HasErr {
-    fn try_mul(self, rhs: Rhs) -> Result<Self, Self::Err>;
+    type Output;
+    fn try_mul(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: BinaryKernel<BinaryMulKernelOp, E>, LhsTape: Tape<E, D>, R>
@@ -55,6 +56,7 @@ impl<S: Shape, E: Dtype, D: BinaryKernel<BinaryMulKernelOp, E>, LhsTape: Tape<E,
 where
     LhsTape: Merge<R>,
 {
+    type Output = Self;
     fn try_mul(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
         try_binary_op(BinaryMulKernelOp, self, rhs)
     }
@@ -63,6 +65,7 @@ where
 impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarMulKernelOp<E>, E>, T: Tape<E, D>> TryMul<E>
     for Tensor<S, E, D, T>
 {
+    type Output = Self;
     fn try_mul(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarMulKernelOp { scalar: rhs }, self)
     }
@@ -72,8 +75,26 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarMulKernelOp<E>, E>, T: Tape<E, D>>
 impl<S: Shape, D: UnaryKernel<ScalarMulKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
     TryMul<f32> for Tensor<S, half::f16, D, T>
 {
+    type Output = Self;
     fn try_mul(self, rhs: f32) -> Result<Self, Self::Err> {
         let scalar = half::f16::from_f32(rhs);
+        try_unary_op(ScalarMulKernelOp { scalar }, self)
+    }
+}
+
+#[cfg(feature = "f16")]
+impl<
+        S: Shape,
+        D: UnaryKernel<
+            ScalarMulKernelOp<crate::dtypes::AMP<half::f16>>,
+            crate::dtypes::AMP<half::f16>,
+        >,
+        T: Tape<crate::dtypes::AMP<half::f16>, D>,
+    > TryMul<f32> for Tensor<S, crate::dtypes::AMP<half::f16>, D, T>
+{
+    type Output = Self;
+    fn try_mul(self, rhs: f32) -> Result<Self, Self::Err> {
+        let scalar = crate::dtypes::AMP(half::f16::from_f32(rhs));
         try_unary_op(ScalarMulKernelOp { scalar }, self)
     }
 }
@@ -83,7 +104,7 @@ impl<S: Shape, E: Dtype, D: Storage<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Mul<
 where
     Self: TryMul<Rhs>,
 {
-    type Output = Self;
+    type Output = <Self as TryMul<Rhs>>::Output;
     fn mul(self, rhs: Rhs) -> Self::Output {
         self.try_mul(rhs).unwrap()
     }

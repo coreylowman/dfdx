@@ -31,5 +31,6 @@ pub use slice::SliceShape;
 pub use axes::{Axes, Axes2, Axes3, Axes4, Axes5, Axes6, Axis, HasAxes};
 pub use shape::{Array, Const, ConstDim, Dim};
 pub use shape::{ConstShape, HasShape, Shape};
-pub use shape::{Dtype, HasDtype, HasUnitType, Unit};
 pub use shape::{Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6};
+
+pub use crate::dtypes::{Dtype, HasDtype, HasUnitType, SafeZeros, Unit};

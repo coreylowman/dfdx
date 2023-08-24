@@ -1,3 +1,5 @@
+#[allow(unused_imports)]
+use crate::dtypes::*;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 
 unsafe impl cudarc::driver::DeviceRepr for super::LnKernelOp {}
@@ -5,9 +7,11 @@ unsafe impl cudarc::driver::DeviceRepr for super::LnKernelOp {}
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/ln.ptx"));
 
 #[cfg(feature = "f16")]
+cuda_unary!(super::LnKernelOp, f16, PTX_SRC, "ln_fwd_f16", "ln_bwd_f16");
+#[cfg(feature = "f16")]
 cuda_unary!(
     super::LnKernelOp,
-    half::f16,
+    AMP<f16>,
     PTX_SRC,
     "ln_fwd_f16",
     "ln_bwd_f16"

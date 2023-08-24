@@ -1,4 +1,6 @@
+#[allow(unused_imports)]
 use crate::{
+    dtypes::*,
     shapes::{RemoveDimTo, ReplaceDimTo, Shape},
     tensor::{launch_cfg, Cuda, Storage, Tensor},
 };
@@ -189,7 +191,18 @@ macro_rules! impl_cuda_kernels {
 
 #[cfg(feature = "f16")]
 impl_cuda_kernels!(
-    half::f16,
+    f16,
+    "gather_f16",
+    "gather_fwd_f16",
+    "gather_bwd_f16",
+    "select_f16",
+    "select_fwd_f16",
+    "select_bwd_f16"
+);
+
+#[cfg(feature = "f16")]
+impl_cuda_kernels!(
+    AMP<f16>,
     "gather_f16",
     "gather_fwd_f16",
     "gather_bwd_f16",

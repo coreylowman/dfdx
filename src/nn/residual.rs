@@ -39,7 +39,7 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>> TensorCollection<E, D> f
     }
 }
 
-impl<T: WithEmptyTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T>
+impl<T: WithEmptyTape + TryAdd<T, Output = T>, F: Module<T, Output = T, Error = T::Err>> Module<T>
     for Residual<F>
 {
     type Output = T;
@@ -50,8 +50,8 @@ impl<T: WithEmptyTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Mod
     }
 }
 
-impl<T: WithEmptyTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T>
-    for Residual<F>
+impl<T: WithEmptyTape + TryAdd<T, Output = T>, F: ModuleMut<T, Output = T, Error = T::Err>>
+    ModuleMut<T> for Residual<F>
 {
     type Output = T;
     type Error = F::Error;

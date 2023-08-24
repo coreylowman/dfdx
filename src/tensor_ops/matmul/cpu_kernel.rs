@@ -50,6 +50,53 @@ pub(crate) trait MatMulImpl<E> {
 }
 
 #[cfg(feature = "f16")]
+impl MatMulImpl<crate::dtypes::AMP<half::f16>> for Cpu {
+    #[inline]
+    fn matmul<M: Dim, K: Dim, N: Dim>(
+        (m, k, n): (M, K, N),
+        accum: bool,
+        ap: *const crate::dtypes::AMP<half::f16>,
+        astr: [usize; 2],
+        bp: *const crate::dtypes::AMP<half::f16>,
+        bstr: [usize; 2],
+        cp: *mut crate::dtypes::AMP<half::f16>,
+        cstr: [usize; 2],
+    ) {
+        #[cfg(not(feature = "cpu"))]
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
+
+        #[cfg(feature = "cpu")]
+        unsafe {
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp as *mut gemm::f16,
+                cstr[1] as isize,
+                cstr[0] as isize,
+                accum,
+                ap as *const gemm::f16,
+                astr[1] as isize,
+                astr[0] as isize,
+                bp as *const gemm::f16,
+                bstr[1] as isize,
+                bstr[0] as isize,
+                if accum {
+                    gemm::f16::ONE
+                } else {
+                    gemm::f16::ZERO
+                },
+                gemm::f16::ONE,
+                false,
+                false,
+                false,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+            )
+        }
+    }
+}
+
+#[cfg(feature = "f16")]
 impl MatMulImpl<half::f16> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(

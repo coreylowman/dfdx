@@ -11,11 +11,6 @@ pub trait HasErr: Sized {
     type Err: std::fmt::Debug + std::fmt::Display;
 }
 
-/// Convert tensors to [std::vec::Vec]
-pub trait AsVec<E> {
-    fn as_vec(&self) -> std::vec::Vec<E>;
-}
-
 pub trait RandomU64 {
     /// Generates a random u64 number
     fn random_u64(&self) -> u64;

@@ -58,7 +58,7 @@ mod tests {
     use crate::{shapes::Axis, tensor::*, tensor_ops::BroadcastTo, tests::*};
 
     #[test]
-    #[should_panic = "left: `(5,)`,\n right: `(3,)`"]
+    #[should_panic = "left: (5,)\n right: (3,)"]
     fn test_axpy_wrong_shape() {
         let dev: TestDevice = Default::default();
         let mut a: Tensor<_, TestDtype, _> = dev.zeros_like(&(5,));

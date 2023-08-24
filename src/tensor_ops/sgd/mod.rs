@@ -10,7 +10,7 @@ use crate::{
 
 use super::optim::{Momentum, WeightDecay};
 
-/// Configuration of hyperparameters for [Sgd].
+/// Configuration of hyperparameters for [crate::optim::Sgd].
 ///
 /// Using different learning rate:
 /// ```rust
@@ -94,6 +94,7 @@ pub trait SgdKernel<E: Dtype>: Storage<E> {
 }
 
 impl SgdConfig {
+    /// Updates a single tensor using SGD.
     pub fn try_update<S: Shape, E: Dtype, D: SgdKernel<E>>(
         &self,
         param: &mut Tensor<S, E, D>,

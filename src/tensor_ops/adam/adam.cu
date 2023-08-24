@@ -74,3 +74,45 @@ extern "C" __global__ void FN( \
 ADAM(__half, adam_update_f16);
 ADAM(float, adam_update_f32);
 ADAM(double, adam_update_f64);
+
+extern "C" __global__ void adam_update_amp_f16(
+    const AdamConfig cfg,
+    const size_t numel,
+    const int t_int,
+    __half* param,
+    __half* moment1,
+    __half* moment2,
+    const __half* grad
+) {
+    float beta1 = cfg.beta1;
+    float beta2 = cfg.beta2;
+    float lr = cfg.lr;
+    float weight_decay = cfg.weight_decay;
+    float eps = cfg.eps;
+    float one = 1.0;
+    float t = t_int;
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        float p = param[i];
+        float g = grad[i];
+        float m = moment1[i];
+        float v = moment2[i];
+    
+        if (cfg.weight_decay_type == L2) {
+            g += weight_decay * p;
+        }
+    
+        m = m * beta1 + g * (one - beta1);
+        v = v * beta2 + g * g * (one - beta2);
+        float m_hat = m * one / (one - powg(beta1, t));
+        float v_hat = v * one / (one - powg(beta2, t));
+        g = lr * m_hat / (sqrtg(v_hat) + eps);
+    
+        if (cfg.weight_decay_type == Decoupled) {
+            g += (weight_decay * lr) * p;
+        }
+    
+        moment1[i] = m;
+        moment2[i] = v;
+        param[i] -= g;
+    }
+}

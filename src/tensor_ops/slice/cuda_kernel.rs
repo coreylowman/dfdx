@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     prelude::cpu::NdIndex,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor},
@@ -26,7 +27,13 @@ macro_rules! has_kernels {
 has_kernels!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, bool);
 
 #[cfg(feature = "f16")]
-impl HasCudaKernel<half::f16> for Cuda {
+impl HasCudaKernel<f16> for Cuda {
+    const MOD: &'static str = "slice_f16";
+    const FNS: &'static [&'static str] = &["slice_fwd_f16", "slice_bwd_f16"];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
     const MOD: &'static str = "slice_f16";
     const FNS: &'static [&'static str] = &["slice_fwd_f16", "slice_bwd_f16"];
 }
