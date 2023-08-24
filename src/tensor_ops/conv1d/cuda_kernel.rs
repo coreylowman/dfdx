@@ -48,10 +48,10 @@ impl HasCudaKernel<f64> for Cuda {
     ];
 }
 
-fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
+fn make_3d<S: Shape>(strides: S::Concrete) -> [usize; 3] {
     match S::NUM_DIMS {
-        3 => [0, strides[0], strides[1], strides[2]],
-        4 => [strides[0], strides[1], strides[2], strides[3]],
+        2 => [0, strides[0], strides[1]],
+        3 => [strides[0], strides[1], strides[2]],
         _ => unreachable!("Only implemented for 3d & 4d arrays"),
     }
 }
@@ -82,7 +82,7 @@ where
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
-        let img_strides = self.dev.htod_copy(make_4d::<L>(img.strides).into())?;
+        let img_strides = self.dev.htod_copy(make_3d::<L>(img.strides).into())?;
 
         let out_buf = Arc::get_mut(&mut out.data).unwrap();
 
