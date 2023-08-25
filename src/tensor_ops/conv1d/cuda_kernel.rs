@@ -101,7 +101,7 @@ where
             // RHS (B, G, C/G*K, OL)
             // OUT (B, G, O/G, OL)
             let m = op.chan_out / op.groups;
-            let k = op.chan_in * op.kernel;
+            let k = (op.chan_in / op.groups) * op.kernel;
             let n = op.l_out;
             if op.groups == 1 {
                 // optimizing here for common case
@@ -147,7 +147,7 @@ where
         grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec,
-        _: &impl Tensorlike<O, E, Self>,
+        grad_stuff: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let patches_item_numel = op.chan_out * op.kernel * op.l_in;
@@ -163,6 +163,11 @@ where
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         self.par_stream.wait_for_default()?;
+        let mut data: Vec<E> = repeat(E::ONE).take(grad_stuff.shape().concrete()).collect();
+        self.dev
+            .dtoh_sync_copy_into(&grad_out.slice(..), data.as_mut_slice());
+
+        println!("grad out {:?}", data);
 
         unsafe {
             // unfold grad_out into patches
@@ -189,6 +194,8 @@ where
 
             self.par_stream.wait_for_default()?;
 
+            println!("grad buff {:?}", data);
+
             // img_g += filters * patches
             // LHS =    (G, C/G, O/G*K)
             // RHS = (B, G, O/G*K, L)
@@ -210,9 +217,6 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
-                let mut out_data: Vec<E> = grad_out.as_vec();
-
-                println!("grad out {:?}", out_data);
             } else {
                 for i_batch in 0..op.batch {
                     self.gemm_batch(

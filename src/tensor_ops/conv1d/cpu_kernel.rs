@@ -110,6 +110,8 @@ impl Cpu {
                 }
             }
         }
+        println!("Grad Buff OUT {buf:?}");
+        println!("filters {filters_tr:?}");
 
         {
             // img_g += filters^T * unfold(grad_out)
