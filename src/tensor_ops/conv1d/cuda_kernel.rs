@@ -163,7 +163,9 @@ where
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         self.par_stream.wait_for_default()?;
-        let mut data: Vec<E> = repeat(E::ONE).take(grad_stuff.shape().concrete()).collect();
+        let mut data: Vec<E> = repeat(E::ONE)
+            .take(grad_stuff.shape().num_elements())
+            .collect();
         self.dev
             .dtoh_sync_copy_into(&grad_out.slice(..), data.as_mut_slice());
 
