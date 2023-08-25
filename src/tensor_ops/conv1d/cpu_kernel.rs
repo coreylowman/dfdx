@@ -1,3 +1,4 @@
+use crate::prelude::{HasAxes, HasShape};
 use crate::shapes::{Dtype, Shape};
 use crate::tensor::{cpu::*, *};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
@@ -53,6 +54,7 @@ impl Cpu {
                 }
             }
         }
+        println!("img: {img:?}");
 
         println!("Buff {buf:?}");
 
@@ -60,7 +62,7 @@ impl Cpu {
         let m = op.chan_out / op.groups;
         // todo: examine why this fails the test
         // let k = (op.chan_in / op.groups) * op.kernel;
-        let k = (op.chan_in / op.groups) * op.kernel;
+        let k = op.chan_in * op.kernel;
 
         let n = op.l_out;
         for g in 0..op.groups {
@@ -76,7 +78,7 @@ impl Cpu {
             );
         }
 
-        println!("Buff {out:?}");
+        println!("Buff OUT {out:?}");
         Ok(())
     }
 
@@ -174,9 +176,11 @@ where
             3 => [lhs.strides[0], out.strides[0]],
             _ => unreachable!(),
         };
+
         let lhs = lhs.data.as_ref();
         let rhs = rhs.data.as_ref();
         let out = Arc::make_mut(&mut out.data);
+        use crate::prelude::HasShape;
         for i_batch in 0..op.batch {
             self.fwd_conv1d(
                 &op,

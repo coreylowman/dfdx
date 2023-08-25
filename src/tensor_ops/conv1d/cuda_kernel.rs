@@ -92,10 +92,10 @@ where
             let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.l_out) as u32);
             let params = (op, img.data.as_ref(), &img_strides, &mut patches);
             unfold_fn.launch(cfg, params)?;
-            let mut data: Vec<f32> = repeat(E::ONE).take(patches_numel).collect();
+            let mut data: Vec<E> = repeat(E::ONE).take(patches_numel).collect();
             self.dev.dtoh_sync_copy_into(&patches, data.as_mut_slice());
 
-            println!("{:?}", data);
+            println!("buff {:?}", data);
 
             // LHS    (G, O/G, C/G*K)
             // RHS (B, G, C/G*K, OL)
@@ -117,11 +117,9 @@ where
                 )
                 .unwrap();
 
-                let mut out_data: Vec<f32> = repeat(E::ONE).take(out.num_elements()).collect();
-                self.dev
-                    .dtoh_sync_copy_into(&out_buf, out_data.as_mut_slice());
+                let mut out_data: Vec<E> = out.as_vec();
 
-                println!("{:?}", out_data);
+                println!("out {:?}", out_data);
             } else {
                 for i_batch in 0..op.batch {
                     self.gemm_batch(
@@ -173,6 +171,11 @@ where
             unfold_fn.launch(cfg, (op, grad_out, &mut patches))?;
         }
 
+        let mut data: Vec<E> = repeat(E::ONE).take(patches_numel).collect();
+        self.dev.dtoh_sync_copy_into(&patches, data.as_mut_slice());
+
+        println!("grad buff {:?}", data);
+
         unsafe {
             // prepare filters for backward operations by
             // swapping dims 0 and 1
@@ -207,6 +210,9 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
+                let mut out_data: Vec<E> = grad_out.as_vec();
+
+                println!("grad out {:?}", out_data);
             } else {
                 for i_batch in 0..op.batch {
                     self.gemm_batch(

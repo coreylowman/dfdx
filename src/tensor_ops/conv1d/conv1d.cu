@@ -31,7 +31,7 @@ __device__ void unfold_input_into_patches(
     const size_t b = idx % op.batch;
 
     const T *image_i = image + b * strides[0] + c * strides[1];
-    T *patches_i = patches + ol * op.l_out;
+    T *patches_i = patches + ol;
     patches_i += c * (op.kernel * op.l_out);
     patches_i += b * (op.chan_in * op.kernel * op.l_out);
 
