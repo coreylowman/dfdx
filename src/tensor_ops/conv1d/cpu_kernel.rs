@@ -54,9 +54,9 @@ impl Cpu {
             }
         }
 
-        // (G, O / G, C * K) * (G, C * K * K, OL) = (G, O / G, OL)
+        // (G, O / G, C * K) * (G, C * K , OL) = (G, O / G, OL)
         let m = op.chan_out / op.groups;
-        let k = op.chan_in * op.kernel;
+        let k = (op.chan_in / op.groups) * op.kernel;
 
         let n = op.l_out;
         for g in 0..op.groups {
@@ -161,7 +161,7 @@ where
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        let patches = (op.groups * op.chan_in, op.kernel, op.kernel, op.l_out);
+        let patches = (op.groups * op.chan_in, op.kernel, op.l_out);
         let mut patches = self.try_alloc_zeros::<E>(patches.num_elements())?;
         let [lstride, ostride] = match L::NUM_DIMS {
             2 => [0; 2],

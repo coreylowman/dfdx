@@ -52,7 +52,7 @@ fn make_3d<S: Shape>(strides: S::Concrete) -> [usize; 3] {
     match S::NUM_DIMS {
         2 => [0, strides[0], strides[1]],
         3 => [strides[0], strides[1], strides[2]],
-        _ => unreachable!("Only implemented for 3d & 4d arrays"),
+        _ => unreachable!("Only implemented for 2d & 3d arrays"),
     }
 }
 
@@ -96,7 +96,7 @@ where
             // RHS (B, G, C/G*K, OL)
             // OUT (B, G, O/G, OL)
             let m = op.chan_out / op.groups;
-            let k = (op.chan_in / op.groups) * op.kernel;
+            let k = op.chan_in * op.kernel;
             let n = op.l_out;
             if op.groups == 1 {
                 // optimizing here for common case
