@@ -54,8 +54,12 @@ impl Cpu {
             }
         }
 
+        println!("Buff {buf:?}");
+
         // (G, O / G, C * K) * (G, C * K , OL) = (G, O / G, OL)
         let m = op.chan_out / op.groups;
+        // todo: examine why this fails the test
+        // let k = (op.chan_in / op.groups) * op.kernel;
         let k = (op.chan_in / op.groups) * op.kernel;
 
         let n = op.l_out;
@@ -71,6 +75,8 @@ impl Cpu {
                 [n, 1],
             );
         }
+
+        println!("Buff {out:?}");
         Ok(())
     }
 

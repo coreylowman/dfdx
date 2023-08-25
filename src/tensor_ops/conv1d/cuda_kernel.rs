@@ -6,6 +6,7 @@ use crate::{
     tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
 };
 
+use core::iter::repeat;
 use std::sync::Arc;
 
 unsafe impl DeviceRepr for super::Conv1DOp {}
@@ -91,6 +92,10 @@ where
             let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.l_out) as u32);
             let params = (op, img.data.as_ref(), &img_strides, &mut patches);
             unfold_fn.launch(cfg, params)?;
+            let mut data: Vec<f32> = repeat(E::ONE).take(patches_numel).collect();
+            self.dev.dtoh_sync_copy_into(&patches, data.as_mut_slice());
+
+            println!("{:?}", data);
 
             // LHS    (G, O/G, C/G*K)
             // RHS (B, G, C/G*K, OL)
@@ -111,6 +116,12 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
+
+                let mut out_data: Vec<f32> = repeat(E::ONE).take(out.num_elements()).collect();
+                self.dev
+                    .dtoh_sync_copy_into(&out_buf, out_data.as_mut_slice());
+
+                println!("{:?}", out_data);
             } else {
                 for i_batch in 0..op.batch {
                     self.gemm_batch(
