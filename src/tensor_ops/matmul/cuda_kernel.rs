@@ -40,6 +40,15 @@ fn gemm_cfg<M: Dim, K: Dim, N: Dim, E: Dtype>(
             beta,
             ldc: out_stride as i32,
         };
+        println!(
+            "TRUE! lda: {}, ldb {}, ldc: {}, {}, {}, {}",
+            cfg.lda,
+            cfg.ldb,
+            cfg.ldc,
+            m.size(),
+            k.size(),
+            n.size(),
+        );
         (cfg, true)
     } else {
         // out is stored in column major format
@@ -56,7 +65,7 @@ fn gemm_cfg<M: Dim, K: Dim, N: Dim, E: Dtype>(
             ldc: out_stride as i32,
         };
         println!(
-            "lda: {}, ldb {}, ldc: {}, {}, {}, {}",
+            "FALSE! lda: {}, ldb {}, ldc: {}, {}, {}, {}",
             cfg.lda,
             cfg.ldb,
             cfg.ldc,
