@@ -2,62 +2,125 @@ use std::{mem::MaybeUninit, vec::Vec};
 
 /// Collates `Self` into some other type.
 /// Generally similar to an unzip method;
-/// Transforms `[(A, B); N]` into `([A; N], [B; N])`;
-/// Transforms `Vec<(A, B)>` into `(Vec<A>, Vec<B>)`.
+/// Transforms `[(A, B, ...); N]` into `([A; N], [B; N], ...)`;
+/// Transforms `Vec<(A, B, ...)>` into `(Vec<A>, Vec<B>, ...)`.
 pub trait Collate {
     type Collated;
     fn collated(self) -> Self::Collated;
 }
 
-impl<A, B, const N: usize> Collate for [(A, B); N] {
-    type Collated = ([A; N], [B; N]);
-    fn collated(self) -> Self::Collated {
-        let mut a_n = [(); N].map(|_| MaybeUninit::uninit());
-        let mut b_n = [(); N].map(|_| MaybeUninit::uninit());
+macro_rules! generate_collate_impl {
+    ( $( [$generic:ident, $var:ident, $iter:ident] ),* ) => {
+        // non-reference, array
+        impl<$($generic,)* const N: usize> Collate for [($($generic,)*); N] {
+            type Collated = ($([$generic; N]),*);
+            fn collated(self) -> Self::Collated {
+                $( let mut $var = [(); N].map(|_| MaybeUninit::uninit()); )*
 
-        for (i, (a, b)) in self.into_iter().enumerate() {
-            a_n[i].write(a);
-            b_n[i].write(b);
+                for (i, ($($iter,)*)) in self.into_iter().enumerate() {
+                    $( $var[i].write($iter); )*
+                }
+
+                $( let $var = unsafe { $var.map(|$iter| $iter.assume_init()) }; )*
+
+                ($($var,)*)
+            }
         }
 
-        let a_n = unsafe { a_n.map(|a| a.assume_init()) };
-        let b_n = unsafe { b_n.map(|b| b.assume_init()) };
+        // reference, array
+        impl<'a, $($generic,)* const N: usize> Collate for [&'a ($($generic,)*); N] {
+            type Collated = ($([&'a $generic; N]),*);
+            fn collated(self) -> Self::Collated {
+                $( let mut $var = [(); N].map(|_| MaybeUninit::uninit()); )*
 
-        (a_n, b_n)
-    }
-}
+                for (i, ($($iter,)*)) in self.into_iter().enumerate() {
+                    $( $var[i].write($iter); )*
+                }
 
-impl<'a, A, B, const N: usize> Collate for [&'a (A, B); N] {
-    type Collated = ([&'a A; N], [&'a B; N]);
-    fn collated(self) -> Self::Collated {
-        let mut a_n = [(); N].map(|_| MaybeUninit::uninit());
-        let mut b_n = [(); N].map(|_| MaybeUninit::uninit());
+                $( let $var = unsafe { $var.map(|$iter| $iter.assume_init()) }; )*
 
-        for (i, (a, b)) in self.into_iter().enumerate() {
-            a_n[i].write(a);
-            b_n[i].write(b);
+                ($($var,)*)
+            }
         }
 
-        let a_n = unsafe { a_n.map(|a| a.assume_init()) };
-        let b_n = unsafe { b_n.map(|b| b.assume_init()) };
+        // non-reference, vec
+        impl <$($generic,)*> Collate for Vec<($($generic,)*)> {
+            type Collated = ($(Vec<$generic>),*);
+            fn collated(self) -> Self::Collated {
+                $( let mut $var = Vec::with_capacity(self.len()); )*
 
-        (a_n, b_n)
-    }
+                for ($($iter,)*) in self.into_iter() {
+                    $( $var.push($iter); )*
+                }
+
+                ($($var,)*)
+            }
+        }
+
+        // reference, vec
+        impl <'a, $($generic,)*> Collate for Vec<&'a ($($generic,)*)> {
+            type Collated = ($(Vec<&'a $generic>),*);
+            fn collated(self) -> Self::Collated {
+                $( let mut $var = Vec::with_capacity(self.len()); )*
+
+                for ($($iter,)*) in self.into_iter() {
+                    $( $var.push($iter); )*
+                }
+
+                ($($var,)*)
+            }
+        }
+    };
 }
 
-impl<A, B> Collate for Vec<(A, B)> {
-    type Collated = (Vec<A>, Vec<B>);
-    fn collated(self) -> Self::Collated {
-        self.into_iter().unzip()
-    }
-}
-
-impl<'a, A, B> Collate for Vec<&'a (A, B)> {
-    type Collated = (Vec<&'a A>, Vec<&'a B>);
-    fn collated(self) -> Self::Collated {
-        self.into_iter().map(|(a, b)| (a, b)).unzip()
-    }
-}
+generate_collate_impl!([A, a, a_n], [B, b, b_n]);
+generate_collate_impl!([A, a, a_n], [B, b, b_n], [C, c, c_n]);
+generate_collate_impl!([A, a, a_n], [B, b, b_n], [C, c, c_n], [D, d, d_n]);
+generate_collate_impl!(
+    [A, a, a_n],
+    [B, b, b_n],
+    [C, c, c_n],
+    [D, d, d_n],
+    [E, e, e_n]
+);
+generate_collate_impl!(
+    [A, a, a_n],
+    [B, b, b_n],
+    [C, c, c_n],
+    [D, d, d_n],
+    [E, e, e_n],
+    [F, f, f_n]
+);
+generate_collate_impl!(
+    [A, a, a_n],
+    [B, b, b_n],
+    [C, c, c_n],
+    [D, d, d_n],
+    [E, e, e_n],
+    [F, f, f_n],
+    [G, g, g_n]
+);
+generate_collate_impl!(
+    [A, a, a_n],
+    [B, b, b_n],
+    [C, c, c_n],
+    [D, d, d_n],
+    [E, e, e_n],
+    [F, f, f_n],
+    [G, g, g_n],
+    [H, h, h_n]
+);
+generate_collate_impl!(
+    [A, a, a_n],
+    [B, b, b_n],
+    [C, c, c_n],
+    [D, d, d_n],
+    [E, e, e_n],
+    [F, f, f_n],
+    [G, g, g_n],
+    [H, h, h_n],
+    [I, i, i_n]
+);
 
 pub struct Collator<I> {
     iter: I,
@@ -88,8 +151,8 @@ pub trait IteratorCollateExt: Iterator {
     /// but works on items that are Vecs or arrays
     ///
     /// For example:
-    /// - An item of `Vec<(usize, usize)>` becomes `(Vec<usize>, Vec<usize>)`
-    /// - An item of `[(usize, usize); N]` becomes `([usize; N], [usize; N]`
+    /// - An item of `Vec<(usize, usize, ...)>` becomes `(Vec<usize>, Vec<usize>, ...)`
+    /// - An item of `[(usize, usize, ...); N]` becomes `([usize; N], [usize; N], ...)`
     ///
     /// Example implementations:
     /// ```rust
@@ -101,6 +164,8 @@ pub trait IteratorCollateExt: Iterator {
     /// assert_eq!(iter.next().unwrap(), (['c'; 10], ['d'; 10]));
     /// assert_eq!(iter.next().unwrap(), (['e'; 10], ['f'; 10]));
     /// ```
+    ///
+    /// This works for any number of items in the tuple up to 8.
     fn collate(self) -> Collator<Self>
     where
         Self: Sized,
@@ -121,6 +186,12 @@ mod test {
 
         let items = [&(1, 2), &(3, 4), &(5, 6)];
         assert_eq!(items.collated(), ([&1, &3, &5], [&2, &4, &6]));
+
+        let items = [(1, 2, 3), (4, 5, 6), (7, 8, 9)];
+        assert_eq!(items.collated(), ([1, 4, 7], [2, 5, 8], [3, 6, 9]));
+
+        let items = [&(1, 2, 3), &(4, 5, 6), &(7, 8, 9)];
+        assert_eq!(items.collated(), ([&1, &4, &7], [&2, &5, &8], [&3, &6, &9]));
     }
 
     #[test]
@@ -134,5 +205,15 @@ mod test {
         let (a, b): (Vec<&i32>, Vec<&i32>) = items.collated();
         assert_eq!(a, [&1, &3, &5]);
         assert_eq!(b, [&2, &4, &6]);
+
+        let items = std::vec![(1, 2, 3), (4, 5, 6), (7, 8, 9)];
+        let (a, b, c): (Vec<i32>, Vec<i32>, Vec<i32>) = items.collated();
+        assert_eq!(a, [1, 4, 7]);
+        assert_eq!(b, [2, 5, 8]);
+
+        let items = std::vec![&(1, 2, 3), &(4, 5, 6), &(7, 8, 9)];
+        let (a, b, c): (Vec<&i32>, Vec<&i32>, Vec<&i32>) = items.collated();
+        assert_eq!(a, [&1, &4, &7]);
+        assert_eq!(b, [&2, &5, &8]);
     }
 }
