@@ -55,6 +55,10 @@ fn gemm_cfg<M: Dim, K: Dim, N: Dim, E: Dtype>(
             beta,
             ldc: out_stride as i32,
         };
+        println!(
+            "lda: {}, ldb {}, ldc: {}, m, k, n",
+            cfg.lda, cfg.ldb, cfg.ldc, m, k, n
+        );
         (cfg, false)
     }
 }
