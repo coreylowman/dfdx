@@ -77,7 +77,7 @@ where
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let patches_item_numel = op.chan_in * op.kernel * op.l_out;
+        let patches_item_numel = op.groups * op.chan_in * op.kernel * op.l_out;
         let patches_numel = op.batch * patches_item_numel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;

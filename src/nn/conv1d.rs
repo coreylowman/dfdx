@@ -193,27 +193,32 @@ mod tests {
     fn test_grouped_forward_sizes() {
         let dev: TestDevice = Default::default();
 
-        let x = dev.zeros::<Rank2<16, 10>>();
+        let x = dev.ones::<Rank2<16, 10>>();
 
         let m = dev.build_module::<Conv1D<16, 32, 3, 1, 0, 1>, TestDtype>();
         let _: Tensor<Rank3<32, 16, 3>, _, _> = m.weight;
         let _: Tensor<Rank2<32, 8>, _, _> = m.forward(x.clone());
+        println!("1");
 
         let m = dev.build_module::<Conv1D<16, 32, 3, 1, 0, 1, 2>, TestDtype>();
         let _: Tensor<Rank3<32, 8, 3>, _, _> = m.weight;
         let _: Tensor<Rank2<32, 8>, _, _> = m.forward(x.clone());
+        println!("2");
 
         let m = dev.build_module::<Conv1D<16, 32, 3, 1, 0, 1, 4>, TestDtype>();
         let _: Tensor<Rank3<32, 4, 3>, _, _> = m.weight;
         let _: Tensor<Rank2<32, 8>, _, _> = m.forward(x.clone());
+        println!("3");
 
         let m = dev.build_module::<Conv1D<16, 32, 3, 1, 0, 1, 8>, TestDtype>();
         let _: Tensor<Rank3<32, 2, 3>, _, _> = m.weight;
         let _: Tensor<Rank2<32, 8>, _, _> = m.forward(x.clone());
+        println!("4");
 
         let m = dev.build_module::<Conv1D<16, 32, 3, 1, 0, 1, 16>, TestDtype>();
         let _: Tensor<Rank3<32, 1, 3>, _, _> = m.weight;
         let _: Tensor<Rank2<32, 8>, _, _> = m.forward(x);
+        println!("5");
     }
 
     #[rustfmt::skip]

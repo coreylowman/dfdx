@@ -184,9 +184,13 @@ where
         let out = Arc::make_mut(&mut out.data);
         use crate::prelude::HasShape;
         for i_batch in 0..op.batch {
+            let lhs_slice = &lhs[i_batch * lstride..];
+            println!("LHS Slice: {lhs_slice:?}");
+            println!("Patches: {patches:?}");
+            println!("rhs: {:?}", rhs);
             self.fwd_conv1d(
                 &op,
-                &lhs[i_batch * lstride..],
+                lhs_slice,
                 rhs,
                 &mut out[i_batch * ostride..],
                 &mut patches,
