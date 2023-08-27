@@ -101,7 +101,7 @@ where
             // RHS (B, G, C/G*K, OL)
             // OUT (B, G, O/G, OL)
             let m = op.chan_out / op.groups;
-            let k = (op.chan_in / op.groups) * op.kernel;
+            let k = op.chan_in * op.kernel;
             let n = op.l_out;
             if op.groups == 1 {
                 // optimizing here for common case
