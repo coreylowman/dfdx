@@ -210,10 +210,29 @@ mod test {
         let (a, b, c): (Vec<i32>, Vec<i32>, Vec<i32>) = items.collated();
         assert_eq!(a, [1, 4, 7]);
         assert_eq!(b, [2, 5, 8]);
+        assert_eq!(c, [3, 6, 9]);
 
         let items = std::vec![&(1, 2, 3), &(4, 5, 6), &(7, 8, 9)];
         let (a, b, c): (Vec<&i32>, Vec<&i32>, Vec<&i32>) = items.collated();
         assert_eq!(a, [&1, &4, &7]);
         assert_eq!(b, [&2, &5, &8]);
+        assert_eq!(c, [&3, &6, &9]);
+    }
+
+    #[test]
+    fn test_collate_iterator() {
+        let items = [[('a', 'b'); 10], [('c', 'd'); 10], [('e', 'f'); 10]];
+        let mut iter = items.into_iter().collate();
+
+        assert_eq!(iter.next().unwrap(), (['a'; 10], ['b'; 10]));
+        assert_eq!(iter.next().unwrap(), (['c'; 10], ['d'; 10]));
+        assert_eq!(iter.next().unwrap(), (['e'; 10], ['f'; 10]));
+
+        let items = [vec![(1, 2); 10], vec![(3, 4); 10], vec![(5, 6); 10]];
+        let mut iter = items.into_iter().collate();
+
+        assert_eq!(iter.next().unwrap(), (vec![1; 10], vec![2; 10]));
+        assert_eq!(iter.next().unwrap(), (vec![3; 10], vec![4; 10]));
+        assert_eq!(iter.next().unwrap(), (vec![5; 10], vec![6; 10]));
     }
 }
