@@ -8,6 +8,7 @@ use dfdx::{
     tensor_ops::{Device, ReshapeTo},
 };
 
+/// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 #[derive(Debug, Default, Clone, Copy, CustomModule)]
 pub struct Flatten2D;
 

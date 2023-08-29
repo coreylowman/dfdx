@@ -1,5 +1,6 @@
 use dfdx::prelude::{Device, Dtype, Shape, Tape, Tensor};
 
+/// Calls [dfdx::tensor_ops::sqrt()].
 #[derive(Default, Debug, Clone, Copy, crate::CustomModule)]
 pub struct Sqrt;
 

@@ -1,5 +1,20 @@
 use dfdx::prelude::{Device, Dim, Dtype, MaxTo, Tape, Tensor};
 
+/// Applies max pooling over an entire image, fully reducing the height and width
+/// dimensions:
+/// - Reduces 3d (C, H, W) to 1d (C, )
+/// - Reduces 4d (B, C, H, W) to 2d (B, C)
+///
+/// **Pytorch equivalent**: `torch.nn.AdaptiveMaxPool2d(1)` followed by a flatten.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let m: MaxPoolGlobal = Default::default();
+/// let _: Tensor<Rank1<5>, f32, _> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
+/// let _: Tensor<Rank2<10, 5>, f32, _> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
+/// ```
 #[derive(Default, Debug, Clone, Copy, crate::CustomModule)]
 pub struct MaxPoolGlobal;
 

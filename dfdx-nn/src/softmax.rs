@@ -1,8 +1,8 @@
 use dfdx::prelude::{Device, Dtype, Shape, Tape, Tensor};
 
+/// Calls [dfdx::tensor_ops::softmax()] on the last axis of the input.
 #[derive(Default, Debug, Clone, Copy, crate::CustomModule)]
 pub struct Softmax;
-
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::Module<Tensor<S, E, D, T>>
     for Softmax
 {

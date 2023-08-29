@@ -1,10 +1,29 @@
 use crate::*;
 use dfdx::prelude::*;
 
+/// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
+///
+/// This calls [normalize()] on the last axis of the input to normalize to 0 mean and unit std dev, and then does an element-wise
+/// affine transform using learnable parameters [Self::gamma] and [Self::beta].
+///
+/// [Self::epsilon] is passed to [normalize()] and added to the variance to ensure big enough numbers. It defaults to `1e-5`.
+///
+/// Generics:
+/// - `M` The size of the affine transform tensors.
+///
+/// # Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = LayerNorm1D<5>;
+/// let model = dev.build_module::<Model, f32>();
+/// let _: Tensor<Rank1<5>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
+/// ```
 #[derive(Default, Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct LayerNorm1DConfig<M: Dim>(pub M);
 
+/// Compile time sugar alias around [LayerNorm1DConfig]
 pub type LayerNorm1DConstConfig<const M: usize> = LayerNorm1DConfig<Const<M>>;
 
 impl<M: Dim, E: Dtype, D: Device<E>> crate::BuildOnDevice<E, D> for LayerNorm1DConfig<M> {
@@ -18,6 +37,7 @@ impl<M: Dim, E: Dtype, D: Device<E>> crate::BuildOnDevice<E, D> for LayerNorm1DC
     }
 }
 
+/// See [LayerNorm1DConfig]
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct LayerNorm1D<M: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

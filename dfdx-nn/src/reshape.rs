@@ -5,6 +5,16 @@ use dfdx::{
     tensor_ops::{Device, ReshapeTo},
 };
 
+/// Reshapes input tensors to a configured shape.
+///
+/// Example usage:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let model: Reshape<Rank2<5, 24>> = Default::default();
+/// let x: Tensor<Rank4<5, 4, 3, 2>, f32, _> = dev.sample_normal();
+/// let _: Tensor<Rank2<5, 24>, f32, _> = model.forward(x);
+/// ```
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Reshape<S: Shape>(pub S);
 

@@ -15,6 +15,19 @@ pub struct FeedForwardConfig<Model: Dim, F: Dim> {
     pub l2: LinearConfig<F, Model>,
 }
 
+/// A single transformer encoder block
+///
+/// Generics
+/// - `Model`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NumHeads`: The number of heads in [MultiHeadAttention].
+/// - `F`: The size of the hidden layer in the feedforward network.
+///
+/// **Pytorch equivalent**:
+/// ```python
+/// encoder = torch.nn.TransformerEncoderLayer(
+///    Model, NumHeads, dim_feedforward=F, batch_first=True, dropout=0.0
+/// )
+/// ```
 #[derive(Clone, Debug, Sequential)]
 #[built(EncoderBlock)]
 pub struct EncoderBlockConfig<Model: Dim, NumHeads: Dim, F: Dim> {
@@ -41,6 +54,20 @@ impl<Model: Dim, NumHeads: Dim, F: Dim> EncoderBlockConfig<Model, NumHeads, F> {
     }
 }
 
+/// A transformer decoder block. Different than the normal transformer block
+/// as this self attention accepts an additional sequence from the encoder.
+///
+/// Generics
+/// - `Model`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NumHeads`: The number of heads in [MultiHeadAttention].
+/// - `F`: The size of the hidden layer in the feedforward network.
+///
+/// **Pytorch equivalent**:
+/// ```python
+/// decoder = torch.nn.TransformerDecoderLayer(
+///    Model, NumHeads, dim_feedforward=F, batch_first=True, dropout=0.0
+/// )
+/// ```
 #[derive(Clone, Debug, CustomModule)]
 #[built(DecoderBlock)]
 pub struct DecoderBlockConfig<Model: Dim, NumHeads: Dim, F: Dim> {
@@ -106,6 +133,27 @@ where
     }
 }
 
+/// Transformer architecture as described in
+/// [Attention is all you need](https://arxiv.org/abs/1706.03762).
+///
+/// This is comprised of a [EncoderBlockConfig] and a [DecoderBlockConfig].
+///
+/// Generics:
+/// - `Model`: Size of the input features to the encoder/decoder.
+/// - `NumHeads`: Number of heads for [MultiHeadAttention].
+/// - `F`: Feedforward hidden dimension for both encoder/decoder
+///
+/// **Pytorch equivalent**:
+/// ```python
+/// torch.nn.Transformer(
+///     d_model=Model,
+///     nhead=NumHeads,
+///     num_encoder_layers=cfg.encoder.len(),
+///     num_decoder_layers=cfg.decoder.len(),
+///     dim_feedforward=F,
+///     batch_first=True,
+/// )
+/// ```
 #[derive(Clone, Debug, CustomModule)]
 #[built(Transformer)]
 pub struct TransformerConfig<Model: Dim, NumHeads: Dim, F: Dim> {

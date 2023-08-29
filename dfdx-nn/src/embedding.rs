@@ -7,12 +7,43 @@ use dfdx::{
 
 use crate::*;
 
+/// An embedding
+///
+/// **Pytorch Equivalent**: `torch.nn.Embedding(...)`
+///
+/// Initializes [Self::weight] from the Standard Normal distribution.
+///
+/// Generics:
+/// - `Vocab`: The size of the vocabulary, inputs integer values must be between
+///    0 and Vocab;
+/// - `Model`: The "output" size of vectors & matrices which are the vectors being selected.
+///
+/// # Examples
+/// `Embedding<5, 2>` can act on vectors with SEQ integer elements (with values between 0 and 4), and results in a SEQ tensor of
+/// usually f32 elements being the rows in [Self::weight].
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = Embedding<7, 2>;
+/// let mut model = dev.build_module::<Model, f32>();
+/// // single sequence of ids
+/// let inputs: Tensor<Rank1<5>, usize, _> = dev.zeros();
+/// let _: Tensor<(Const<5>, Const<2>,), f32, _> = model.forward(inputs);
+/// // Dynamic sequence of ids
+/// let inputs: Tensor<(usize, ), usize, _> = dev.zeros_like(&(5, ));
+/// let _: Tensor<(usize, Const<2>,), f32, _> = model.forward(inputs);
+/// // batched sequence of ids
+/// let inputs: Tensor<Rank2<10, 5>, usize, _> = dev.zeros();
+/// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32, _> = model.forward(inputs);
+/// ```
 #[derive(Default, Clone, Copy, Debug)]
 pub struct EmbeddingConfig<Vocab: Dim, Model: Dim> {
     pub vocab: Vocab,
     pub model: Model,
 }
 
+/// Compile time sugar alias around [EmbeddingConfig].
 pub type EmbeddingConstConfig<const VOCAB: usize, const MODEL: usize> =
     EmbeddingConfig<Const<VOCAB>, Const<MODEL>>;
 
@@ -25,6 +56,7 @@ impl<V: Dim, M: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for EmbeddingCo
     }
 }
 
+/// See [EmbeddingConfig].
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct Embedding<Vocab: Dim, Model: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

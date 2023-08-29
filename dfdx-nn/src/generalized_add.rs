@@ -5,6 +5,23 @@ use dfdx::{
     tensor_ops::{Device, TryAdd},
 };
 
+/// A residual connection around two modules: `T(x) + U(x)`,
+/// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
+///
+/// # Generics
+/// - `T`: The underlying module to do a skip connection around.
+/// - `U`: The underlying residual module
+///
+/// # Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = GeneralizedResidual<ReLU, Square>;
+/// let model = dev.build_module::<Model, f32>();
+/// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+/// let y = model.forward(x);
+/// assert_eq!(y.array(), [4.0, 1.0, 0.0, 2.0, 6.0]);
+/// ```
 #[derive(
     Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams, LoadSafeTensors, SaveSafeTensors,
 )]

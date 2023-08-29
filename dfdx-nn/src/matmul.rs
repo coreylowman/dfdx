@@ -6,12 +6,27 @@ use dfdx::{
 };
 use rand_distr::Uniform;
 
+/// Performs matrix multiplication of the form `x * W^T`, where `x` is the input, and `W` is the weight matrix.
+/// `x` can be 1d, 2d, or 3d.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = MatMulConfig<5, 2>;
+/// let model = dev.build_module::<Model, f32>();
+/// // single item forward
+/// let _: Tensor<Rank1<2>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
+/// // batched forward
+/// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
+/// ```
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MatMulConfig<I: Dim, O: Dim> {
     pub inp: I,
     pub out: O,
 }
 
+/// Compile time sugar alias around [MatMulConfig].
 pub type MatMulConstConfig<const I: usize, const O: usize> = MatMulConfig<Const<I>, Const<O>>;
 
 impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for MatMulConfig<I, O> {
@@ -23,6 +38,7 @@ impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for MatMulConfi
     }
 }
 
+/// See [MatMulConfig].
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct MatMul<I: Dim, O: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
@@ -30,7 +46,6 @@ pub struct MatMul<I: Dim, O: Dim, Elem: Dtype, Dev: Device<Elem>> {
     pub weight: Tensor<(O, I), Elem, Dev>,
 }
 
-// NOTE: others can simply #[derive(ResetParams)]
 impl<I: Dim, O: Dim, E, D: Device<E>> ResetParams<E, D> for MatMul<I, O, E, D>
 where
     E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,

@@ -1,10 +1,43 @@
 use crate::{LoadSafeTensors, SaveSafeTensors, UpdateParams, ZeroGrads};
 use dfdx::prelude::*;
 
+/// Batch normalization for sequences as described in
+/// [Batch Normalization: Accelerating Deep Network Training
+/// by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
+///
+/// Generics:
+///
+/// - `C` the size of the dimension to reduce. Both for 2d tensors (of the form <BATCH_SIZE, C>)
+///   as well as 3d tensors (of the form <BATCH_SIZE, C, SEQUENCE_LENGTH>), this is the 1st dimension.
+///
+/// # Training vs Inference
+///
+/// BatchNorm1D supports the following cases (see sections below for more details):
+/// 1. **Training**: [crate::Module::forward_mut()] and [OwnedTape] on the input tensor
+/// 2. **Inference**: [crate::Module::forward()] and [NoneTape] on the input tensor.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = BatchNorm1D<3>;
+/// let bn = dev.build_module::<Model, f32>();
+/// let _ = bn.forward(dev.zeros::<Rank2<4, 3>>());
+/// let _ = bn.forward(dev.zeros::<Rank3<4, 3, 2>>());
+/// ```
+///
+/// ### Training
+/// - Running statistics: updated with momentum
+/// - Normalization: calculated using batch stats
+///
+/// ### Inference
+/// - Running statistics: **not** updated
+/// - Normalization: calculated using running stats
 #[derive(Default, Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct BatchNorm1DConfig<C: Dim>(pub C);
 
+/// Compile time sugar alias around [BatchNorm1DConfig]
 pub type BatchNorm1DConstConfig<const C: usize> = BatchNorm1DConfig<Const<C>>;
 
 impl<C: Dim, E: Dtype, D: Device<E>> crate::BuildOnDevice<E, D> for BatchNorm1DConfig<C> {
@@ -21,20 +54,29 @@ impl<C: Dim, E: Dtype, D: Device<E>> crate::BuildOnDevice<E, D> for BatchNorm1DC
     }
 }
 
+/// See [BatchNorm1DConfig].
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct BatchNorm1D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
+    /// Scale for affine transform. Defaults to 1.0
     #[param]
     #[serialize]
     pub scale: Tensor<(C,), Elem, Dev>,
+    /// Bias for affine transform. Defaults to 0.0
     #[param]
     #[serialize]
     pub bias: Tensor<(C,), Elem, Dev>,
+    /// Spatial mean that is updated during training. Defaults to 0.0
     #[serialize]
     pub running_mean: Tensor<(C,), Elem, Dev>,
+    /// Spatial variance that is updated during training. Defaults to 1.0
     #[serialize]
     pub running_var: Tensor<(C,), Elem, Dev>,
+    /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
     #[serialize]
     pub epsilon: f64,
+    /// Controls exponential moving average of running stats. Defaults to 0.1
+    ///
+    /// `running_stat * (1.0 - momentum) + stat * momentum`.
     #[serialize]
     pub momentum: f64,
 }

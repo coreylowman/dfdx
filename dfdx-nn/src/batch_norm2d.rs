@@ -1,10 +1,45 @@
 use crate::{LoadSafeTensors, SaveSafeTensors, UpdateParams, ZeroGrads};
 use dfdx::prelude::*;
 
+/// Batch normalization for images as described in
+/// [Batch Normalization: Accelerating Deep Network Training
+/// by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
+///
+/// Generics:
+///
+/// - `C` the size of the spatial dimension to reduce. For 3d tensors this is the 0th
+///   dimension. For 4d tensors, this is the 1st dimension.
+///
+/// # Training vs Inference
+///
+/// BatchNorm2D supports the following cases (see sections below for more details):
+/// 1. **Training**: [ModuleMut] and [OwnedTape] on the input tensor
+/// 2. **Inference**: [Module] and [NoneTape] on the input tensor.
+///
+/// *NOTE: ModuleMut/NoneTape, and Module/OwnedTape will fail to compile.*
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = BatchNorm2D<3>;
+/// let bn = dev.build_module::<Model, f32>();
+/// let _ = bn.forward(dev.zeros::<Rank3<3, 2, 2>>());
+/// let _ = bn.forward(dev.zeros::<Rank4<4, 3, 2, 2>>());
+/// ```
+///
+/// ### Training
+/// - Running statistics: updated with momentum
+/// - Normalization: calculated using batch stats
+///
+/// ### Inference
+/// - Running statistics: **not** updated
+/// - Normalization: calculated using running stats
 #[derive(Default, Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct BatchNorm2DConfig<C: Dim>(pub C);
 
+/// Compile time sugar alias around [BatchNorm2DConfig]
 pub type BatchNorm2DConstConfig<const C: usize> = BatchNorm2DConfig<Const<C>>;
 
 impl<C: Dim, E: Dtype, D: Device<E>> crate::BuildOnDevice<E, D> for BatchNorm2DConfig<C> {
@@ -21,6 +56,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> crate::BuildOnDevice<E, D> for BatchNorm2DC
     }
 }
 
+/// See [BatchNorm2DConfig]
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct BatchNorm2D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

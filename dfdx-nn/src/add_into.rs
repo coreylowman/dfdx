@@ -5,6 +5,24 @@ use dfdx::{
     tensor_ops::{Device, TryAdd},
 };
 
+/// Add inputs together into a single tensor. `T` should be a tuple
+//// where every element of the tuple has the same output type
+///
+/// This provides a utility for networks where multiple inputs are needed
+///
+/// Generics:
+/// - `T` the module to add the outputs together of
+///
+/// # Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
+/// let model = dev.build_module::<Model, f32>();
+/// let a: Tensor<Rank1<2>, f32, _> = dev.zeros();
+/// let b: Tensor<Rank1<3>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank1<5>, f32, _> = model.forward((a, b));
+/// ```
 #[derive(
     Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams, LoadSafeTensors, SaveSafeTensors,
 )]

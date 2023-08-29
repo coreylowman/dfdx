@@ -1,8 +1,8 @@
 use dfdx::prelude::{Device, Dtype, Shape, Tape, Tensor};
 
+/// Calls [dfdx::tensor_ops::fast_gelu()].
 #[derive(Default, Debug, Clone, Copy, crate::CustomModule)]
 pub struct FastGeLU;
-
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::Module<Tensor<S, E, D, T>>
     for FastGeLU
 {
@@ -13,9 +13,9 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::Module<Tensor<S, E,
     }
 }
 
+/// Calls [dfdx::tensor_ops::accurate_gelu()].
 #[derive(Default, Debug, Clone, Copy, crate::CustomModule)]
 pub struct AccurateGeLU;
-
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::Module<Tensor<S, E, D, T>>
     for AccurateGeLU
 {

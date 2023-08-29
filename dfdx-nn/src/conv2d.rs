@@ -6,6 +6,39 @@ use dfdx::{
 
 use crate::*;
 
+/// **Requires Nightly** Performs *unbiased* 2d convolutions on 3d and 4d images.
+///
+/// **Pytorch Equivalent**: `torch.nn.Conv2d(..., bias=False)`
+///
+/// Example usage:
+/// ```rust
+/// # use dfdx_nn::Conv2DConfig;
+/// # use dfdx::shapes::Const;
+/// // compile time channels/kernel
+/// let m: Conv2DConfig<Const<3>, Const<5>, Const<3>> = Default::default();
+/// // runtime channels/kernel
+/// let m: Conv2DConfig<usize, usize, usize> = Conv2DConfig {
+///     in_chan: 3,
+///     out_chan: 5,
+///     kernel_size: 3,
+///     ..Default::default()
+/// };
+/// ```
+///
+/// To create a biased conv, combine with [crate::Bias2D].
+///
+/// Generics:
+/// - `InChan`: The number of input channels in an image.
+/// - `OutChan`: The number of channels in the output of the layer.
+/// - `KernelSize`: The size of the kernel applied to both width and height of the images.
+/// - `Stride`: How far to move the kernel each step. Defaults to `Const<1>`
+/// - `Padding`: How much zero padding to add around the images. Defaults to `Const<0>`.
+/// - `Dilation`: Controls the spacing between kernel points. Defaults to `Const<1>`.
+/// - `Groups`: Controls the connections between inputs and outputs.
+///     `InChan` and `OutChan` must both be divisible by `Groups`.
+///
+/// See [conv animations](https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md) for helpful
+/// visualization of all of these parameters.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Conv2DConfig<
     InChan: Dim,
@@ -25,6 +58,7 @@ pub struct Conv2DConfig<
     pub groups: Groups,
 }
 
+/// Compile time sugar alias around [Conv2DConfig]
 pub type Conv2DConstConfig<
     const IN_CHAN: usize,
     const OUT_CHAN: usize,
@@ -70,6 +104,7 @@ where
     }
 }
 
+/// The module built with [Conv2DConfig]. See [Conv2DConfig] for usage.
 #[derive(Debug, Clone, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct Conv2D<InChan, OutChan, KernelSize, Stride, Padding, Dilation, Groups, Elem, Dev>
 where

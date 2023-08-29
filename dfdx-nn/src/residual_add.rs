@@ -7,6 +7,22 @@ use dfdx::{
 
 use crate::Module;
 
+/// A residual connection around `T`: `T(x) + x`,
+/// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
+///
+/// # Generics
+/// - `T`: The underlying module to do a skip connection around.
+///
+/// # Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = Residual<ReLU>;
+/// let model = dev.build_module::<Model, f32>();
+/// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+/// let y = model.forward(x);
+/// assert_eq!(y.array(), [-2.0, -1.0, 0.0, 2.0, 4.0]);
+/// ```
 #[derive(
     Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams, SaveSafeTensors, LoadSafeTensors,
 )]

@@ -2,6 +2,20 @@ use crate::*;
 use dfdx::{shapes::*, tensor::*, tensor_ops::*};
 use num_traits::Float;
 
+/// A multi-head attention layer.
+///
+/// Generics:
+/// - `Embed`: The size of query vectors.
+/// - `NumHeads` The number of heads to split query/key/value into.
+/// - *Optional* `K`: The size of key vectors. Defaults to `Embed`
+/// - *Optional* `V` The size of value vectors. Defaults to `Embed`
+///
+/// **Pytorch equivalent**: `torch.nn.MultiheadAttention(Embed, NumHeads, batch_first=True)`
+///
+/// Examples
+/// - `MultiHeadAttention<8, 2>` is an attention layer with 2 heads and 8 token, key and value dims.
+/// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
+///   than the embed dimension
 #[derive(Default, Debug, Copy, Clone, CustomModule)]
 #[built(MultiHeadAttention)]
 pub struct MultiHeadAttentionConfig<Embed: Dim, NumHeads: Dim, K: Dim = Embed, V: Dim = Embed> {

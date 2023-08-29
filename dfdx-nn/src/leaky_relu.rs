@@ -3,6 +3,7 @@ use dfdx::{
     tensor_ops::TryPReLU,
 };
 
+/// ReLU but maintains a small gradient if the input values are negative.
 #[derive(Debug, Clone, Copy, crate::CustomModule)]
 pub struct LeakyReLU(pub f64);
 

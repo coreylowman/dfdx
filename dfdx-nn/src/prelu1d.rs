@@ -6,6 +6,7 @@ use dfdx::{
 
 use crate::*;
 
+/// Calls [prelu()] with learnable values along second dimension.
 #[derive(Debug, Clone, Copy)]
 pub struct PReLU1DConfig<C: Dim> {
     pub a: f64,
@@ -31,6 +32,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for PReLU1DConfig<C> {
     }
 }
 
+/// See [PReLU1DConfig].
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct PReLU1D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

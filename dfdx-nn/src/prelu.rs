@@ -6,6 +6,7 @@ use dfdx::{
 
 use crate::*;
 
+/// Calls [dfdx::tensor_ops::prelu()] with learnable value.
 #[derive(Debug, Clone, Copy)]
 pub struct PReLUConfig(pub f64);
 
@@ -23,6 +24,7 @@ impl<E: Dtype, D: Device<E>> BuildOnDevice<E, D> for PReLUConfig {
     }
 }
 
+/// See [PReLUConfig].
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct PReLU<Elem: Dtype, Dev: Device<Elem>> {
     #[param]

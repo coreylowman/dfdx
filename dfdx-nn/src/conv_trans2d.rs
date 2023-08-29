@@ -6,6 +6,21 @@ use dfdx::{
 
 use crate::*;
 
+/// **Requires Nightly** Performs *unbiased* 2d deconvolutions on 3d and 4d images.
+///
+/// **Pytorch Equivalent**: `torch.nn.ConvTranspose2d(..., bias=False)`
+///
+/// To create a biased conv, combine with [crate::Bias2D].
+///
+/// Generics:
+/// - `InChan`: The number of input channels in an image.
+/// - `OutChan`: The number of channels in the output of the layer.
+/// - `KernelSize`: The size of the kernel applied to both width and height of the images.
+/// - `Stride`: How far to move the kernel each step. Defaults to `Const<1>`
+/// - `Padding`: How much zero padding to add around the images. Defaults to `Const<0>`.
+/// - `Dilation`: Controls the spacing between kernel points. Defaults to `Const<1>`.
+/// - `Groups`: Controls the connections between inputs and outputs. Defaults to `Const<1>`.
+///     `InChan` and `OutChan` must both be divisible by `Groups`.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ConvTrans2DConfig<
     InChan: Dim,
@@ -25,6 +40,7 @@ pub struct ConvTrans2DConfig<
     pub groups: Groups,
 }
 
+/// Compile time sugar alias around [ConvTrans2DConfig].
 pub type ConvTrans2DConstConfig<
     const IN_CHAN: usize,
     const OUT_CHAN: usize,
@@ -66,6 +82,7 @@ where
     }
 }
 
+/// See [ConvTrans2DConfig].
 #[derive(Debug, Clone, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct ConvTrans2D<InChan, OutChan, KernelSize, Stride, Padding, Dilation, Groups, Elem, Dev>
 where

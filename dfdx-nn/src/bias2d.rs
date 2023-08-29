@@ -6,10 +6,29 @@ use dfdx::{
 
 use crate::*;
 
+/// Adds a learnable 1d bias to 3d and 4d inputs.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// const NUM_CHANS: usize = 5;
+/// type Model = Bias2D<NUM_CHANS>;
+/// let model = dev.build_module::<Model, f32>();
+///
+/// // 3d input
+/// let x: Tensor<Rank3<NUM_CHANS, 2, 3>, f32, _> = dev.sample_normal();
+/// model.forward(x);
+///
+/// // 4d input
+/// let x: Tensor<Rank4<10, NUM_CHANS, 2, 3>, f32, _> = dev.sample_normal();
+/// model.forward(x);
+/// ```
 #[derive(Default, Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct Bias2DConfig<I: Dim>(pub I);
 
+/// Compile time sugar alias around [Bias2DConfig]
 pub type Bias2DConstConfig<const I: usize> = Bias2DConfig<Const<I>>;
 
 impl<I: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for Bias2DConfig<I> {
@@ -21,6 +40,7 @@ impl<I: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for Bias2DConfig<I> {
     }
 }
 
+/// See [Bias2DConfig]
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
 pub struct Bias2D<I: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

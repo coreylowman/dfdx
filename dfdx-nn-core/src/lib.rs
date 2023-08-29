@@ -6,7 +6,9 @@ use dfdx::{
     shapes::HasShape,
 };
 
+/// Mutable & Immutable forward of `Input` that produces [Module::Output].
 pub trait Module<X> {
+    /// The type that this unit produces given `Input`.
     type Output;
     type Error: std::fmt::Debug;
 
@@ -25,6 +27,9 @@ pub trait Module<X> {
     }
 }
 
+/// An error indicating that a parameter was not used in gradient
+/// computation, and was therefore not present in [Gradients]
+/// during an update.
 #[derive(Debug)]
 pub enum OptimizerUpdateError<Err> {
     UnusedTensors(Vec<UniqueId>),
@@ -43,6 +48,7 @@ impl<Err: std::fmt::Display> std::fmt::Display for OptimizerUpdateError<Err> {
 #[cfg(feature = "std")]
 impl<Err: std::fmt::Debug + std::fmt::Display> std::error::Error for OptimizerUpdateError<Err> {}
 
+/// Something that can update both tensors and a [UpdateParams]. At minimum [Optimizer::update_tensor()] must be implemented.
 pub trait Optimizer<M, E: Dtype, D: Device<E>>: Sized {
     fn update_tensor<S: Shape>(
         &mut self,
@@ -71,6 +77,7 @@ pub trait Optimizer<M, E: Dtype, D: Device<E>>: Sized {
     }
 }
 
+/// Something that can be constructed on a device as a certain dtype.
 pub trait BuildOnDevice<E: Dtype, D: Device<E>>: Clone {
     type Built: Clone + std::fmt::Debug;
     fn build_on_device(&self, device: &D) -> Self::Built {
@@ -79,6 +86,7 @@ pub trait BuildOnDevice<E: Dtype, D: Device<E>>: Clone {
     fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err>;
 }
 
+/// Something that can have all of its parameters reset to a specific state (may be random or not random).
 pub trait ResetParams<E: Dtype, D: Device<E>> {
     fn reset_params(&mut self) {
         self.try_reset_params().unwrap()
@@ -86,6 +94,7 @@ pub trait ResetParams<E: Dtype, D: Device<E>> {
     fn try_reset_params(&mut self) -> Result<(), D::Err>;
 }
 
+/// Something that can have it's params updated with an [Optimizer] and a set of [Gradients].
 pub trait UpdateParams<E: Dtype, D: Device<E>> {
     fn update_params<M, Optim: Optimizer<M, E, D>>(
         &mut self,
@@ -104,6 +113,7 @@ pub trait UpdateParams<E: Dtype, D: Device<E>> {
     ) -> Result<(), D::Err>;
 }
 
+/// Something that can allocate a [Gradients] object or zero out the [Gradients] object.
 pub trait ZeroGrads<E: Dtype, D: Device<E>> {
     fn zero_grads(&self, grads: &mut Gradients<E, D>) {
         self.try_zero_grads(grads).unwrap()
@@ -121,6 +131,7 @@ pub trait ZeroGrads<E: Dtype, D: Device<E>> {
     }
 }
 
+/// Something that can be saved to a .safetensors file.
 pub trait SaveSafeTensors {
     fn save_safetensors<P: AsRef<std::path::Path>>(
         &self,
@@ -149,6 +160,7 @@ pub trait SaveSafeTensors {
     );
 }
 
+/// Something that can be loaded from a .safetensors file.
 pub trait LoadSafeTensors {
     fn load_safetensors<P: AsRef<std::path::Path>>(
         &mut self,
@@ -241,6 +253,7 @@ unit_safetensors!(i64);
 unit_safetensors!(isize);
 unit_safetensors!(usize);
 
+/// Extension method that calls [BuildOnDevice] and then [ResetParams].
 pub trait BuildModuleExt<M>: Sized {
     fn build_module_ext<E: Dtype>(&self, m: M) -> M::Built
     where
@@ -248,9 +261,18 @@ pub trait BuildModuleExt<M>: Sized {
         M::Built: ResetParams<E, Self>,
         Self: Device<E>,
     {
-        let mut module = m.build_on_device(self);
-        module.reset_params();
-        module
+        self.try_build_module_ext(m).unwrap()
+    }
+
+    fn try_build_module_ext<E: Dtype>(&self, m: M) -> Result<M::Built, Self::Err>
+    where
+        M: BuildOnDevice<E, Self>,
+        M::Built: ResetParams<E, Self>,
+        Self: Device<E>,
+    {
+        let mut module = m.try_build_on_device(self)?;
+        module.try_reset_params()?;
+        Ok(module)
     }
 }
 impl<D, M> BuildModuleExt<M> for D {}
