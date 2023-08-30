@@ -306,6 +306,36 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     })
 }
 
+/// Implements all of the dfdx_nn traits automatically on your type. Assumes all fields on your type
+/// are modules (i.e. they also implement all the dfdx_nn traits).
+///
+/// [dfdx_nn::Module] is implemented as calling each of the fields on the type in definition order.
+///
+/// # Example usage
+/// Here we define a simple feedforward network with 3 layers.
+/// the `#[derive(Sequential)]` means the built module will execute
+/// the layers in **specification** order. So it will execute in the following order:
+/// 1. linear1
+/// 2. act1
+/// 3. linear2
+/// 4. act2
+/// 5. linear3
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
+/// #[derive(Debug, Clone, Sequential)]
+/// #[built(Mlp)]
+/// struct MlpConfig {
+///     // Linear with compile time input size & runtime known output size
+///     linear1: LinearConfig<Const<784>, usize>,
+///     act1: ReLU,
+///     // Linear with runtime input & output size
+///     linear2: LinearConfig<usize, usize>,
+///     act2: Tanh,
+///     // Linear with runtime input & compile time output size.
+///     linear3: LinearConfig<usize, Const<10>>,
+/// }
+/// ```
 #[proc_macro_derive(Sequential, attributes(built))]
 pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
