@@ -20,7 +20,7 @@ type QNetwork = (
 fn main() {
     let dev = AutoDevice::default();
     // initialize model
-    let mut q_net = dev.build_module_ext::<f32>(QNetwork::default());
+    let mut q_net = dev.build_module::<f32>(QNetwork::default());
     let mut target_q_net = q_net.clone();
 
     let mut grads = q_net.alloc_grads();

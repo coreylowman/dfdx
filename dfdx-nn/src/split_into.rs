@@ -17,9 +17,10 @@ use dfdx::{shapes::Dtype, tensor::WithEmptyTape, tensor_ops::Device};
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = SplitInto<(Linear<5, 3>, Linear<5, 7>)>;
-/// let model = dev.build_module::<Model, f32>();
+/// type Model = SplitInto<(LinearConstConfig<5, 3>, LinearConstConfig<5, 7>)>;
+/// let model = dev.build_module::<f32>(Model::default());
 /// let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<7>, f32, _>) = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(

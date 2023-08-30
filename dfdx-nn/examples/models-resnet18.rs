@@ -56,7 +56,7 @@ fn main() {
 
         let dev = AutoDevice::default();
         let arch = Resnet18Config::<1000>::default();
-        let m: Resnet18<1000, f32, AutoDevice> = dev.build_module_ext::<f32>(arch);
+        let m: Resnet18<1000, f32, AutoDevice> = dev.build_module::<f32>(arch);
 
         let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();
         let _: Tensor<Rank1<1000>, f32, _> = m.forward(x.clone());

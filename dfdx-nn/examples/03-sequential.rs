@@ -39,7 +39,7 @@ fn main() {
     };
 
     // Same way of building it.
-    let m = dev.build_module_ext::<f32>(arch);
+    let m = dev.build_module::<f32>(arch);
 
     // The built module has fields that are named exactly the same as the config struct.
     dbg!(&m.linear1);

@@ -6,15 +6,16 @@ use dfdx::{
 
 use crate::*;
 
-/// Adds a learnable 1d bias to 3d and 4d inputs.
+/// Adds a learnable 1d bias to 3d `(C, Height, Width)` and 4d `(Batch, C, Height, Width)` inputs.
 ///
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
 /// const NUM_CHANS: usize = 5;
-/// type Model = Bias2D<NUM_CHANS>;
-/// let model = dev.build_module::<Model, f32>();
+/// type Model = Bias2DConstConfig<NUM_CHANS>;
+/// let model = dev.build_module::<f32>(Model::default());
 ///
 /// // 3d input
 /// let x: Tensor<Rank3<NUM_CHANS, 2, 3>, f32, _> = dev.sample_normal();
@@ -26,13 +27,13 @@ use crate::*;
 /// ```
 #[derive(Default, Clone, Copy, Debug)]
 #[repr(transparent)]
-pub struct Bias2DConfig<I: Dim>(pub I);
+pub struct Bias2DConfig<C: Dim>(pub C);
 
 /// Compile time sugar alias around [Bias2DConfig]
-pub type Bias2DConstConfig<const I: usize> = Bias2DConfig<Const<I>>;
+pub type Bias2DConstConfig<const C: usize> = Bias2DConfig<Const<C>>;
 
-impl<I: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for Bias2DConfig<I> {
-    type Built = Bias2D<I, E, D>;
+impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for Bias2DConfig<C> {
+    type Built = Bias2D<C, E, D>;
     fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
         Ok(Bias2D {
             bias: device.try_zeros_like(&(self.0,))?,
@@ -42,20 +43,20 @@ impl<I: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for Bias2DConfig<I> {
 
 /// See [Bias2DConfig]
 #[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
-pub struct Bias2D<I: Dim, Elem: Dtype, Dev: Device<Elem>> {
+pub struct Bias2D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
     #[serialize]
-    pub bias: Tensor<(I,), Elem, Dev>,
+    pub bias: Tensor<(C,), Elem, Dev>,
 }
 
-impl<I: Dim, E: Dtype, D: Device<E>> ResetParams<E, D> for Bias2D<I, E, D> {
+impl<C: Dim, E: Dtype, D: Device<E>> ResetParams<E, D> for Bias2D<C, E, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.bias.try_fill_with_zeros()
     }
 }
 
 impl<C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
-    Module<Tensor<(C, H, W), E, D, T>> for Bias2D<W, E, D>
+    Module<Tensor<(C, H, W), E, D, T>> for Bias2D<C, E, D>
 {
     type Output = Tensor<(C, H, W), E, D, T>;
     type Error = D::Err;
@@ -65,7 +66,7 @@ impl<C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
 }
 
 impl<B: Dim, C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
-    Module<Tensor<(B, C, H, W), E, D, T>> for Bias2D<W, E, D>
+    Module<Tensor<(B, C, H, W), E, D, T>> for Bias2D<C, E, D>
 {
     type Output = Tensor<(B, C, H, W), E, D, T>;
     type Error = D::Err;

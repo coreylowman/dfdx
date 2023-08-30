@@ -10,6 +10,7 @@ use dfdx::prelude::{Device, Dim, Dtype, MeanTo, Tape, Tensor};
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
 /// let m: AvgPoolGlobal = Default::default();
 /// let _: Tensor<Rank1<5>, f32, _> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());

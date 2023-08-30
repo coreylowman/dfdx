@@ -16,7 +16,8 @@ use dfdx::{
 /// # Example Usage
 ///
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
+/// # use dfdx_nn::{*, optim::*};
 /// # let dev: Cpu = Default::default();
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let mut model: Model = dev.zeros();

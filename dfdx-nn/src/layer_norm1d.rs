@@ -14,9 +14,10 @@ use dfdx::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = LayerNorm1D<5>;
-/// let model = dev.build_module::<Model, f32>();
+/// type Model = LayerNorm1DConstConfig<5>;
+/// let model = dev.build_module::<f32>(Model::default());
 /// let _: Tensor<Rank1<5>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Default, Clone, Copy, Debug)]

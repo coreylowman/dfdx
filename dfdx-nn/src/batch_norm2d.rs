@@ -21,9 +21,10 @@ use dfdx::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = BatchNorm2D<3>;
-/// let bn = dev.build_module::<Model, f32>();
+/// type Model = BatchNorm2DConstConfig<3>;
+/// let bn = dev.build_module::<f32>(Model::default());
 /// let _ = bn.forward(dev.zeros::<Rank3<3, 2, 2>>());
 /// let _ = bn.forward(dev.zeros::<Rank4<4, 3, 2, 2>>());
 /// ```

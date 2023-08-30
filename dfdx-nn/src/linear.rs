@@ -12,9 +12,10 @@ use dfdx::shapes::{Const, Dim};
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// let arch: LinearConstConfig<5, 2> = Default::default();
-/// let model = dev.build_module_ext::<f32>(arch);
+/// type Model = LinearConstConfig<5, 2>;
+/// let model = dev.build_module::<f32>(Model::default());
 /// // single item forward
 /// let _: Tensor<Rank1<2>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward

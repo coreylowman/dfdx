@@ -17,7 +17,7 @@ struct MlpConfig {
 
 fn main() {
     let dev = AutoDevice::default();
-    let mut mlp = dev.build_module_ext::<f32>(MlpConfig::default());
+    let mut mlp = dev.build_module::<f32>(MlpConfig::default());
     let mut grads = mlp.alloc_grads();
 
     // let's initialize some dummy data to optimize with

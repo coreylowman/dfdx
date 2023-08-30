@@ -19,9 +19,10 @@ use dfdx::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = BatchNorm1D<3>;
-/// let bn = dev.build_module::<Model, f32>();
+/// type Model = BatchNorm1DConstConfig<3>;
+/// let bn = dev.build_module::<f32>(Model::default());
 /// let _ = bn.forward(dev.zeros::<Rank2<4, 3>>());
 /// let _ = bn.forward(dev.zeros::<Rank3<4, 3, 2>>());
 /// ```
@@ -90,16 +91,16 @@ impl<C: Dim, E: Dtype, D: Device<E>> crate::ResetParams<E, D> for BatchNorm1D<C,
     }
 }
 
-impl<C: Dim, L: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::Module<Tensor<(C, L), E, D, T>>
+impl<B: Dim, C: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::Module<Tensor<(B, C), E, D, T>>
     for BatchNorm1D<C, E, D>
 {
-    type Output = Tensor<(C, L), E, D, T>;
+    type Output = Tensor<(B, C), E, D, T>;
     type Error = D::Err;
-    fn try_forward(&self, x: Tensor<(C, L), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(B, C), E, D, T>) -> Result<Self::Output, Self::Error> {
         assert!(!T::OWNS_TAPE);
         self.infer_fwd(x)
     }
-    fn try_forward_mut(&mut self, x: Tensor<(C, L), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: Tensor<(B, C), E, D, T>) -> Result<Self::Output, Self::Error> {
         assert!(T::OWNS_TAPE);
         self.train_fwd(x)
     }

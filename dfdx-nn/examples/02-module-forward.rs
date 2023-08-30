@@ -6,7 +6,7 @@ fn main() {
 
     // Let's build our model similar to the first example.
     type Model = LinearConstConfig<2, 5>;
-    let mut model = dev.build_module_ext::<f32>(Model::default());
+    let mut model = dev.build_module::<f32>(Model::default());
 
     // Let's sample two different tensor shapes to pass to forward.
     let unbatched_x: Tensor<Rank1<2>, f32, _> = dev.sample_uniform();

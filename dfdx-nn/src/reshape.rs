@@ -10,6 +10,7 @@ use dfdx::{
 /// Example usage:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
 /// let model: Reshape<Rank2<5, 24>> = Default::default();
 /// let x: Tensor<Rank4<5, 4, 3, 2>, f32, _> = dev.sample_normal();

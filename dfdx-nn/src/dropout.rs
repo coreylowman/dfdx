@@ -14,6 +14,7 @@ use crate::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
 /// let grads = dropout.alloc_grads();
@@ -48,8 +49,9 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Ten
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// let mut dropout = Dropout { p: 0.2 };
+/// let mut dropout = Dropout { p: 0.5 };
 /// let grads = dropout.alloc_grads();
 /// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
 /// let r = dropout.forward_mut(x.trace(grads));

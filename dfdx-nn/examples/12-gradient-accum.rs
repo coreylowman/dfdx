@@ -12,7 +12,7 @@ fn main() {
         Tanh,
         LinearConstConfig<10, 20>,
     );
-    let model = dev.build_module_ext::<f32>(Model::default());
+    let model = dev.build_module::<f32>(Model::default());
 
     let x: Tensor<Rank2<10, 2>, f32, _> = dev.sample_normal();
 

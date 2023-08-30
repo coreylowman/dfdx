@@ -14,7 +14,7 @@ fn main() {
     let dev: AutoDevice = Default::default();
 
     let arch: MlpConfig<784, 10> = Default::default();
-    let mut module = dev.build_module_ext::<f32>(arch);
+    let mut module = dev.build_module::<f32>(arch);
 
     // We use `ZeroGrads::alloc_grads` to pre-allocate model gradients.
     // This will let us trace the model forward call without re-allocating gradients.

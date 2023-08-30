@@ -19,7 +19,7 @@ fn main() {
     let dev = AutoDevice::default();
 
     // initiliaze model - all weights are 0s
-    let mut pi_net = dev.build_module_ext::<f32>(PolicyNetwork::default());
+    let mut pi_net = dev.build_module::<f32>(PolicyNetwork::default());
     let mut target_pi_net = pi_net.clone();
 
     let mut grads = pi_net.alloc_grads();

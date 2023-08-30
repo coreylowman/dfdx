@@ -24,9 +24,10 @@ use crate::*;
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = Embedding<7, 2>;
-/// let mut model = dev.build_module::<Model, f32>();
+/// type Model = EmbeddingConstConfig<7, 2>;
+/// let mut model = dev.build_module::<f32>(Model::default());
 /// // single sequence of ids
 /// let inputs: Tensor<Rank1<5>, usize, _> = dev.zeros();
 /// let _: Tensor<(Const<5>, Const<2>,), f32, _> = model.forward(inputs);

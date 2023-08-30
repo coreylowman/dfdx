@@ -12,9 +12,10 @@ use rand_distr::Uniform;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = MatMulConfig<5, 2>;
-/// let model = dev.build_module::<Model, f32>();
+/// type Model = MatMulConstConfig<5, 2>;
+/// let model = dev.build_module::<f32>(Model::default());
 /// // single item forward
 /// let _: Tensor<Rank1<2>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward

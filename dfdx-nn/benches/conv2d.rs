@@ -21,7 +21,7 @@ fn main() {
     println!();
 
     let dev: Dev = Default::default();
-    let mut m = dev.build_module_ext::<Dtype>(Model::default());
+    let mut m = dev.build_module::<Dtype>(Model::default());
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();

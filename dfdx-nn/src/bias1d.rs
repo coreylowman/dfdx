@@ -6,22 +6,23 @@ use dfdx::{
 
 use crate::*;
 
-/// Adds a learnable 1d bias to 2d and 3d inputs.
+/// Adds a learnable 1d bias to 2d `(Batch, I)` and 3d `(Batch, Seq, I)` inputs.
 ///
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # use dfdx_nn::*;
 /// # let dev: Cpu = Default::default();
-/// const NUM_CHANS: usize = 5;
-/// type Model = Bias1D<NUM_CHANS>;
-/// let model = dev.build_module::<Model, f32>();
+/// const I: usize = 5;
+/// type Model = Bias1DConstConfig<I>;
+/// let model = dev.build_module::<f32>(Model::default());
 ///
-/// // 3d input
-/// let x: Tensor<Rank3<NUM_CHANS, 2, 3>, f32, _> = dev.sample_normal();
+/// // 2d input
+/// let x: Tensor<Rank2<5, I>, f32, _> = dev.sample_normal();
 /// model.forward(x);
 ///
-/// // 4d input
-/// let x: Tensor<Rank4<10, NUM_CHANS, 2, 3>, f32, _> = dev.sample_normal();
+/// // 3d input
+/// let x: Tensor<Rank3<10, 5, I>, f32, _> = dev.sample_normal();
 /// model.forward(x);
 /// ```
 #[derive(Default, Clone, Copy, Debug)]

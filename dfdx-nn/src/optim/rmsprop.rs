@@ -21,7 +21,8 @@ use dfdx::{
 ///
 /// Constructing using new:
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
+/// # use dfdx_nn::{*, optim::*};
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let dev: Cpu = Default::default();
 /// # let model: Model = dev.zeros();

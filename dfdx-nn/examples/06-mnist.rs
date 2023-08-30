@@ -78,7 +78,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model, gradients, and optimizer
-    let mut model = dev.build_module_ext::<f32>(Mlp::default());
+    let mut model = dev.build_module::<f32>(Mlp::default());
     let mut grads = model.alloc_grads();
     let mut opt = dfdx_nn::optim::Adam::new(&model, Default::default());
 
