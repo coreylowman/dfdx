@@ -11,7 +11,7 @@ use crate::*;
 ///
 /// **Pytorch Equivalent**: `torch.nn.Embedding(...)`
 ///
-/// Initializes [Self::weight] from the Standard Normal distribution.
+/// Initializes embedding matrix from the Standard Normal distribution.
 ///
 /// Generics:
 /// - `Vocab`: The size of the vocabulary, inputs integer values must be between
@@ -20,7 +20,7 @@ use crate::*;
 ///
 /// # Examples
 /// `Embedding<5, 2>` can act on vectors with SEQ integer elements (with values between 0 and 4), and results in a SEQ tensor of
-/// usually f32 elements being the rows in [Self::weight].
+/// usually f32 elements being the rows in the embedding matrix.
 ///
 /// ```rust
 /// # use dfdx::prelude::*;

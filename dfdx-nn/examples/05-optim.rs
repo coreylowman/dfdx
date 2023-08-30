@@ -26,11 +26,12 @@ fn main() {
 
     // To optimize a network we need an optimizer object. There are a few options,
     // here we will use Sgd.
-    let mut sgd = dfdx_nn::Sgd::new(
+    use dfdx_nn::optim::Sgd;
+    let mut sgd = Sgd::new(
         &mlp,
-        dfdx_nn::SgdConfig {
+        SgdConfig {
             lr: 1e-1,
-            momentum: Some(dfdx_nn::Momentum::Nesterov(0.9)),
+            momentum: Some(Momentum::Nesterov(0.9)),
             weight_decay: None,
         },
     );

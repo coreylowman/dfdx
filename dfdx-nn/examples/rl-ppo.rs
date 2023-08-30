@@ -24,7 +24,7 @@ fn main() {
 
     let mut grads = pi_net.alloc_grads();
 
-    let mut sgd = Sgd::new(
+    let mut sgd = dfdx_nn::optim::Sgd::new(
         &pi_net,
         SgdConfig {
             lr: 1e-2,

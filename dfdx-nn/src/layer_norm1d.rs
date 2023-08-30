@@ -4,9 +4,9 @@ use dfdx::prelude::*;
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
 /// This calls [normalize()] on the last axis of the input to normalize to 0 mean and unit std dev, and then does an element-wise
-/// affine transform using learnable parameters [Self::gamma] and [Self::beta].
+/// affine transform using learnable parameters.
 ///
-/// [Self::epsilon] is passed to [normalize()] and added to the variance to ensure big enough numbers. It defaults to `1e-5`.
+/// Epsilon is passed to [normalize()] and added to the variance to ensure big enough numbers. It defaults to `1e-5`.
 ///
 /// Generics:
 /// - `M` The size of the affine transform tensors.

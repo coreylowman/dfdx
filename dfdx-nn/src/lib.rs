@@ -1,5 +1,7 @@
 #![feature(generic_const_exprs)]
 
+pub mod optim;
+
 mod abs;
 mod add_into;
 mod batch_norm1d;
@@ -22,7 +24,6 @@ mod ln;
 mod log_softmax;
 mod matmul;
 mod multi_head_attention;
-mod optim;
 mod pool_2d_avg;
 mod pool_2d_max;
 mod pool_2d_min;
@@ -46,12 +47,6 @@ mod upscale2d;
 
 pub use dfdx_nn_core::*;
 pub use dfdx_nn_derives::*;
-
-pub use optim::adam::Adam;
-pub use optim::rmsprop::RMSprop;
-pub use optim::sgd::Sgd;
-// re-exports
-pub use dfdx::tensor_ops::{AdamConfig, Momentum, RMSpropConfig, SgdConfig, WeightDecay};
 
 pub use abs::Abs;
 pub use add_into::AddInto;

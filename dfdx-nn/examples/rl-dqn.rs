@@ -25,7 +25,7 @@ fn main() {
 
     let mut grads = q_net.alloc_grads();
 
-    let mut sgd = Sgd::new(
+    let mut sgd = dfdx_nn::optim::Sgd::new(
         &q_net,
         SgdConfig {
             lr: 1e-1,

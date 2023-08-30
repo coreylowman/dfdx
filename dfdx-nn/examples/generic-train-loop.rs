@@ -55,7 +55,7 @@ fn main() {
     type Model = LinearConstConfig<10, 2>;
     type Dtype = f32;
     let mut model = dev.build_module_ext::<Dtype>(Model::default());
-    let mut opt = Sgd::new(&model, Default::default());
+    let mut opt = dfdx_nn::optim::Sgd::new(&model, Default::default());
 
     // just some random data
     let mut data = Vec::new();

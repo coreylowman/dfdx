@@ -80,7 +80,7 @@ fn main() {
     // initialize model, gradients, and optimizer
     let mut model = dev.build_module_ext::<f32>(Mlp::default());
     let mut grads = model.alloc_grads();
-    let mut opt = Adam::new(&model, Default::default());
+    let mut opt = dfdx_nn::optim::Adam::new(&model, Default::default());
 
     // initialize dataset
     let dataset = MnistTrainSet::new(&mnist_path);
