@@ -1,12 +1,8 @@
 use std::ops::Mul;
 
-use crate::{CustomModule, Module};
+use crate::*;
 
-use dfdx::{
-    shapes::{Dim, Dtype, HasShape},
-    tensor::{Tape, Tensor},
-    tensor_ops::{Device, ReshapeTo},
-};
+use dfdx::prelude::*;
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 #[derive(Debug, Default, Clone, Copy, CustomModule)]
@@ -46,5 +42,24 @@ where
         let (batch, c, h, w) = *input.shape();
         let dst = (batch, c * h * w);
         input.try_reshape_like(&dst)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    #[test]
+    fn test_flattens() {
+        let dev: TestDevice = Default::default();
+        let _: Tensor<Rank1<100>, TestDtype, _> =
+            Flatten2D.forward_mut(dev.zeros::<Rank3<10, 5, 2>>());
+        let _: Tensor<Rank2<5, 24>, TestDtype, _> =
+            Flatten2D.forward_mut(dev.zeros::<Rank4<5, 4, 3, 2>>());
+        let x: Tensor<(usize, Const<4>, Const<3>, Const<2>), TestDtype, _> =
+            dev.zeros_like(&(5, Const::<4>, Const::<3>, Const::<2>));
+        let y = Flatten2D.forward_mut(x);
+        assert_eq!(y.shape(), &(5, Const::<24>));
     }
 }

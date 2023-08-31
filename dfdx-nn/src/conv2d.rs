@@ -1,8 +1,4 @@
-use dfdx::{
-    shapes::{Const, Dim, Dtype, HasShape},
-    tensor::Tensor,
-    tensor_ops::{Device, TryConv2D},
-};
+use dfdx::prelude::*;
 
 use crate::*;
 
@@ -178,5 +174,119 @@ where
 
     fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
         (x, self.weight.clone()).try_conv2d(self.stride, self.padding, self.dilation, self.groups)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_forward_3d_sizes() {
+        let dev: TestDevice = Default::default();
+        let x = dev.zeros::<Rank3<3, 10, 10>>();
+        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<4, 8, 8>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 4, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 4, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<4, 7, 7>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 4, 4>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 4, 4>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 3, 3>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 1, 1>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 12, 12>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 1, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 2, 2>>::default()).forward(x.clone());
+    }
+
+    #[test]
+    fn test_grouped_forward_sizes() {
+        let dev: TestDevice = Default::default();
+
+        let x = dev.zeros::<Rank3<16, 10, 10>>();
+
+        let m =
+            dev.build_module::<TestDtype>(<Conv2DConstConfig<16, 32, 3, 1, 0, 1, 1>>::default());
+        let _: Tensor<Rank4<32, 16, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m =
+            dev.build_module::<TestDtype>(<Conv2DConstConfig<16, 32, 3, 1, 0, 1, 2>>::default());
+        let _: Tensor<Rank4<32, 8, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m =
+            dev.build_module::<TestDtype>(<Conv2DConstConfig<16, 32, 3, 1, 0, 1, 4>>::default());
+        let _: Tensor<Rank4<32, 4, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m =
+            dev.build_module::<TestDtype>(<Conv2DConstConfig<16, 32, 3, 1, 0, 1, 8>>::default());
+        let _: Tensor<Rank4<32, 2, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x.clone());
+
+        let m =
+            dev.build_module::<TestDtype>(<Conv2DConstConfig<16, 32, 3, 1, 0, 1, 16>>::default());
+        let _: Tensor<Rank4<32, 1, 3, 3>, _, _> = m.weight;
+        let _: Tensor<Rank3<32, 8, 8>, _, _> = m.forward(x);
+    }
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_forward_4d_sizes() {
+        let dev: TestDevice = Default::default();
+        let x = dev.zeros::<Rank4<5, 3, 10, 10>>();
+        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 8, 8>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 4, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 4, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 7, 7>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 4, 4>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 4, 4>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 3, 3>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 1, 1>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 12, 12>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 1, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = dev.build_module::<TestDtype>(<Conv2DConstConfig<3, 2, 3, 2, 2>>::default()).forward(x.clone());
+    }
+
+    #[test]
+    fn test_2_conv_sizes() {
+        let dev = Cpu::default();
+        type A = Conv2DConstConfig<1, 2, 3>;
+        type B = Conv2DConstConfig<2, 4, 3>;
+        let _: Tensor<Rank3<4, 6, 6>, _, _> = dev
+            .build_module::<TestDtype>(<(A, B)>::default())
+            .forward(dev.zeros::<Rank3<1, 10, 10>>());
+    }
+
+    #[test]
+    fn test_3_conv_sizes() {
+        type A = Conv2DConstConfig<1, 2, 3>;
+        type B = Conv2DConstConfig<2, 4, 3>;
+        type C = Conv2DConstConfig<4, 1, 1, 1, 1>;
+
+        let dev = Cpu::default();
+        let _: Tensor<Rank3<1, 8, 8>, _, _> = dev
+            .build_module::<TestDtype>(<(A, B, C)>::default())
+            .forward_mut(dev.zeros::<Rank3<1, 10, 10>>());
+    }
+
+    #[test]
+    fn test_conv_with_optimizer() {
+        let dev: TestDevice = Default::default();
+
+        let mut m = dev.build_module::<TestDtype>(Conv2DConstConfig::<2, 4, 3>::default());
+
+        let weight_init = m.weight.clone();
+
+        let mut opt = crate::optim::Sgd::new(&m, Default::default());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().leaky_trace());
+        let g = out.square().mean().backward();
+
+        assert_ne!(
+            g.get(&m.weight).array(),
+            [[[[TestDtype::zero(); 3]; 3]; 2]; 4]
+        );
+
+        opt.update(&mut m, &g).expect("unused params");
+
+        assert_ne!(weight_init.array(), m.weight.array());
     }
 }

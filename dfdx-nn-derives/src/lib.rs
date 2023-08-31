@@ -189,7 +189,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     fn write_safetensors(
                         &self,
                         location: &str,
-                        tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                        tensors: &mut Vec<(String, ::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
                     ) {}
                 }
 
@@ -197,8 +197,8 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     fn read_safetensors<'a>(
                         &mut self,
                         location: &str,
-                        tensors: &safetensors::SafeTensors<'a>,
-                    ) -> Result<(), safetensors::SafeTensorError> {
+                        tensors: &::safetensors::SafeTensors<'a>,
+                    ) -> Result<(), ::safetensors::SafeTensorError> {
                         Ok(())
                     }
                 }

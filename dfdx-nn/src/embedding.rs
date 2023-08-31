@@ -1,9 +1,4 @@
-use dfdx::{
-    prelude::{Device, Dim, Dtype, Tape, Tensor},
-    shapes::Const,
-    tensor::{PutTape, SplitTape},
-    tensor_ops::GatherTo,
-};
+use dfdx::prelude::*;
 
 use crate::*;
 
@@ -98,5 +93,67 @@ impl<Batch: Dim, Seq: Dim, V: Dim, M: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>
     ) -> Result<Self::Output, D::Err> {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).try_gather(input)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    const W: [[f64; 5]; 2] = [
+        [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
+        [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
+    ];
+
+    #[test]
+    fn test_embedding_initialize() {
+        let dev: TestDevice = Default::default();
+        let m = dev.build_module::<TestDtype>(<EmbeddingConstConfig<2000, 1>>::default());
+        let bound: TestDtype = NumCast::from(1.0 / (2000.0.sqrt())).unwrap();
+        for v in m.weight.as_vec() {
+            assert!(-bound <= v && v <= bound && v != TestDtype::zero());
+        }
+    }
+
+    #[test]
+    fn embedding_forward_1d() {
+        let dev: TestDevice = Default::default();
+
+        let model = Embedding {
+            weight: dev.tensor(W).to_dtype::<TestDtype>(),
+        };
+
+        let x = dev.tensor([0, 0, 1]);
+        let y = model.forward(x.leaky_trace());
+        assert_close_to_literal!(
+            y,
+            [
+                [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
+                [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
+                [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
+            ]
+        );
+
+        let g = y.square().mean().backward();
+        assert_close_to_literal!(
+            g.get(&model.weight),
+            [
+                [
+                    -0.09223715,
+                    -0.08099073,
+                    -0.09898819,
+                    0.03814289,
+                    -0.007172427,
+                ],
+                [
+                    0.015645266,
+                    0.01874625,
+                    -0.014227235,
+                    -0.012497525,
+                    0.025299065,
+                ],
+            ]
+        );
     }
 }

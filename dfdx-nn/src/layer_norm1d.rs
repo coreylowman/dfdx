@@ -96,3 +96,66 @@ impl<Batch: Dim, Seq: Dim, M: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
         self.beta.retaped::<T>().broadcast_like(&x).try_add(x)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    #[test]
+    fn test_layer_norm_reset() {
+        let dev: TestDevice = Default::default();
+
+        let mut m = dev.build_module::<TestDtype>(<LayerNorm1DConstConfig<5>>::default());
+        assert_close_to_literal!(m.gamma, [1.0; 5]);
+        assert_close_to_literal!(m.beta, [0.0; 5]);
+
+        m.gamma = dev.sample_normal();
+        m.beta = dev.sample_normal();
+
+        assert_ne!(m.gamma.array(), [TestDtype::ONE; 5]);
+        assert_ne!(m.beta.array(), [TestDtype::default(); 5]);
+
+        m.reset_params();
+
+        assert_close_to_literal!(m.gamma, [1.0; 5]);
+        assert_close_to_literal!(m.beta, [0.0; 5]);
+    }
+
+    #[test]
+    fn test_layer_norm_1d_forward() {
+        let dev: TestDevice = Default::default();
+        let mut m = dev.build_module::<TestDtype>(<LayerNorm1DConstConfig<5>>::default());
+        let x = dev.sample_normal::<Rank1<5>>();
+        let r = m.forward_mut(x.leaky_trace());
+        assert_close_to_literal!(r, [0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247]);
+        let g = r.mean().backward();
+        assert_close_to_literal!(
+            g.get(&m.gamma),
+            [0.1746608, 0.19759633, -0.32166985, 0.088057674, -0.13864495]
+        );
+        assert_close_to_literal!(g.get(&m.beta), [0.2; 5]);
+    }
+
+    #[test]
+    fn test_layer_norm_2d_forward() {
+        let dev: TestDevice = Default::default();
+        let m = dev.build_module::<TestDtype>(<LayerNorm1DConstConfig<5>>::default());
+        let x = dev.sample_normal::<Rank2<3, 5>>();
+        let r = m.forward(x.leaky_trace());
+        assert_close_to_literal!(
+            r,
+            [
+                [0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247],
+                [0.663322, -1.8449169, 0.05217871, 0.056903206, 1.0725129],
+                [1.0343355, -1.5559655, -0.40086073, 1.1405537, -0.21806297],
+            ]
+        );
+        let g = r.mean().backward();
+        assert_close_to_literal!(
+            g.get(&m.gamma),
+            [0.1713974, -0.16086, -0.1304687, 0.109183, 0.0107483]
+        );
+        assert_close_to_literal!(g.get(&m.beta), [0.2; 5]);
+    }
+}

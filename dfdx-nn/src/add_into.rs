@@ -82,3 +82,38 @@ add_into_impls!([B b Bi b_i], [C c Ci c_i]);
 add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i]);
 add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i]);
 add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i], [F f Fi f_i]);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+    use dfdx::prelude::*;
+
+    #[test]
+    fn longer_network() {
+        let dev: TestDevice = Default::default();
+        // check if it works in a longer neural net
+        type Model = (
+            AddInto<(LinearConstConfig<5, 3>, LinearConstConfig<5, 3>)>,
+            ReLU,
+            LinearConstConfig<3, 1>,
+        );
+        let mut model = dev.build_module::<TestDtype>(Model::default());
+        let _: Tensor<Rank1<1>, _, _, OwnedTape<_, _>> = model.forward((
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+        ));
+        let _: Tensor<Rank2<5, 1>, _, _, OwnedTape<_, _>> = model.forward((
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
+        ));
+        let _: Tensor<Rank1<1>, _, _, OwnedTape<_, _>> = model.forward_mut((
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+        ));
+        let _: Tensor<Rank2<5, 1>, _, _, OwnedTape<_, _>> = model.forward_mut((
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
+        ));
+    }
+}

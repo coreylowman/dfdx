@@ -1,8 +1,4 @@
-use dfdx::{
-    shapes::{Dtype, Shape},
-    tensor::{Tape, Tensor},
-    tensor_ops::Device,
-};
+use dfdx::prelude::*;
 
 use crate::*;
 
@@ -33,13 +29,19 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Ten
 
     /// Does nothing
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        assert!(!T::OWNS_TAPE);
+        assert!(
+            !T::OWNS_TAPE,
+            "DropoutOneIn::try_forward input must not be traced."
+        );
         Ok(input)
     }
 
     /// Applies dropout to the input tensor.
     fn try_forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
-        assert!(T::OWNS_TAPE);
+        assert!(
+            T::OWNS_TAPE,
+            "DropoutOneIn::try_forward_mut input must be traced."
+        );
         x.try_dropout(1.0 / N as f64)
     }
 }
@@ -75,13 +77,75 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
 
     /// Does nothing
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        assert!(!T::OWNS_TAPE);
+        assert!(
+            !T::OWNS_TAPE,
+            "Dropout::try_forward input must not be traced."
+        );
         Ok(input)
     }
 
     /// Applies dropout to the input tensor.
     fn try_forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
-        assert!(T::OWNS_TAPE);
+        assert!(
+            T::OWNS_TAPE,
+            "Dropout::try_forward_mut input must be traced."
+        );
         x.try_dropout(self.p)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::*;
+
+    use super::*;
+
+    #[test]
+    fn test_dropout_internal_rng_reproduce() {
+        let dev: TestDevice = Default::default();
+        let mut d1 = Dropout { p: 0.5 };
+        let mut d2 = Dropout { p: 0.5 };
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
+        let r1 = d1.forward_mut(t.leaky_trace());
+        let r2 = d2.forward_mut(t.leaky_trace());
+        let r1_2 = d1.forward_mut(t.leaky_trace());
+        assert_ne!(r1.array(), r2.array());
+        assert_ne!(r1.array(), r1_2.array());
+    }
+
+    #[test]
+    fn test_dropout_no_tape() {
+        let dev: TestDevice = Default::default();
+        let dropout = Dropout { p: 0.5 };
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
+        let r = dropout.forward(t.clone());
+        assert_eq!(t.array(), r.array());
+    }
+
+    #[test]
+    fn test_dropout_tape() {
+        let dev: TestDevice = Default::default();
+        let mut dropout = Dropout { p: 0.5 };
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
+        let r = dropout.forward_mut(t.leaky_trace());
+        assert_ne!(t.array(), r.array());
+    }
+
+    #[test]
+    #[should_panic = "Dropout::try_forward input must not be traced."]
+    fn test_dropout_forward_with_tape() {
+        let dev: TestDevice = Default::default();
+        let dropout = Dropout { p: 0.5 };
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
+        let _ = dropout.forward(t.leaky_trace());
+    }
+
+    #[test]
+    #[should_panic = "Dropout::try_forward_mut input must be traced."]
+    fn test_dropout_forward_mut_without_tape() {
+        let dev: TestDevice = Default::default();
+        let mut dropout = Dropout { p: 0.5 };
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
+        let _ = dropout.forward_mut(t);
     }
 }

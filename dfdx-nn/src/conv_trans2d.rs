@@ -1,8 +1,4 @@
-use dfdx::{
-    shapes::{Const, Dim, Dtype, HasShape},
-    tensor::Tensor,
-    tensor_ops::{Device, TryConvTrans2D},
-};
+use dfdx::prelude::*;
 
 use crate::*;
 
@@ -161,5 +157,89 @@ where
             self.dilation,
             self.groups,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_forward_3d_sizes() {
+        let dev: TestDevice = Default::default();
+        let x = dev.zeros::<Rank3<3, 8, 8>>();
+        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<4, 10, 10>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 4, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 4, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<4, 11, 11>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 4, 4>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 17, 17>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 24, 24>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 1, 1>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 1, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank3<2, 13, 13>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 2, 2>>::default()).forward(x.clone());
+    }
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_forward_4d_sizes() {
+        let dev: TestDevice = Default::default();
+        let x = dev.zeros::<Rank4<5, 3, 8, 8>>();
+        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 10, 10>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 4, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 4, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 11, 11>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 4, 4>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 17, 17>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 24, 24>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 3>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 1, 1>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 1, 2>>::default()).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 13, 13>, _, _, _> = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<3, 2, 3, 2, 2>>::default()).forward(x.clone());
+    }
+
+    #[test]
+    fn test_2_conv_sizes() {
+        let dev = Cpu::default();
+        type A = ConvTrans2DConstConfig<4, 2, 3>;
+        type B = ConvTrans2DConstConfig<2, 1, 3>;
+        type Model = (A, B);
+        let _: Tensor<Rank3<1, 10, 10>, _, _> = dev
+            .build_module::<TestDtype>(Model::default())
+            .forward(dev.zeros::<Rank3<4, 6, 6>>());
+    }
+
+    #[test]
+    fn test_3_conv_sizes() {
+        type A = ConvTrans2DConstConfig<2, 1, 3>;
+        type B = ConvTrans2DConstConfig<4, 2, 3>;
+        type C = ConvTrans2DConstConfig<1, 4, 1, 1, 1>;
+        type Model = (C, B, A);
+
+        let dev = Cpu::default();
+        let _: Tensor<Rank3<1, 10, 10>, _, _> = dev
+            .build_module::<TestDtype>(Model::default())
+            .forward_mut(dev.zeros::<Rank3<1, 8, 8>>());
+    }
+
+    #[test]
+    fn test_conv_with_optimizer() {
+        let dev: TestDevice = Default::default();
+
+        let mut m = dev.build_module::<TestDtype>(<ConvTrans2DConstConfig<2, 4, 3>>::default());
+
+        let weight_init = m.weight.clone();
+
+        let mut opt = crate::optim::Sgd::new(&m, Default::default());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().leaky_trace());
+        let g = out.square().mean().backward();
+
+        assert_ne!(
+            g.get(&m.weight).array(),
+            [[[[TestDtype::zero(); 3]; 3]; 4]; 2]
+        );
+
+        opt.update(&mut m, &g).expect("unused params");
+
+        assert_ne!(weight_init.array(), m.weight.array());
     }
 }

@@ -1,4 +1,4 @@
-use crate::{LoadSafeTensors, SaveSafeTensors, UpdateParams, ZeroGrads};
+use crate::*;
 use dfdx::prelude::*;
 
 /// Batch normalization for sequences as described in
@@ -41,7 +41,7 @@ pub struct BatchNorm1DConfig<C: Dim>(pub C);
 /// Compile time sugar alias around [BatchNorm1DConfig]
 pub type BatchNorm1DConstConfig<const C: usize> = BatchNorm1DConfig<Const<C>>;
 
-impl<C: Dim, E: Dtype, D: Device<E>> crate::BuildOnDevice<E, D> for BatchNorm1DConfig<C> {
+impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for BatchNorm1DConfig<C> {
     type Built = BatchNorm1D<C, E, D>;
     fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
         Ok(BatchNorm1D {
@@ -201,5 +201,94 @@ impl<C: Dim, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
         let x = x.try_sub(self.running_mean.clone().try_broadcast_like(&shape)?)?;
         let x = x.try_mul(scale)?;
         x.try_add(self.bias.clone().try_broadcast_like(&shape)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    #[test]
+    fn test_batchnorm1d_2d_forward_mut() {
+        let dev = TestDevice::seed_from_u64(0);
+
+        let x1: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample(rand_distr::StandardNormal);
+        let mut bn = dev.build_module::<TestDtype>(BatchNorm1DConstConfig::<2>::default());
+
+        let y1 = bn.forward_mut(x1.leaky_trace());
+        assert_close_to_literal!(
+            y1,
+            [
+                [1.3168651, 0.19157785],
+                [-1.1049646, -1.3092154],
+                [-0.21190044, 1.1176374],
+            ]
+        );
+
+        let g = y1.exp().mean().backward();
+        assert_close_to_literal!(bn.running_mean, [-0.09994803, 0.07696156]);
+        assert_close_to_literal!(bn.running_var, [1.1536077, 0.9321649]);
+        assert_close_to_literal!(g.get(&bn.scale), [0.72945416, 0.5493023]);
+        assert_close_to_literal!(g.get(&bn.bias), [0.8119954, 0.7564688]);
+        assert_close_to_literal!(
+            g.get(&x1),
+            [
+                [0.023908734, -0.18436226],
+                [0.040923715, 0.0703277],
+                [-0.06483248, 0.11403453],
+            ]
+        );
+    }
+
+    #[test]
+    fn test_batchnorm1d_3d_forward_mut() {
+        const BATCH_SIZE: usize = 3;
+        const DIMENSION: usize = 2;
+        const LENGTH: usize = 2;
+        let dev = TestDevice::seed_from_u64(0);
+
+        let x1: Tensor<Rank3<BATCH_SIZE, DIMENSION, LENGTH>, TestDtype, _> =
+            dev.sample(rand_distr::StandardNormal);
+        let mut bn = dev.build_module::<TestDtype>(BatchNorm1DConstConfig::<DIMENSION>::default());
+
+        let y1 = bn.forward_mut(x1.leaky_trace());
+        assert_close_to_literal!(
+            y1,
+            [
+                [[0.059494145, 0.21366562], [-1.0539212, 0.5588659]],
+                [[-2.0465322, 0.6680055], [-0.46153978, 0.8375814]],
+                [[-0.041158404, 1.1465254], [1.411404, -1.2923905]],
+            ]
+        );
+
+        let g = y1.exp().mean().backward();
+        assert_close_to_literal!(bn.running_mean, [0.065665804, -0.07374697]);
+        assert_close_to_literal!(bn.running_var, [1.0069065, 1.2117702]);
+        assert_close_to_literal!(g.get(&bn.scale), [0.4112549, 0.6407272]);
+        assert_close_to_literal!(g.get(&bn.bias), [0.7071625, 0.78455544]);
+        assert_close_to_literal!(
+            g.get(&x1),
+            [
+                [[-0.035488494, -0.031065114], [0.0067214966, -0.02774144]],
+                [[0.035152107, -0.0011850521], [-0.017958358, -0.017146945]],
+                [[-0.03715139, 0.0697379], [0.037428252, 0.018696927]],
+            ]
+        );
+    }
+
+    #[test]
+    fn test_batchnorm1d_update() {
+        const BATCH_SIZE: usize = 3;
+        const DIMENSION: usize = 4;
+        let dev: TestDevice = Default::default();
+
+        let x1: Tensor<Rank2<BATCH_SIZE, DIMENSION>, TestDtype, _> = dev.sample_normal();
+        let mut bn = dev.build_module::<TestDtype>(BatchNorm1DConstConfig::<DIMENSION>::default());
+        let y = bn.forward_mut(x1.leaky_trace());
+        let g = y.square().mean().backward();
+
+        let mut opt = crate::optim::Sgd::new(&bn, Default::default());
+        opt.update(&mut bn, &g).expect("");
     }
 }
