@@ -1,9 +1,5 @@
 use crate::*;
-use dfdx::{
-    shapes::{Const, Dim, Dtype, HasShape},
-    tensor::{Tape, Tensor},
-    tensor_ops::{Device, GenericUpscale2D, NearestNeighbor, Upscale2DKernel, UpscaleMethod},
-};
+use dfdx::prelude::*;
 
 #[derive(Debug, Default, Clone, CustomModule)]
 pub struct Upscale2D<
@@ -78,5 +74,34 @@ where
         let h = h * self.height_factor;
         let w = w * self.width_factor;
         x.generic_upscale2d_like(self.method, h, w)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    #[test]
+    fn test_upscale2d() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<Rank3<3, 4, 4>, TestDtype, _> = dev.zeros();
+        let _: Tensor<Rank3<3, 8, 8>, _, _> = Upscale2D::<Const<8>>::default().forward(x.clone());
+        let _: Tensor<Rank3<3, 8, 12>, _, _> =
+            Upscale2D::<Const<8>, Const<12>>::default().forward(x.clone());
+        let _: Tensor<Rank3<3, 9, 9>, _, _> =
+            Upscale2D::<Const<9>, Const<9>, NearestNeighbor>::default().forward(x);
+    }
+
+    #[test]
+    fn test_upscale2dby() {
+        use dfdx::prelude::Bilinear;
+        let dev: TestDevice = Default::default();
+        let x: Tensor<Rank3<3, 4, 4>, TestDtype, _> = dev.zeros();
+        let _: Tensor<Rank3<3, 8, 8>, _, _> = Upscale2DBy::<Const<2>>::default().forward(x.clone());
+        let _: Tensor<Rank3<3, 8, 12>, _, _> =
+            Upscale2DBy::<Const<2>, Const<3>>::default().forward(x.clone());
+        let _: Tensor<Rank3<3, 12, 12>, _, _> =
+            Upscale2DBy::<Const<3>, Const<3>, Bilinear>::default().forward(x.clone());
     }
 }

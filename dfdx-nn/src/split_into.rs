@@ -1,6 +1,6 @@
 use crate::*;
 
-use dfdx::{shapes::Dtype, tensor::WithEmptyTape, tensor_ops::Device};
+use dfdx::prelude::*;
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -80,3 +80,47 @@ tuple_impls!(A [B, C]);
 tuple_impls!(A [B, C, D]);
 tuple_impls!(A [B, C, D, E]);
 tuple_impls!(A [B, C, D, E, F]);
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::type_complexity)]
+
+    use super::*;
+    use crate::tests::*;
+
+    #[test]
+    fn test_split_into_2() {
+        let dev: TestDevice = Default::default();
+        type Model = SplitInto<(LinearConstConfig<5, 1>, LinearConstConfig<5, 2>)>;
+        let m = dev.build_module::<TestDtype>(Model::default());
+        let _: (
+            Tensor<Rank1<1>, _, _, OwnedTape<_, _>>,
+            Tensor<Rank1<2>, _, _, OwnedTape<_, _>>,
+        ) = m.forward(dev.zeros::<Rank1<5>>().leaky_traced());
+        let _: (
+            Tensor<Rank2<3, 1>, _, _, OwnedTape<_, _>>,
+            Tensor<Rank2<3, 2>, _, _, OwnedTape<_, _>>,
+        ) = m.forward(dev.zeros::<Rank2<3, 5>>().leaky_traced());
+    }
+
+    #[test]
+    fn test_split_into_3() {
+        let dev: TestDevice = Default::default();
+        type Model = SplitInto<(
+            LinearConstConfig<5, 1>,
+            LinearConstConfig<5, 2>,
+            LinearConstConfig<5, 3>,
+        )>;
+        let m = dev.build_module::<TestDtype>(Model::default());
+        let _: (
+            Tensor<Rank1<1>, _, _, OwnedTape<_, _>>,
+            Tensor<Rank1<2>, _, _, OwnedTape<_, _>>,
+            Tensor<Rank1<3>, _, _, OwnedTape<_, _>>,
+        ) = m.forward(dev.zeros::<Rank1<5>>().leaky_traced());
+        let _: (
+            Tensor<Rank2<3, 1>, _, _, OwnedTape<_, _>>,
+            Tensor<Rank2<3, 2>, _, _, OwnedTape<_, _>>,
+            Tensor<Rank2<3, 3>, _, _, OwnedTape<_, _>>,
+        ) = m.forward(dev.zeros::<Rank2<3, 5>>().leaky_traced());
+    }
+}
