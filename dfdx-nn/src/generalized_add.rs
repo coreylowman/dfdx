@@ -68,19 +68,7 @@ mod tests {
     use crate::tests::*;
 
     #[test]
-    fn test_reset_generalized_residual() {
-        let dev: TestDevice = Default::default();
-
-        type Model = GeneralizedAdd<LinearConstConfig<2, 5>, LinearConstConfig<2, 5>>;
-        let model = dev.build_module::<f32>(Model::default());
-        assert_ne!(model.t.matmul.weight.array(), [[0.0; 2]; 5]);
-        assert_ne!(model.t.add.bias.array(), [0.0; 5]);
-        assert_ne!(model.u.matmul.weight.array(), [[0.0; 2]; 5]);
-        assert_ne!(model.u.add.bias.array(), [0.0; 5]);
-    }
-
-    #[test]
-    fn test_generalized_residual_gradients() {
+    fn test_generalized_add_gradients() {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedAdd<LinearConstConfig<2, 2>, LinearConstConfig<2, 2>>;

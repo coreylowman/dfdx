@@ -265,47 +265,4 @@ pub(crate) mod tests {
         }};
     }
     pub(crate) use assert_close_to_literal;
-
-    macro_rules! assert_close_to_tensor {
-        ($Lhs:expr, $Rhs:expr) => {
-            let lhs = $Lhs.array();
-            let tol = AssertClose::get_default_tol(&lhs);
-            let far_pair = AssertClose::get_far_pair(&lhs, &$Rhs.array(), tol);
-            if let Some((l, r)) = far_pair {
-                panic!("lhs != rhs | {l} != {r}");
-            }
-        };
-        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
-            let far_pair = $Lhs.array().get_far_pair(
-                &$Rhs.array(),
-                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
-            );
-            if let Some((l, r)) = far_pair {
-                panic!("lhs != rhs | {l} != {r}");
-            }
-        }};
-    }
-    pub(crate) use assert_close_to_tensor;
-
-    macro_rules! assert_close {
-        ($Lhs:expr, $Rhs:expr) => {
-            let lhs = $Lhs;
-            let tol = AssertClose::get_default_tol(&lhs);
-            let far_pair = AssertClose::get_far_pair(&lhs, &$Rhs, tol);
-            if let Some((l, r)) = far_pair {
-                panic!("lhs != rhs | {l} != {r}");
-            }
-        };
-        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
-            let far_pair = $Lhs.get_far_pair(
-                &$Rhs,
-                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
-            );
-            if let Some((l, r)) = far_pair {
-                panic!("lhs != rhs | {l} != {r}");
-            }
-        }};
-    }
-
-    pub(crate) use assert_close;
 }

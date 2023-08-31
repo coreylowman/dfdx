@@ -39,17 +39,17 @@ impl<E: Dtype, D: Device<E>, T: BuildOnDevice<E, D>> BuildOnDevice<E, D> for Res
 
 impl<X: WithEmptyTape, T: Module<X>> Module<X> for ResidualAdd<T>
 where
-    X: TryAdd<T::Output, Err = T::Error>,
+    T::Output: TryAdd<X, Err = T::Error>,
 {
-    type Output = X::Output;
+    type Output = <T::Output as TryAdd<X>>::Output;
     type Error = T::Error;
     fn try_forward(&self, x: X) -> Result<Self::Output, Self::Error> {
         let t = self.0.try_forward(x.with_empty_tape())?;
-        x.try_add(t)
+        t.try_add(x)
     }
     fn try_forward_mut(&mut self, x: X) -> Result<Self::Output, Self::Error> {
         let t = self.0.try_forward_mut(x.with_empty_tape())?;
-        x.try_add(t)
+        t.try_add(x)
     }
 }
 
@@ -59,7 +59,7 @@ mod tests {
     use crate::tests::*;
 
     #[test]
-    fn test_residual_gradients() {
+    fn test_residual_add_backward() {
         let dev: TestDevice = Default::default();
 
         let model = dev.build_module::<f32>(<ResidualAdd<LinearConstConfig<2, 2>>>::default());
