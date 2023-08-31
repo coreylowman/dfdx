@@ -113,6 +113,17 @@ pub trait UpdateParams<E: Dtype, D: Device<E>> {
     ) -> Result<(), D::Err>;
 }
 
+impl<S: Shape, E: Dtype, D: Device<E>> UpdateParams<E, D> for Tensor<S, E, D> {
+    fn try_update_params<M, Optim: Optimizer<M, E, D>>(
+        &mut self,
+        optimizer: &mut Optim,
+        gradients: &Gradients<E, D>,
+        missing_tensors: &mut Vec<UniqueId>,
+    ) -> Result<(), <D>::Err> {
+        optimizer.update_tensor(self, gradients, missing_tensors)
+    }
+}
+
 /// Something that can allocate a [Gradients] object or zero out the [Gradients] object.
 pub trait ZeroGrads<E: Dtype, D: Device<E>> {
     fn zero_grads(&self, grads: &mut Gradients<E, D>) {

@@ -19,6 +19,11 @@ safetensors = { workspace = true }
 num-traits = { workspace = true }
 rand_distr = { workspace = true }
 
+[features]
+test-f16 = []
+test-amp-f16 = []
+test-f64 = []
+ci-check = ["dfdx/ci-check"]
 
 [[bench]]
 name = "batchnorm2d"
