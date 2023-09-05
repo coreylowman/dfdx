@@ -127,7 +127,7 @@ fn main() {
         );
     }
 
-    // save our model to a .npz file
-    #[cfg(feature = "numpy")]
-    model.save("06-mnist.npz").expect("failed to save model");
+    model
+        .save_safetensors("06-mnist.npz")
+        .expect("failed to save model");
 }
