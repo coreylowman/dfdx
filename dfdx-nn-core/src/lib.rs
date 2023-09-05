@@ -150,17 +150,12 @@ pub trait SaveSafeTensors {
     ) -> Result<(), safetensors::SafeTensorError> {
         let mut tensors = Vec::new();
         self.write_safetensors("", &mut tensors);
-        let data = tensors
-            .iter()
-            .map(|(k, dtype, shape, data)| {
-                (
-                    k.clone(),
-                    safetensors::tensor::TensorView::new(dtype.clone(), shape.clone(), data)
-                        .unwrap(),
-                )
-            })
-            .collect::<Vec<_>>();
-        let data = data.iter().map(|i| (i.0.clone(), &i.1)).collect::<Vec<_>>();
+        let data = tensors.iter().map(|(k, dtype, shape, data)| {
+            (
+                k.clone(),
+                safetensors::tensor::TensorView::new(dtype.clone(), shape.clone(), data).unwrap(),
+            )
+        });
 
         safetensors::serialize_to_file(data, &None, path.as_ref())
     }
