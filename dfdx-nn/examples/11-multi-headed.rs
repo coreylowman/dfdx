@@ -1,12 +1,7 @@
 //! Demonstrates how to build a neural network that has multiple
 //! outputs using `SplitInto`.
 
-use dfdx::{
-    shapes::Rank1,
-    tensor::{AsArray, AutoDevice, Tensor, TensorFrom},
-};
-
-use dfdx_nn::{BuildModuleExt, LinearConstConfig, Module, SplitInto};
+use dfdx_nn::{dfdx::prelude::*, BuildModuleExt, LinearConstConfig, Module, SplitInto};
 
 fn main() {
     let dev = AutoDevice::default();

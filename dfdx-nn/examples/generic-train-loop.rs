@@ -1,7 +1,6 @@
 /// This advanced example shows how to work with dfdx in a generic
 /// training setting.
-use dfdx::{prelude::*, tensor::AutoDevice};
-use dfdx_nn::*;
+use dfdx_nn::{dfdx::prelude::*, *};
 
 /// Our generic training function. Works with any model/optimizer/loss function!
 fn classification_train<

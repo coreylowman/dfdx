@@ -1,5 +1,4 @@
-use dfdx::prelude::*;
-use dfdx_nn::{BuildModuleExt, LinearConstConfig};
+use dfdx_nn::{dfdx::prelude::*, BuildModuleExt, LinearConstConfig};
 
 fn main() {
     let dev = AutoDevice::default();

@@ -1,5 +1,4 @@
-use dfdx::prelude::*;
-use dfdx_nn::{BuildModuleExt, LinearConstConfig, Module, ReLU, Sequential};
+use dfdx_nn::{dfdx::prelude::*, BuildModuleExt, LinearConstConfig, Module, ReLU, Sequential};
 
 #[derive(Clone, Default, Debug, Sequential)]
 struct MlpConfig<const I: usize, const O: usize> {

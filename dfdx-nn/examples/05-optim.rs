@@ -1,7 +1,8 @@
 //! Intro to dfdx_nn::optim
 
-use dfdx::prelude::*;
-use dfdx_nn::{BuildModuleExt, LinearConstConfig, Module, ReLU, Sequential, Tanh, ZeroGrads};
+use dfdx_nn::{
+    dfdx::prelude::*, BuildModuleExt, LinearConstConfig, Module, ReLU, Sequential, Tanh, ZeroGrads,
+};
 
 // first let's declare our neural network to optimze
 #[derive(Default, Clone, Sequential)]

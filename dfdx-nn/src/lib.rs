@@ -7,6 +7,8 @@ pub use dfdx_nn_core::*;
 pub use dfdx_nn_derives::*;
 pub use layers::*;
 
+pub use dfdx;
+
 #[cfg(test)]
 pub(crate) mod tests {
     pub use num_traits::{Float, FromPrimitive, NumCast, Zero};

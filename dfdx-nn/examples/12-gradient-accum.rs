@@ -1,6 +1,4 @@
-use dfdx::prelude::*;
-
-use dfdx_nn::*;
+use dfdx_nn::{dfdx::prelude::*, *};
 
 fn main() {
     let dev = AutoDevice::default();
@@ -32,5 +30,5 @@ fn main() {
 
     // finally, we can use ZeroGrads to zero out the accumulated gradients
     model.zero_grads(&mut grads);
-    assert_eq!(grads.get(&model.0.matmul.weight).array(), [[0.0; 2]; 5]);
+    assert_eq!(grads.get(&model.0.weight).array(), [[0.0; 2]; 5]);
 }

@@ -82,9 +82,9 @@ mod tests {
 
         let g = y.mean().backward();
         assert_close_to_literal!(g.get(&x), [[0.15889636, 0.062031522]; 4]);
-        assert_close_to_literal!(g.get(&model.t.matmul.weight), [[-0.025407, 0.155879]; 2]);
-        assert_close_to_literal!(g.get(&model.t.add.bias), [0.5; 2]);
-        assert_close_to_literal!(g.get(&model.u.matmul.weight), [[-0.025407, 0.155879]; 2]);
-        assert_close_to_literal!(g.get(&model.u.add.bias), [0.5; 2]);
+        assert_close_to_literal!(g.get(&model.t.weight), [[-0.025407, 0.155879]; 2]);
+        assert_close_to_literal!(g.get(&model.t.bias), [0.5; 2]);
+        assert_close_to_literal!(g.get(&model.u.weight), [[-0.025407, 0.155879]; 2]);
+        assert_close_to_literal!(g.get(&model.u.bias), [0.5; 2]);
     }
 }

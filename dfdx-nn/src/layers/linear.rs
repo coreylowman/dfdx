@@ -2,6 +2,8 @@ use crate::*;
 
 use dfdx::prelude::*;
 
+use rand_distr::Uniform;
+
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
 ///
@@ -21,22 +23,72 @@ use dfdx::prelude::*;
 /// // batched forward
 /// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
-#[derive(Default, Debug, Clone, Copy, Sequential)]
-#[built(Linear)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LinearConfig<I: Dim, O: Dim> {
-    pub matmul: MatMulConfig<I, O>,
-    pub add: Bias1DConfig<O>,
+    pub inp: I,
+    pub out: O,
+}
+
+impl<I: Dim, O: Dim> LinearConfig<I, O> {
+    pub fn new(inp: I, out: O) -> Self {
+        Self { inp, out }
+    }
 }
 
 /// Compile time sugar alias around [LinearConfig].
 pub type LinearConstConfig<const I: usize, const O: usize> = LinearConfig<Const<I>, Const<O>>;
 
-impl<I: Dim, O: Dim> LinearConfig<I, O> {
-    pub fn new(inp: I, out: O) -> Self {
-        Self {
-            matmul: MatMulConfig { inp, out },
-            add: Bias1DConfig(out),
-        }
+impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LinearConfig<I, O> {
+    type Built = Linear<I, O, E, D>;
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
+        Ok(Linear {
+            weight: device.try_zeros_like(&(self.out, self.inp))?,
+            bias: device.try_zeros_like(&(self.out,))?,
+        })
+    }
+}
+
+/// See [LinearConfig].
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+pub struct Linear<I: Dim, O: Dim, Elem: Dtype, Dev: Device<Elem>> {
+    #[param]
+    #[serialize]
+    pub weight: Tensor<(O, I), Elem, Dev>,
+    #[param]
+    #[serialize]
+    pub bias: Tensor<(O,), Elem, Dev>,
+}
+
+impl<I: Dim, O: Dim, E, D: Device<E>> ResetParams<E, D> for Linear<I, O, E, D>
+where
+    E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,
+{
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+        let (_o, i) = self.weight.shape();
+        let b = E::from_f64(1.0 / (i.size() as f64).sqrt()).unwrap();
+        self.weight.try_fill_with_distr(Uniform::new(-b, b))?;
+        self.bias.try_fill_with_distr(Uniform::new(-b, b))
+    }
+}
+
+impl<S: Shape, I: Dim, O: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
+    for Linear<I, O, E, D>
+where
+    Tensor<S, E, D, T>: TryMatMul<Tensor<(I, O), E, D, T>, Err = D::Err>,
+    Bias1D<O, E, D>:
+        Module<<Tensor<S, E, D, T> as TryMatMul<Tensor<(I, O), E, D, T>>>::Output, Error = D::Err>,
+{
+    type Output = <Bias1D<O, E, D> as Module<
+        <Tensor<S, E, D, T> as TryMatMul<Tensor<(I, O), E, D, T>>>::Output,
+    >>::Output;
+    type Error = D::Err;
+    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+        let weight = self.weight.retaped::<T>().try_permute()?;
+        let bias = Bias1D {
+            bias: self.bias.clone(),
+        };
+        let y = x.try_matmul(weight)?;
+        bias.try_forward(y)
     }
 }
 
@@ -56,12 +108,8 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Linear {
-            matmul: MatMul {
-                weight: dev.tensor(W).to_dtype::<TestDtype>(),
-            },
-            add: Bias1D {
-                bias: dev.tensor(B).to_dtype::<TestDtype>(),
-            },
+            weight: dev.tensor(W).to_dtype::<TestDtype>(),
+            bias: dev.tensor(B).to_dtype::<TestDtype>(),
         };
 
         let x = dev
@@ -72,13 +120,13 @@ mod tests {
 
         let g = y.square().mean().backward();
         assert_close_to_literal!(
-            g.get(&model.matmul.weight),
+            g.get(&model.weight),
             [
                 [0.82293916, -2.2596567, -2.1001704, -0.05280815, -1.8978603],
                 [-0.07596206, 0.20857942, 0.19385791, 0.004874499, 0.17518352],
             ]
         );
-        assert_close_to_literal!(g.get(&model.add.bias), [-0.93430865, 0.08624211]);
+        assert_close_to_literal!(g.get(&model.bias), [-0.93430865, 0.08624211]);
     }
 
     #[test]
@@ -86,12 +134,8 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Linear {
-            matmul: MatMul {
-                weight: dev.tensor(W).to_dtype::<TestDtype>(),
-            },
-            add: Bias1D {
-                bias: dev.tensor(B).to_dtype::<TestDtype>(),
-            },
+            weight: dev.tensor(W).to_dtype::<TestDtype>(),
+            bias: dev.tensor(B).to_dtype::<TestDtype>(),
         };
 
         let x = dev
@@ -113,13 +157,13 @@ mod tests {
 
         let g = y.square().mean().backward();
         assert_close_to_literal!(
-            g.get(&model.matmul.weight),
+            g.get(&model.weight),
             [
                 [-1.1541969, 0.6956873, -0.8553807, 0.9289255, 0.04931633],
                 [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.5286576],
             ]
         );
-        assert_close_to_literal!(g.get(&model.add.bias), [0.7679174, -0.31687993]);
+        assert_close_to_literal!(g.get(&model.bias), [0.7679174, -0.31687993]);
     }
 
     #[test]
@@ -127,12 +171,8 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Linear {
-            matmul: MatMul {
-                weight: dev.tensor(W).to_dtype::<TestDtype>(),
-            },
-            add: Bias1D {
-                bias: dev.tensor(B).to_dtype::<TestDtype>(),
-            },
+            weight: dev.tensor(W).to_dtype::<TestDtype>(),
+            bias: dev.tensor(B).to_dtype::<TestDtype>(),
         };
 
         #[rustfmt::skip]
@@ -160,9 +200,9 @@ mod tests {
         let g = y.square().mean().backward();
         #[rustfmt::skip]
         assert_close_to_literal!(
-            g.get(&model.matmul.weight),
+            g.get(&model.weight),
             [[-0.16088384, 0.10978711, -0.9008978, 0.59211355, -0.029177088], [0.35563633, -0.38838047, -0.17600831, -0.2034213, 0.31128058]]
         );
-        assert_close_to_literal!(g.get(&model.add.bias), [0.40265593, -0.2874091]);
+        assert_close_to_literal!(g.get(&model.bias), [0.40265593, -0.2874091]);
     }
 }

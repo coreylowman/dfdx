@@ -3,8 +3,7 @@
 // In this example we can see a simple way to compose many layers together
 // sequentially.
 
-use dfdx::prelude::*;
-use dfdx_nn::{BuildModuleExt, LinearConfig, Module, ReLU, Sequential, Tanh};
+use dfdx_nn::{dfdx::prelude::*, BuildModuleExt, LinearConfig, Module, ReLU, Sequential, Tanh};
 
 /// Here we define a simple feedforward network with 3 layers.
 /// the `#[derive(Sequential)]` means the built module will execute

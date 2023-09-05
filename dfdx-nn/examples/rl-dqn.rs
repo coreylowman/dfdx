@@ -2,9 +2,10 @@
 
 use std::time::Instant;
 
-use dfdx::{losses::huber_loss, prelude::*};
-
-use dfdx_nn::*;
+use dfdx_nn::{
+    dfdx::{losses::huber_loss, prelude::*},
+    *,
+};
 
 const BATCH: usize = 64;
 const STATE: usize = 4;

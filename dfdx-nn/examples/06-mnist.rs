@@ -23,9 +23,10 @@ use indicatif::ProgressIterator;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
 
-use dfdx::{data::*, prelude::*, tensor::AutoDevice};
-
-use dfdx_nn::*;
+use dfdx_nn::{
+    dfdx::{data::*, prelude::*, tensor::AutoDevice},
+    *,
+};
 
 struct MnistTrainSet(Mnist);
 

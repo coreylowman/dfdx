@@ -1,4 +1,4 @@
-use dfdx::prelude::*;
+use dfdx_nn::dfdx::prelude::*;
 
 fn main() {
     // The first part of building a network is to specify the architecture.

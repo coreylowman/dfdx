@@ -2,8 +2,7 @@
 
 use std::time::Instant;
 
-use dfdx::{prelude::*, tensor::AutoDevice};
-use dfdx_nn::*;
+use dfdx_nn::{dfdx::prelude::*, *};
 
 const BATCH: usize = 64;
 const STATE: usize = 4;

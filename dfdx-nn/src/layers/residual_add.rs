@@ -64,12 +64,8 @@ mod tests {
 
         let model = dev.build_module::<f32>(<ResidualAdd<LinearConstConfig<2, 2>>>::default());
         let model = ResidualAdd(Linear {
-            matmul: MatMul {
-                weight: model.0.matmul.weight.to_dtype::<TestDtype>(),
-            },
-            add: Bias1D {
-                bias: model.0.add.bias.to_dtype::<TestDtype>(),
-            },
+            weight: model.0.weight.to_dtype::<TestDtype>(),
+            bias: model.0.bias.to_dtype::<TestDtype>(),
         });
 
         let x: Tensor<Rank2<4, 2>, f32, _> = dev.sample_normal();
@@ -80,8 +76,8 @@ mod tests {
         assert_close_to_literal!(y, [[0.25372928, -2.4258814],[1.7892148, -2.6242268],[1.5131638, 0.23407778],[3.4201493, 1.597525]]);
 
         let g = y.mean().backward();
-        assert_close_to_literal!(g.get(&model.0.matmul.weight), [[0.475242, -0.075136]; 2]);
-        assert_close_to_literal!(g.get(&model.0.add.bias), [0.5; 2]);
+        assert_close_to_literal!(g.get(&model.0.weight), [[0.475242, -0.075136]; 2]);
+        assert_close_to_literal!(g.get(&model.0.bias), [0.5; 2]);
         assert_close_to_literal!(g.get(&x), [[0.18806472, 0.21419683]; 4]);
     }
 }
