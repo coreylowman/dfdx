@@ -1,8 +1,14 @@
-#![feature(generic_const_exprs)]
+#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
-use dfdx_nn::*;
-
+#[cfg(not(feature = "nightly"))]
 fn main() {
+    panic!("Run this example with `cargo +nightly`.")
+}
+
+#[cfg(feature = "nightly")]
+fn main() {
+    use dfdx_nn::*;
+
     #[derive(Default, Clone, Sequential)]
     pub struct BasicBlockInternal<const C: usize> {
         conv1: Conv2DConstConfig<C, C, 3, 1, 1>,

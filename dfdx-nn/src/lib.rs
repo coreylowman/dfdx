@@ -1,4 +1,4 @@
-#![feature(generic_const_exprs)]
+#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 pub mod optim;
 
@@ -8,12 +8,15 @@ mod batch_norm1d;
 mod batch_norm2d;
 mod bias1d;
 mod bias2d;
+#[cfg(feature = "nightly")]
 mod conv2d;
+#[cfg(feature = "nightly")]
 mod conv_trans2d;
 mod cos;
 mod dropout;
 mod embedding;
 mod exp;
+#[cfg(feature = "nightly")]
 mod flatten2d;
 mod gelu;
 mod generalized_add;
@@ -25,8 +28,11 @@ mod ln;
 mod log_softmax;
 mod matmul;
 mod multi_head_attention;
+#[cfg(feature = "nightly")]
 mod pool_2d_avg;
+#[cfg(feature = "nightly")]
 mod pool_2d_max;
+#[cfg(feature = "nightly")]
 mod pool_2d_min;
 mod pool_global_avg;
 mod pool_global_max;
@@ -56,12 +62,15 @@ pub use batch_norm1d::{BatchNorm1D, BatchNorm1DConfig, BatchNorm1DConstConfig};
 pub use batch_norm2d::{BatchNorm2D, BatchNorm2DConfig, BatchNorm2DConstConfig};
 pub use bias1d::{Bias1D, Bias1DConfig, Bias1DConstConfig};
 pub use bias2d::{Bias2D, Bias2DConfig, Bias2DConstConfig};
+#[cfg(feature = "nightly")]
 pub use conv2d::{Conv2D, Conv2DConfig, Conv2DConstConfig};
+#[cfg(feature = "nightly")]
 pub use conv_trans2d::{ConvTrans2D, ConvTrans2DConfig, ConvTrans2DConstConfig};
 pub use cos::Cos;
 pub use dropout::{Dropout, DropoutOneIn};
 pub use embedding::{Embedding, EmbeddingConfig, EmbeddingConstConfig};
 pub use exp::Exp;
+#[cfg(feature = "nightly")]
 pub use flatten2d::Flatten2D;
 pub use gelu::{AccurateGeLU, FastGeLU};
 pub use generalized_add::GeneralizedAdd;
@@ -73,8 +82,11 @@ pub use ln::Ln;
 pub use log_softmax::LogSoftmax;
 pub use matmul::{MatMul, MatMulConfig, MatMulConstConfig};
 pub use multi_head_attention::{MultiHeadAttention, MultiHeadAttentionConfig};
+#[cfg(feature = "nightly")]
 pub use pool_2d_avg::{AvgPool2D, AvgPool2DConst};
+#[cfg(feature = "nightly")]
 pub use pool_2d_max::{MaxPool2D, MaxPool2DConst};
+#[cfg(feature = "nightly")]
 pub use pool_2d_min::{MinPool2D, MinPool2DConst};
 pub use pool_global_avg::AvgPoolGlobal;
 pub use pool_global_max::MaxPoolGlobal;
