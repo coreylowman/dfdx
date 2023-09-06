@@ -108,7 +108,7 @@ where
             // RHS (B, G, C/G*K*K, OH*OW)
             // OUT (B, G, O/G, OH*OW)
             let m = op.chan_out / op.groups;
-            let k = (op.chan_in / op.groups) * op.kernel * op.kernel;
+            let k = op.chan_in * op.kernel * op.kernel;
             let n = op.h_out * op.w_out;
             if op.groups == 1 {
                 // optimizing here for common case
@@ -129,7 +129,7 @@ where
                         (op.groups, m, k, n),
                         fil.data.as_ref(),
                         [m * k, k, 1],
-                        &patches.slice(i_batch * op.groups * k * n..),
+                        &patches.slice(i_batch * k * n..),
                         [k * n, n, 1],
                         Default::default(),
                         &mut out_buf.slice_mut(i_batch * op.groups * m * n..),
