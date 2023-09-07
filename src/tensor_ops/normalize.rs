@@ -46,7 +46,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
             .retaped::<T>()
             .try_square()?
             .try_mean::<_, Ax>()?
-            .try_add(E::from_f64(epsilon.into()).unwrap())?
+            .try_add(epsilon)?
             .try_sqrt()?;
         centered.try_div(std.try_broadcast_like(&shape)?)
     }

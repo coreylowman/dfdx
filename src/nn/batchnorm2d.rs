@@ -51,9 +51,7 @@ where
     var.try_axpy(1.0 - momentum, &var_chan, momentum * n / (n - 1.0))?;
 
     // statistics for normalizing - on tape
-    let std = var_chan
-        .try_add(E::from_f64(epsilon).unwrap())?
-        .try_sqrt()?;
+    let std = var_chan.try_add(epsilon)?.try_sqrt()?;
 
     // record broadcast of scale & bias - on tape
     let scale = scale
@@ -81,10 +79,7 @@ where
     let shape = *x.shape();
 
     // statistics for normalizing
-    let std = var
-        .clone()
-        .try_add(E::from_f64(epsilon).unwrap())?
-        .try_sqrt()?;
+    let std = var.clone().try_add(epsilon)?.try_sqrt()?;
 
     let scale = scale.clone().try_div(std)?.try_broadcast_like(&shape)?;
 
