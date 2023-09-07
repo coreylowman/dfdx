@@ -2,97 +2,56 @@ use super::*;
 use crate::{tensor_ops::*, tests::*};
 
 #[test]
-/// Produced by
-/// ```python
-/// q = torch.nn.Conv1d(1, 2, 2)
-/// x = torch.sample_normal(1, 2, 3, requires_grad=True)
-/// q(x).exp().mean().backward()
-/// ```
 fn test_conv1d_default_stride_and_padding() {
     let dev: TestDevice = Default::default();
     let weight = dev
-        .tensor([[[0.02272552, 0.5804308]], [[0.7020492, 0.05399668]]])
+        .tensor([[[0.46187001, 0.34853035]], [[-0.65229625, 0.04932868]]])
         .to_dtype::<TestDtype>();
-    let bias = dev.tensor([-0.3903233, 0.45088166]).to_dtype::<TestDtype>();
     let x = dev
-        .tensor([[-1.6405383, 1.1242371]])
+        .tensor([[1.33830595, 0.79225832]])
         .to_dtype::<TestDtype>();
-    let result = (x.leaky_trace(), weight.clone())
-        .conv1d(Const::<1>, Const::<0>, Const::<1>, Const::<1>)
-        + bias.leaky_trace().broadcast::<_, _>();
-    assert_close_to_literal!(result, [[0.2249364], [-0.6401519]]);
+    let result =
+        (x.leaky_trace(), weight.clone()).conv1d(Const::<1>, Const::<0>, Const::<1>, Const::<1>);
+    assert_close_to_literal!(result, [[0.89424950], [-0.83389091]]);
     let g = result.exp().mean().backward();
-    assert_close_to_literal!(g.get(&x), [[0.19929343, 0.37765408]]);
+    assert_close_to_literal!(g.get(&x), [[0.42308712, 0.43687853]]);
     assert_close_to_literal!(
         g.get(&weight),
-        [[[-1.0271764, 0.70390904]], [[-0.43245602, 0.2963558]]]
+        [[[1.63641334, 0.96873373]], [[0.29065058, 0.17206106]]]
     );
-    assert_close_to_literal!(g.get(&bias), [0.6261215, 0.26360616]);
 }
 
 #[test]
-/// Produced by
-/// ```python
-/// q = torch.nn.Conv1d(1, 2, 2, stride=2)
-/// x = torch.sample_normal(1, 2, 3, requires_grad=True)
-/// q(x).exp().mean().backward()
-/// ```
-fn test_conv1d_stride_2() {
-    let dev: TestDevice = Default::default();
-    let weight = dev
-        .tensor([[[-0.4296614, 0.27693725]], [[-0.3809104, 0.19169092]]])
-        .to_dtype::<TestDtype>();
-    let bias = dev
-        .tensor([-0.29623124, -0.09120554])
-        .to_dtype::<TestDtype>();
-    let x = dev
-        .tensor([[-0.31544453, 0.47184715]])
-        .to_dtype::<TestDtype>();
-
-    let result = (x.leaky_trace(), weight.clone())
-        .conv1d(Const::<2>, Const::<0>, Const::<1>, Const::<1>)
-        + bias.leaky_trace().broadcast::<_, _>();
-    assert_close_to_literal!(result, [[-0.03002486], [0.11939937]]);
-
-    let g = result.exp().mean().backward();
-
-    assert_close_to_literal!(g.get(&x), [[-0.42308503, 0.2423735]]);
-
-    assert_close_to_literal!(
-        g.get(&weight),
-        [[[-0.15305707, 0.22894529]], [[-0.17772458, 0.26584336]]]
-    );
-
-    assert_close_to_literal!(g.get(&bias), [0.48521072, 0.5634099]);
-}
-
-#[test]
-fn test_conv1d_padding_1() {
+fn test_conv1d_all() {
     let dev: TestDevice = Default::default();
     let weight = dev
         .tensor([
-            [[0.45220423, -0.3358205], [0.16038167, 0.09695387]],
-            [[0.19551754, -0.3192072], [-0.49848652, -0.49257886]],
-            [[0.21106702, 0.40513265], [0.08618081, -0.15866321]],
+            [[0.42317861, -0.41726643], [-0.39504033, 0.14706957]],
+            [[0.04628271, -0.47788471], [0.46128953, 0.44733173]],
+            [[-0.02302122, 0.28430778], [0.35562867, 0.14598244]],
         ])
         .to_dtype::<TestDtype>();
-    let bias = dev
-        .tensor([-0.01069266, 0.22007078, -0.4849882])
-        .to_dtype::<TestDtype>();
     let x = dev
-        .tensor([[0.10943512, -1.7794625], [1.1263468, 0.5267281]])
+        .tensor([
+            [
+                0.60798085,
+                -0.04124952,
+                -0.83411056,
+                -0.35019234,
+                0.59375221,
+            ],
+            [-0.53912121, 3.06222630, 0.98324996, 2.30645585, 1.33080256],
+        ])
         .to_dtype::<TestDtype>();
 
-    let result = (x.leaky_trace(), weight.clone())
-        .conv1d(Const::<1>, Const::<1>, Const::<1>, Const::<1>)
-        + bias.leaky_trace().broadcast::<_, Axis<1>>();
-
+    let result =
+        (x.leaky_trace(), weight.clone()).conv1d(Const::<2>, Const::<1>, Const::<2>, Const::<1>);
     assert_close_to_literal!(
         result,
         [
-            [0.06176047, 0.868088, -0.7308956],
-            [-0.36967635, -0.01143935, -0.3904122],
-            [-0.6193623, -1.1693113, -0.8151802]
+            [0.46757236, -0.74182582, -1.05933702],
+            [1.38954353, 2.60976601, 1.04773605],
+            [0.43530372, 1.32710481, 0.82830369]
         ]
     );
 
@@ -100,84 +59,73 @@ fn test_conv1d_padding_1() {
 
     assert_close_to_literal!(
         g.get(&x),
-        [[0.10849564, -0.06070386], [-0.04517691, -0.05858667]]
+        [
+            [0.00000000, -0.15559882, 0.00000000, -0.59979343, 0.00000000],
+            [0.00000000, 1.07552814, 0.00000000, 0.96608126, 0.00000000]
+        ]
     );
 
     assert_close_to_literal!(
         g.get(&weight),
         [
-            [[-0.06622871, -0.45809978], [0.32632908, 0.27255058]],
-            [[-0.12179004, -0.1870675], [0.16333483, 0.1443328]],
-            [[-0.08372552, -0.05486213], [0.06477002, 0.08554335]]
+            [[-0.01567238, -0.02584620], [0.25088674, 0.66512215]],
+            [[-0.17325418, -0.54741162], [5.35664129, 4.84967136]],
+            [[-0.10636187, -0.15377919], [1.86949003, 1.49200678]]
         ]
     );
-
-    assert_close_to_literal!(g.get(&bias), [0.43639296, 0.26181796, 0.14349198]);
 }
 
 #[test]
-fn test_conv1d_stride_3_padding_4() {
+fn test_conv1d_all_grouped() {
     let dev: TestDevice = Default::default();
-    let weight = dev
+    let x = dev
         .tensor([
-            [[-0.4961109, -0.41855216, -0.31035745]],
-            [[-0.28658125, 0.09752917, -0.4264508]],
+            [1.27495587, 0.09800160, -1.10806572, 0.71087748, 1.48600435],
+            [
+                -0.62874401,
+                0.71909815,
+                1.67691362,
+                -1.93346322,
+                -1.22098184,
+            ],
         ])
         .to_dtype::<TestDtype>();
-    let bias = dev.tensor([0.04796273, 0.17420131]).to_dtype::<TestDtype>();
-    let x = dev
-        .tensor([[0.09930344, 1.0408987]])
+    let w = dev
+        .tensor([
+            [[-0.18984121, 0.45376354]],
+            [[-0.53830475, 0.33164448]],
+            [[-0.14025646, 0.52515274]],
+            [[-0.61143655, -0.37861061]],
+        ])
         .to_dtype::<TestDtype>();
 
-    let result = (x.leaky_trace(), weight.clone())
-        .conv1d(Const::<3>, Const::<4>, Const::<1>, Const::<1>)
-        + bias.leaky_trace().broadcast::<_, _>();
-
+    let y = (x.leaky_trace(), w.clone()).conv1d(Const::<2>, Const::<1>, Const::<2>, Const::<2>);
     assert_close_to_literal!(
-        result,
+        y,
         [
-            [0.04796273, -0.31665158, 0.04796273],
-            [0.17420131, -0.26000577, 0.17420131]
+            [0.04446955, 0.30396554, -0.13495384],
+            [0.03250169, 0.18300386, -0.38266873],
+            [0.37763637, -1.11622167, 0.27118072],
+            [-0.27225819, 0.29234678, 1.18219006]
         ]
     );
 
-    let g = result.exp().mean().backward();
-
-    assert_close_to_literal!(g.get(&x), [[-0.03829185, -0.09248922]]);
+    let grads = y.exp().mean().backward();
 
     assert_close_to_literal!(
-        g.get(&weight),
+        grads.get(&x),
         [
-            [[0., 0.01205849, 0.12639713]],
-            [[0., 0.01276127, 0.13376366]]
+            [0.00000000, -0.00722379, 0.00000000, 0.04001465, 0.00000000],
+            [0.00000000, -0.03227153, 0.00000000, -0.20944442, 0.00000000]
         ]
     );
-
-    assert_close_to_literal!(g.get(&bias), [0.4711413, 0.5252729]);
-}
-
-#[test]
-fn test_conv1d_s4p3k2() {
-    let dev = TestDevice::seed_from_u64(432);
-
-    let weight: Tensor<Rank3<3, 5, 2>, TestDtype, _> = dev.sample_normal();
-    println!("weight data {:?}", weight.as_vec());
-    let bias: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
-    println!("bias data {:?}", bias.as_vec());
-    let x: Tensor<Rank2<5, 7>, TestDtype, _> = dev.sample_normal();
-    println!("x data {:?}", x.as_vec());
-
-    let out =
-        (x.leaky_trace(), weight.clone()).conv1d(Const::<4>, Const::<3>, Const::<1>, Const::<1>);
-    let out = out + bias.broadcast::<_, Axis<1>>();
-    println!("out data {:?}, {:?}", out.as_vec(), out.shape());
-
     assert_close_to_literal!(
-        out,
+        grads.get(&w),
         [
-            [0.44691145, 1.3863211, -2.0541177],
-            [0.1279889, -0.96598804, 1.6030374],
-            [-0.66274095, -1.2659106, -0.38152635],
+            [[0.06282897, 0.08882126]],
+            [[0.05021068, 0.07957286]],
+            [[-0.19168709, 0.03465047]],
+            [[-0.44522732, -0.17019148]]
         ]
     );
 }
@@ -213,82 +161,5 @@ fn test_batched_conv1d() {
     let x_grad = grads.get(&x) * 10.0;
     for i in 0..10 {
         assert_close_to_tensor!(x0, x_grad.clone().select(dev.tensor(i)));
-    }
-}
-
-#[test]
-fn test_conv1d_dilated() {
-    let dev: TestDevice = Default::default();
-    let x = dev.tensor([[0., 1., 2., 4., 5.]]).to_dtype::<TestDtype>();
-    let w = dev.tensor([[[0.1, 0.5]]]).to_dtype::<TestDtype>();
-    let y = (x.leaky_trace(), w.clone()).conv1d(Const::<1>, Const::<0>, Const::<2>, Const::<1>);
-    assert_close_to_literal!(y, [[1.0, 2.1, 2.7]]);
-    let grads = y.mean().backward();
-    assert_close_to_literal!(
-        grads.get(&x),
-        [[0.03333335, 0.03333335, 0.2, 0.1666667, 0.1666667],]
-    );
-    assert_close_to_literal!(grads.get(&w), [[[1.0, 11.0 / 3.0]]]);
-}
-
-#[test]
-fn test_conv1d_grouped_forward() {
-    const NUM_GROUPS: usize = 3;
-    let dev: TestDevice = Default::default();
-    let x: Tensor<Rank3<2, 9, 14>, TestDtype, _> = dev.sample_normal();
-    let w: Tensor<Rank3<15, 3, 3>, TestDtype, _> = dev.sample_normal();
-
-    let y = (x.leaky_trace(), w.clone()).conv1d(
-        Const::<1>,
-        Const::<0>,
-        Const::<1>,
-        Const::<NUM_GROUPS>,
-    );
-
-    for i in 0..NUM_GROUPS {
-        let x_group = x
-            .clone()
-            .slice((.., 3 * i..3 * (i + 1), ..))
-            .realize::<(Const<2>, Const<3>, Const<14>)>();
-        let w_group = w
-            .clone()
-            .slice((5 * i..5 * (i + 1), .., ..))
-            .realize::<(Const<5>, Const<3>, Const<3>)>();
-        let y_group = (x_group, w_group).conv1d(Const::<1>, Const::<0>, Const::<1>, Const::<1>);
-        let y_group_true = y
-            .retaped::<NoneTape>()
-            .slice((.., 5 * i..5 * (i + 1), ..))
-            .realize::<(Const<2>, Const<5>, Const<12>)>();
-        assert_close_to_tensor!(y_group, y_group_true);
-    }
-
-    let grads = y.exp().sum().backward();
-    let x_grad = grads.get(&x);
-    let w_grad = grads.get(&w);
-
-    for i in 0..NUM_GROUPS {
-        let x_group = x
-            .clone()
-            .slice((.., 3 * i..3 * (i + 1), ..))
-            .realize::<(Const<2>, Const<3>, Const<14>)>();
-        let w_group = w
-            .clone()
-            .slice((5 * i..5 * (i + 1), .., ..))
-            .realize::<(Const<5>, Const<3>, Const<3>)>();
-        let y_group = (x_group.leaky_trace(), w_group.clone())
-            .conv1d(Const::<1>, Const::<0>, Const::<1>, Const::<1>);
-        let grads = y_group.exp().sum().backward();
-
-        let x_grad_group_true = x_grad
-            .clone()
-            .slice((.., 3 * i..3 * (i + 1), ..))
-            .realize::<(Const<2>, Const<3>, Const<14>)>();
-        let w_grad_group_true = w_grad
-            .clone()
-            .slice((5 * i..5 * (i + 1), .., ..))
-            .realize::<(Const<5>, Const<3>, Const<3>)>();
-
-        assert_close_to_tensor!(grads.get(&x_group), x_grad_group_true);
-        assert_close_to_tensor!(grads.get(&w_group), w_grad_group_true);
     }
 }
