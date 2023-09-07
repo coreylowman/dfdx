@@ -38,9 +38,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> StddevTo<E> for Tensor<S, 
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
-        self.try_var()?
-            .try_add(E::from_f64(epsilon.into()).unwrap())?
-            .try_sqrt()
+        self.try_var()?.try_add(epsilon)?.try_sqrt()
     }
 }
 

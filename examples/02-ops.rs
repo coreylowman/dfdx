@@ -34,13 +34,8 @@ fn main() {
     dbg!(f.array());
 
     // and of course you can chain all of these together
-    let _ = dev
-        .sample_normal::<Rank2<5, 10>>()
-        .clamp(-1.0, 1.0)
-        .exp()
-        .abs()
-        .powf(0.5)
-        / 2.0;
+    let _: Tensor<(Const<5>, Const<10>), f32, _> =
+        dev.sample_normal().clamp(-1.0, 1.0).exp().abs().powf(0.5) / 2.0;
 
     // binary and unary operations can also be performed on dynamically sized tensors
     let mut a: Tensor<(Const<3>, usize), f32, _> = dev.sample_uniform_like(&(Const, 5));
