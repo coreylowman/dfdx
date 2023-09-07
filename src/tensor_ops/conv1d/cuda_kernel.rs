@@ -2,16 +2,16 @@ use cudarc::cublas::{CudaBlas, Gemm};
 use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 
 use crate::{
-    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
 };
 
+use core::iter::repeat;
 use std::sync::Arc;
 
-unsafe impl DeviceRepr for super::Conv2DOp {}
+unsafe impl DeviceRepr for super::Conv1DOp {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/conv2d.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/conv1d.ptx"));
 
 trait HasCudaKernel<E> {
     const MOD: &'static str;
@@ -19,19 +19,8 @@ trait HasCudaKernel<E> {
 }
 
 #[cfg(feature = "f16")]
-impl HasCudaKernel<AMP<f16>> for Cuda {
-    const MOD: &'static str = "conv2d_f16";
-    const FNS: &'static [&'static str] = &[
-        "unfold_input_into_patches_f16",
-        "unfold_output_into_patches_f16",
-        "transpose_filters_f16",
-        "sum_transposed_filters_f16",
-    ];
-}
-
-#[cfg(feature = "f16")]
-impl HasCudaKernel<f16> for Cuda {
-    const MOD: &'static str = "conv2d_f16";
+impl HasCudaKernel<half::f16> for Cuda {
+    const MOD: &'static str = "conv1d_f16";
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f16",
         "unfold_output_into_patches_f16",
@@ -41,7 +30,7 @@ impl HasCudaKernel<f16> for Cuda {
 }
 
 impl HasCudaKernel<f32> for Cuda {
-    const MOD: &'static str = "conv2d_f32";
+    const MOD: &'static str = "conv1d_f32";
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f32",
         "unfold_output_into_patches_f32",
@@ -51,7 +40,7 @@ impl HasCudaKernel<f32> for Cuda {
 }
 
 impl HasCudaKernel<f64> for Cuda {
-    const MOD: &'static str = "conv2d_f64";
+    const MOD: &'static str = "conv1d_f64";
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f64",
         "unfold_output_into_patches_f64",
@@ -60,15 +49,15 @@ impl HasCudaKernel<f64> for Cuda {
     ];
 }
 
-fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
+fn make_3d<S: Shape>(strides: S::Concrete) -> [usize; 3] {
     match S::NUM_DIMS {
-        3 => [0, strides[0], strides[1], strides[2]],
-        4 => [strides[0], strides[1], strides[2], strides[3]],
-        _ => unreachable!("Only implemented for 3d & 4d arrays"),
+        2 => [0, strides[0], strides[1]],
+        3 => [strides[0], strides[1], strides[2]],
+        _ => unreachable!("Only implemented for 2d & 3d arrays"),
     }
 }
 
-impl<E: Dtype + ValidAsZeroBits> super::Conv2DKernel<E> for Cuda
+impl<E: Dtype + ValidAsZeroBits> super::Conv1DKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
     CudaBlas: Gemm<E>,
@@ -79,7 +68,7 @@ where
     }
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: super::Conv2DOp,
+        op: super::Conv1DOp,
         img: &Tensor<L, E, Self>,
         fil: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
@@ -88,28 +77,32 @@ where
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let patches_item_numel = op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
+        let patches_item_numel = op.groups * op.chan_in * op.kernel * op.l_out;
         let patches_numel = op.batch * patches_item_numel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
-        let img_strides = self.dev.htod_copy(make_4d::<L>(img.strides).into())?;
+        let img_strides = self.dev.htod_copy(make_3d::<L>(img.strides).into())?;
 
         let out_buf = Arc::get_mut(&mut out.data).unwrap();
 
         unsafe {
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-            let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
+            let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.l_out) as u32);
             let params = (op, img.data.as_ref(), &img_strides, &mut patches);
             unfold_fn.launch(cfg, params)?;
+            let mut data: Vec<E> = repeat(E::ONE).take(patches_numel).collect();
+            self.dev.dtoh_sync_copy_into(&patches, data.as_mut_slice());
 
-            // LHS    (G, O/G, C/G*K*K)
-            // RHS (B, G, C/G*K*K, OH*OW)
-            // OUT (B, G, O/G, OH*OW)
+            println!("buff {:?}", data);
+
+            // LHS    (G, O/G, C/G*K)
+            // RHS (B, G, C/G*K, OL)
+            // OUT (B, G, O/G, OL)
             let m = op.chan_out / op.groups;
-            let k = op.chan_in * op.kernel * op.kernel;
-            let n = op.h_out * op.w_out;
+            let k = op.chan_in * op.kernel;
+            let n = op.l_out;
             if op.groups == 1 {
                 // optimizing here for common case
                 self.gemm_batch(
@@ -123,13 +116,17 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
+
+                let mut out_data: Vec<E> = out.as_vec();
+
+                println!("out {:?}", out_data);
             } else {
                 for i_batch in 0..op.batch {
                     self.gemm_batch(
                         (op.groups, m, k, n),
                         fil.data.as_ref(),
                         [m * k, k, 1],
-                        &patches.slice(i_batch * k * n..),
+                        &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, n, 1],
                         Default::default(),
                         &mut out_buf.slice_mut(i_batch * op.groups * m * n..),
@@ -145,21 +142,18 @@ where
 
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: super::Conv2DOp,
+        op: super::Conv1DOp,
         lhs: &Tensor<L, E, Self>,
         grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec,
-        _: &impl Tensorlike<O, E, Self>,
+        grad_stuff: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
-        let patches_item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
+        let patches_item_numel = op.chan_out * op.kernel * op.l_in;
         let patches_numel = op.batch * patches_item_numel;
-        let filters_numel = op.groups
-            * (op.chan_in / op.groups)
-            * (op.chan_out / op.groups)
-            * op.kernel
-            * op.kernel;
+        let filters_numel =
+            op.groups * (op.chan_in / op.groups) * (op.chan_out / op.groups) * op.kernel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
@@ -169,13 +163,25 @@ where
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         self.par_stream.wait_for_default()?;
+        let mut data: Vec<E> = repeat(E::ONE)
+            .take(grad_stuff.shape().num_elements())
+            .collect();
+        self.dev
+            .dtoh_sync_copy_into(&grad_out.slice(..), data.as_mut_slice());
+
+        println!("grad out {:?}", data);
 
         unsafe {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-            let cfg = launch_cfg::<128>((op.batch * op.chan_out * op.h_in * op.w_in) as u32);
+            let cfg = launch_cfg::<128>((op.batch * op.chan_out * op.l_in) as u32);
             unfold_fn.launch(cfg, (op, grad_out, &mut patches))?;
         }
+
+        let mut data: Vec<E> = repeat(E::ONE).take(patches_numel).collect();
+        self.dev.dtoh_sync_copy_into(&patches, data.as_mut_slice());
+
+        println!("grad buff {:?}", data);
 
         unsafe {
             // prepare filters for backward operations by
@@ -190,13 +196,15 @@ where
 
             self.par_stream.wait_for_default()?;
 
+            println!("grad buff {:?}", data);
+
             // img_g += filters * patches
-            // LHS =    (G, C/G, O/G*K*K)
-            // RHS = (B, G, O/G*K*K, H*W)
-            // OUT = (B, G, C/G, H*W)
+            // LHS =    (G, C/G, O/G*K)
+            // RHS = (B, G, O/G*K, L)
+            // OUT = (B, G, C/G, L)
             let m = op.chan_in / op.groups;
-            let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
-            let n = op.h_in * op.w_in;
+            let k = (op.chan_out / op.groups) * op.kernel;
+            let n = op.l_in;
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
             if op.groups == 1 {
                 // optimizing here for common case
@@ -231,12 +239,12 @@ where
 
         unsafe {
             // weight_g += img * patches^T
-            // LHS = (B, G, C/G, H*W)
-            // RHS = (B, H*W, G, O/G*K*K)
-            // OUT = (B, G, C/G, O/G*K*K)
+            // LHS = (B, G, C/G, L)
+            // RHS = (B, L, G, O/G*K)
+            // OUT = (B, G, C/G, O/G*K)
             let m = op.chan_in / op.groups;
-            let k = op.h_in * op.w_in;
-            let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
+            let k = op.l_in;
+            let n = (op.chan_out / op.groups) * op.kernel;
             if op.groups == 1 {
                 // optimizing here for common case
                 self.gemm_batch(
