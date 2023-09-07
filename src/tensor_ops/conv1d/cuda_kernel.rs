@@ -145,7 +145,7 @@ where
 
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: super::Conv2DOp,
+        op: super::Conv1DOp,
         lhs: &Tensor<L, E, Self>,
         grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
