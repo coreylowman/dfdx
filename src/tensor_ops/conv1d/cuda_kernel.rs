@@ -88,8 +88,7 @@ where
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let patches_item_numel = op.chan_in * op.kernel * op.l_out;
-        let patches_numel = op.batch * patches_item_numel;
+        let patches_numel = op.batch * op.chan_in * op.kernel * op.l_out;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
@@ -108,7 +107,7 @@ where
             // RHS (B, G, C/G*K, OL)
             // OUT (B, G, O/G, OL)
             let m = op.chan_out / op.groups;
-            let k = op.chan_in * op.kernel;
+            let k = (op.chan_in / op.groups) * op.kernel;
             let n = op.l_out;
             if op.groups == 1 {
                 // optimizing here for common case
@@ -129,7 +128,7 @@ where
                         (op.groups, m, k, n),
                         fil.data.as_ref(),
                         [m * k, k, 1],
-                        &patches.slice(i_batch * k * n..),
+                        &patches.slice(i_batch * op.groups * k * n..),
                         [k * n, n, 1],
                         Default::default(),
                         &mut out_buf.slice_mut(i_batch * op.groups * m * n..),

@@ -102,7 +102,8 @@ where
                 |s| &s.weight,
                 |s| &mut s.weight,
                 TensorOptions::reset_with(|t| {
-                    let b = E::ONE / E::from_usize(I * K).unwrap().sqrt();
+                    let scale = E::from_f64(G as f64 / (I * K) as f64).unwrap();
+                    let b = scale.sqrt();
                     t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
                 }),
             ),
@@ -222,20 +223,20 @@ mod tests {
     }
 
     #[rustfmt::skip]
-        #[test]
-        fn test_forward_4d_sizes() {
-            let dev: TestDevice = Default::default();
-            let x = dev.zeros::<Rank3<5, 3, 10>>();
-            let _: Tensor<Rank3<5, 2, 8>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 4, 8>, _, _, _> = dev.build_module::<Conv1D<3, 4, 3>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 4, 9>, _, _, _> = dev.build_module::<Conv1D<3, 4, 2>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 4, 7>, _, _, _> = dev.build_module::<Conv1D<3, 4, 4>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 2, 4>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 2>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 2, 3>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 3>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 2, 10>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 1, 1>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 2, 12>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 1, 2>, TestDtype>().forward(x.clone());
-            let _: Tensor<Rank3<5, 2, 6>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 2, 2>, TestDtype>().forward(x.clone());
-        }
+    #[test]
+    fn test_forward_4d_sizes() {
+        let dev: TestDevice = Default::default();
+        let x = dev.zeros::<Rank3<5, 3, 10>>();
+        let _: Tensor<Rank3<5, 2, 8>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 4, 8>, _, _, _> = dev.build_module::<Conv1D<3, 4, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 4, 9>, _, _, _> = dev.build_module::<Conv1D<3, 4, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 4, 7>, _, _, _> = dev.build_module::<Conv1D<3, 4, 4>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 2, 4>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 2, 3>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 2, 10>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 1, 1>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 2, 12>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 1, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<5, 2, 6>, _, _, _> = dev.build_module::<Conv1D<3, 2, 3, 2, 2>, TestDtype>().forward(x.clone());
+    }
 
     #[test]
     fn test_2_conv_sizes() {
