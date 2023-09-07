@@ -70,7 +70,7 @@ __device__ void unfold_output_into_patches(
             const size_t ol_ks = l + op.padding;
             const size_t ol_s = ol_ks - op.dilation * k1;
             const size_t ol = ol_s / op.stride;
-            const bool invalid = (ol_ks < op.dilation * k1 || ol_s % op.stride != 0 || ol >= op.h_out);
+            const bool invalid = (ol_ks < op.dilation * k1 || ol_s % op.stride != 0 || ol >= op.l_out);
             *patches_i = invalid ? zero : image_i[ol];
             patches_i += op.l_in;
         }
@@ -133,7 +133,7 @@ __device__ void sum_transposed_filters(
         const T *filters_tr_i = filters_tr + k1;
         filters_tr_i += og * (op.kernel);
         filters_tr_i += cg * (o_per_g * op.kernel);
-        filters_tr_i += g * (c_per_g * o_per_g * op.kernel * op.kernel);
+        filters_tr_i += g * (c_per_g * o_per_g * op.kernel);
     
         T tmp = 0.0;
         for (int b = 0; b < op.batch; b++) {
