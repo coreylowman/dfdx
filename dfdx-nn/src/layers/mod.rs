@@ -5,6 +5,8 @@ mod batch_norm2d;
 mod bias1d;
 mod bias2d;
 #[cfg(feature = "nightly")]
+mod conv1d;
+#[cfg(feature = "nightly")]
 mod conv2d;
 #[cfg(feature = "nightly")]
 mod conv_trans2d;
@@ -55,6 +57,8 @@ pub use batch_norm1d::{BatchNorm1D, BatchNorm1DConfig, BatchNorm1DConstConfig};
 pub use batch_norm2d::{BatchNorm2D, BatchNorm2DConfig, BatchNorm2DConstConfig};
 pub use bias1d::{Bias1D, Bias1DConfig, Bias1DConstConfig};
 pub use bias2d::{Bias2D, Bias2DConfig, Bias2DConstConfig};
+#[cfg(feature = "nightly")]
+pub use conv1d::{Conv1D, Conv1DConfig, Conv1DConstConfig};
 #[cfg(feature = "nightly")]
 pub use conv2d::{Conv2D, Conv2DConfig, Conv2DConstConfig};
 #[cfg(feature = "nightly")]
