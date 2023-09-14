@@ -108,7 +108,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank1<5>,f32, _> = dev.zeros();
-//! let mut grads = t.alloc_grads();
+//! let mut grads = Gradients::leaky();
 //! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<f32, Cpu>> = t.trace(grads);
 //! ```
 //!

@@ -1,3 +1,155 @@
+//! # Architecture Configuration vs Models
+//!
+//! `dfdx-nn` differentiates between the *architecture* of a model, and the constructed model (that has parameters on the device).
+//! This is mainly to make specifying architecture not dependent on the dtype and device
+//! that a model is stored on.
+//!
+//! For example, a linear model has a couple pieces:
+//! 1. The architecture configuration type: [LinearConfig]
+//! 2. The actual built type that contains the parameters: [Linear]
+//!
+//! There's a third piece for convenience: [LinearConstConfig], which let's you specify dimensions at compile time.
+//!
+//! For specifying architecture, you just need the dimensions for the linear, but not the device/dtype:
+//! ```rust
+//! use dfdx_nn::LinearConfig;
+//! let _: LinearConfig<usize, usize> = LinearConfig::new(3, 5);
+//! let _: LinearConfig<Const<3>, usize> = LinearConfig::new(Const, 5);
+//! let _: LinearConfig<usize, Const<5>> = LinearConfig::new(3, Const);
+//! let _: LinearConfig<Const<3>, Const<5>> = LinearConfig::new(Const, Const);
+//! let _: LinearConfig<Const<3>, Const<5>> = Default::default();
+//! let _: LinearConstConfig<3, 5> = Default::default();
+//! ```
+//! **Note** that we don't have any idea on what device or what dtype this will be.
+//!
+//! When we build this configuration into a [Linear] object, it will be placed on a device and have a certain dtype.
+//!
+//! # Building a model from an architecture
+//!
+//! We will use [BuildModuleExt::build_module()], an extension trait on devices, to actually construct a model.
+//!
+//! ```rust
+//! # use dfdx_nn::*;
+//! # use dfdx::prelude::*;
+//! let dev: Cpu = Default::default();
+//! let arch = LinearConfig::new(Const::<3>, 5);
+//! let model: Linear<Const<3>, usize, f32, Cpu> = dev.build_module::<f32>(arch);
+//! ```
+//!
+//! Notice here we have to give both the architecture configuration and a dtype. Since we are calling this method
+//! on a specific device, we also end up giving the model the device it will be located on.
+//!
+//! # Using a model
+//!
+//! There are many things you can do with models. The main action is calling [Module::forward()] and [Module::forward_mut()]
+//! during inference and training.
+//!
+//! ```rust
+//! # use dfdx_nn::*;
+//! # use dfdx::prelude::*;
+//! # let dev: Cpu = Default::default();
+//! let arch = LinearConfig::new(Const::<3>, 5);
+//! let model = dev.build_module::<f32>(arch);
+//! let x: Tensor<(Const<3>,), f32, _> = dev.sample_normal();
+//! let y = model.forward(x);
+//! assert_eq!(y.shape(), (5, ));
+//! ```
+//!
+//! # Composing layers into Sequential models
+//!
+//! There are multiple ways of doing this.
+//!
+//! The recommended way is to derive Sequential because:
+//! 1. You can reference fields/submodules with named items instead of indexing into tuples.
+//! 2. Error messages of deeply nested models are more readable.
+//!
+//! Under the hood, the code generated for Sequential vs tuples are identical.
+//!
+//! ## Deriving [Sequential]
+//!
+//! See [Sequential] for more detailed information.
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # use dfdx_nn::*;
+//! #[derive(Debug, Clone, Sequential)]
+//! #[built(Mlp)]
+//! struct MlpConfig {
+//!     // Linear with compile time input size & runtime known output size
+//!     linear1: LinearConfig<Const<784>, usize>,
+//!     act1: ReLU,
+//!     // Linear with runtime input & output size
+//!     linear2: LinearConfig<usize, usize>,
+//!     act2: Tanh,
+//!     // Linear with runtime input & compile time output size.
+//!     linear3: LinearConfig<usize, Const<10>>,
+//! }
+//!
+//! // fill in the dimensions for the architecture
+//! let arch = MlpConfig {
+//!     linear1: LinearConfig::new(Const, 256),
+//!     act1: Default::default(),
+//!     linear2: LinearConfig::new(256, 128),
+//!     act2: Default::default(),
+//!     linear3: LinearConfig::new(128, Const),
+//! };
+//! let mut model = dev.build_module::<f32>(arch);
+//! let x: Tensor<(usize, Const<3>), f32, _> = dev.sample_uniform_like(&(100, Const));
+//! let y = model.forward_mut(x);
+//! assert_eq!(y.shape(), (100, Const::<10>));
+//! ```
+//!
+//! ## Tuples
+//! The simplest is to create a tuple of layer configs, which represents sequential models.
+//!
+//! Here's an example of how this works:
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # use dfdx_nn::*;
+//! # let dev: Cpu = Default::default();
+//! type Arch = (LinearConstConfig<3, 5>, ReLU, LinearConstConfig<5, 10>);
+//! let mut model = dev.build_module::<f32>(Arch::default());
+//! let x: Tensor<(usize, Const<3>), f32, _> = dev.sample_uniform_like(&(100, Const));
+//! let y = model.forward_mut(x);
+//! assert_eq!(y.shape(), (100, Const::<10>));
+//! ```
+//!
+//! # Optimizers and Gradients
+//!
+//! *See [optim] for more information*
+//!
+//! dfdx-nn supports a number of the standard optimizers:
+//!
+//! | Optimizer | dfdx | pytorch |
+//! | --- | --- | --- |
+//! | SGD | [optim::Sgd] | `torch.optim.SGD` |
+//! | Adam | [optim::Adam] | torch.optim.Adam` |
+//! | AdamW | [optim::Adam] with [optim::WeightDecay::Decoupled] | `torch.optim.AdamW` |
+//! | RMSprop | [optim::RMSprop] | `torch.optim.RMSprop` |
+//!
+//! You can use optimizers to optimize neural networks (or even tensors!). Here's
+//! a simple example of how to do this:
+//! ```rust
+//! # use dfdx::{prelude::*, optim::*};
+//! # let dev: Cpu = Default::default();
+//! type Arch = (LinearConstConfig<3, 5>, ReLU, LinearConstConfig<5, 10>);
+//! let arch = Arch::default();
+//! let mut model = dev.build_module::<f32>(arch);
+//! // 1. allocate gradients for the model
+//! let mut grads = model.alloc_grads();
+//! // 2. create our optimizer
+//! let mut opt = Sgd::new(&model, Default::default());
+//! // 3. trace gradients through forward pass
+//! let x: Tensor<Rank2<10, 3>, f32, _> = dev.sample_normal();
+//! let y = model.forward_mut(x.traced(grads));
+//! // 4. compute loss & run backpropagation
+//! let loss = y.square().mean();
+//! grads = loss.backward();
+//! // 5. apply gradients
+//! opt.update(&mut model, &grads);
+//! ```
+
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 mod layers;

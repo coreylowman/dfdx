@@ -4,7 +4,7 @@ use safetensors::tensor::{SafeTensorError, SafeTensors};
 use std::vec::Vec;
 
 impl<S: Shape, E: Dtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
-    /// Loads data from the [SafeTensors] Storage<E> with the given `key`
+    /// Loads data from the [SafeTensors] `Storage<E>` with the given `key`
     pub fn load_safetensor(
         &mut self,
         tensors: &SafeTensors,

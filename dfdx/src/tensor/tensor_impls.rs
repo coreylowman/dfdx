@@ -63,26 +63,18 @@ pub trait Trace<E, D: Storage<E>>: Clone {
     type Traced;
     /// Start tracking gradients, clones self. The gradients will never free
     /// temporary gradients - See [Gradients::leaky()] for more info.
-    ///
-    /// Prefer to use [Tensor::trace()] with gradients allocated
-    /// with [crate::nn::ZeroGrads::alloc_grads()].
     fn leaky_trace(&self) -> Self::Traced {
         self.clone().leaky_traced()
     }
     /// Start tracking gradients. The gradients will never free
     /// temporary gradients - See [Gradients::leaky()] for more info.
-    ///
-    /// Prefer to use [Tensor::traced()] with gradients allocated
-    /// with [crate::nn::ZeroGrads::alloc_grads()].
     fn leaky_traced(self) -> Self::Traced;
 
-    /// Accumulates gradients into `gradients`, clones self. Use [crate::nn::ZeroGrads::alloc_grads()]
-    /// to create gradients.
+    /// Accumulates gradients into `gradients`, clones self.
     fn trace(&self, gradients: Gradients<E, D>) -> Self::Traced {
         self.clone().traced(gradients)
     }
-    /// Accumulates gradients into `gradients`. Use [crate::nn::ZeroGrads::alloc_grads()]
-    /// to create gradients.
+    /// Accumulates gradients into `gradients`.
     fn traced(self, gradients: Gradients<E, D>) -> Self::Traced;
 }
 

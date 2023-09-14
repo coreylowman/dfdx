@@ -7,7 +7,7 @@ use crate::{
 use super::{storage_traits::AllocGrad, GhostTensor, Tensor, UniqueId};
 
 /// Contains everything that comprises a tensor, except possibly for the actual data. This really
-/// exists to unify handling of [Tensor] and [GhostTensor].
+/// exists to unify handling of [Tensor] and tensors without data.
 ///
 /// *If it looks like a tensor and barks like a tensor, then pet it like a tensor.*
 #[allow(clippy::len_without_is_empty)]

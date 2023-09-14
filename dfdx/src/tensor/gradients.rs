@@ -31,9 +31,6 @@ impl<E, D: Storage<E>> Gradients<E, D> {
     /// This is why this method is called `leaky`, because
     /// it will keep gradients from previous passes if it is
     /// used consecutively.
-    ///
-    /// **You should use [crate::nn::ZeroGrads::alloc_grads]**,
-    /// which will ensure non-leaf gradients are freed after backwards.
     pub fn leaky() -> Self {
         Self {
             gradient_by_id: Default::default(),

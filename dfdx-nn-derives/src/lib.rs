@@ -8,15 +8,15 @@ macro_rules! has_attr {
     };
 }
 
-/// Allows you to implement [dfdx_nn::Module], while automatically implementing the following:
-/// 1. [dfdx_nn::BuildOnDevice]
-/// 2. [dfdx_nn::ResetParams]
-/// 3. [dfdx_nn::UpdateParams]
-/// 4. [dfdx_nn::ZeroGrads]
-/// 5. [dfdx_nn::SaveSafeTensors]
-/// 6. [dfdx_nn::LoadSafeTensors]
+/// Allows you to implement [dfdx_nn_core::Module], while automatically implementing the following:
+/// 1. [dfdx_nn_core::BuildOnDevice]
+/// 2. [dfdx_nn_core::ResetParams]
+/// 3. [dfdx_nn_core::UpdateParams]
+/// 4. [dfdx_nn_core::ZeroGrads]
+/// 5. [dfdx_nn_core::SaveSafeTensors]
+/// 6. [dfdx_nn_core::LoadSafeTensors]
 ///
-/// If your struct contains sub module configs, then you must add the `#[module]` attribute to those items. Any field that is marked with `#[module]` will be expected to implement [dfdx_nn::BuildOnDevice].
+/// If your struct contains sub module configs, then you must add the `#[module]` attribute to those items. Any field that is marked with `#[module]` will be expected to implement [dfdx_nn_core::BuildOnDevice].
 ///
 /// You can control the name of the built struct with the `#[built(<type name>)]` attribute on the struct.
 ///
@@ -309,7 +309,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 /// Implements all of the dfdx_nn traits automatically on your type. Assumes all fields on your type
 /// are modules (i.e. they also implement all the dfdx_nn traits).
 ///
-/// [dfdx_nn::Module] is implemented as calling each of the fields on the type in definition order.
+/// [dfdx_nn_core::Module] is implemented as calling each of the fields on the type in definition order.
 ///
 /// # Example usage
 /// Here we define a simple feedforward network with 3 layers.

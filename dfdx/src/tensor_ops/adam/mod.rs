@@ -10,11 +10,11 @@ use crate::{
 
 use super::WeightDecay;
 
-/// Configuration of hyperparameters for [crate::optim::Adam].
+/// Configuration of hyperparameters for Adam.
 ///
 /// Changing all default parameters:
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
 /// AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.1, 0.2],

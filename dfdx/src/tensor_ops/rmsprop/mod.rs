@@ -10,7 +10,7 @@ use crate::{
 
 use super::WeightDecay;
 
-/// Configuration of hyperparameters for [crate::optim::RMSprop].
+/// Configuration of hyperparameters for RMSprop.
 #[derive(Debug, Clone, Copy)]
 pub struct RMSpropConfig {
     /// Learning rate. Defaults to `1e-2`.

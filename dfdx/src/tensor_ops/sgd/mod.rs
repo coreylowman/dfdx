@@ -10,11 +10,11 @@ use crate::{
 
 use super::optim::{Momentum, WeightDecay};
 
-/// Configuration of hyperparameters for [crate::optim::Sgd].
+/// Configuration of hyperparameters for Sgd.
 ///
 /// Using different learning rate:
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-1,
 ///     momentum: None,
@@ -24,7 +24,7 @@ use super::optim::{Momentum, WeightDecay};
 ///
 /// Using classic momentum:
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-2,
 ///     momentum: Some(Momentum::Classic(0.5)),
@@ -34,7 +34,7 @@ use super::optim::{Momentum, WeightDecay};
 ///
 /// Using nesterov momentum:
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Nesterov(0.25)),
@@ -44,7 +44,7 @@ use super::optim::{Momentum, WeightDecay};
 ///
 /// Using L2 weight decay:
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: None,
@@ -54,7 +54,7 @@ use super::optim::{Momentum, WeightDecay};
 ///
 /// Using decoupled weight decay:
 /// ```rust
-/// # use dfdx::{prelude::*, optim::*};
+/// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: None,
