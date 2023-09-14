@@ -72,9 +72,20 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedAdd<LinearConstConfig<2, 2>, LinearConstConfig<2, 2>>;
-        let model = dev.build_module::<TestDtype>(Model::default());
+        let model = dev.build_module::<f32>(Model::default());
+        let model = GeneralizedAdd {
+            t: Linear {
+                weight: model.t.weight.to_dtype::<TestDtype>(),
+                bias: model.t.bias.to_dtype::<TestDtype>(),
+            },
+            u: Linear {
+                weight: model.u.weight.to_dtype::<TestDtype>(),
+                bias: model.u.bias.to_dtype::<TestDtype>(),
+            },
+        };
 
-        let x: Tensor<Rank2<4, 2>, TestDtype, _> = dev.sample_normal();
+        let x: Tensor<Rank2<4, 2>, f32, _> = dev.sample_normal();
+        let x = x.to_dtype::<TestDtype>();
         let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]
