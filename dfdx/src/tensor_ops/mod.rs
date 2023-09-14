@@ -264,7 +264,7 @@ pub use slice::slice;
 pub use softmax::softmax;
 pub use sqrt::sqrt;
 pub use square::square;
-pub use stack::TryStack;
+pub use stack::{AddDim, TryStack};
 pub use stddev_to::StddevTo;
 pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
