@@ -12,7 +12,8 @@
 //!
 //! For specifying architecture, you just need the dimensions for the linear, but not the device/dtype:
 //! ```rust
-//! use dfdx_nn::LinearConfig;
+//! # use dfdx::prelude::*;
+//! # use dfdx_nn::{LinearConfig, LinearConstConfig};
 //! let _: LinearConfig<usize, usize> = LinearConfig::new(3, 5);
 //! let _: LinearConfig<Const<3>, usize> = LinearConfig::new(Const, 5);
 //! let _: LinearConfig<usize, Const<5>> = LinearConfig::new(3, Const);
@@ -52,7 +53,7 @@
 //! let model = dev.build_module::<f32>(arch);
 //! let x: Tensor<(Const<3>,), f32, _> = dev.sample_normal();
 //! let y = model.forward(x);
-//! assert_eq!(y.shape(), (5, ));
+//! assert_eq!(y.shape(), &(5, ));
 //! ```
 //!
 //! # Composing layers into Sequential models
@@ -72,6 +73,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # use dfdx_nn::*;
+//! # let dev: Cpu = Default::default();
 //! #[derive(Debug, Clone, Sequential)]
 //! #[built(Mlp)]
 //! struct MlpConfig {
@@ -94,9 +96,9 @@
 //!     linear3: LinearConfig::new(128, Const),
 //! };
 //! let mut model = dev.build_module::<f32>(arch);
-//! let x: Tensor<(usize, Const<3>), f32, _> = dev.sample_uniform_like(&(100, Const));
+//! let x: Tensor<(usize, Const<784>), f32, _> = dev.sample_uniform_like(&(100, Const));
 //! let y = model.forward_mut(x);
-//! assert_eq!(y.shape(), (100, Const::<10>));
+//! assert_eq!(y.shape(), &(100, Const::<10>));
 //! ```
 //!
 //! ## Tuples
@@ -112,7 +114,7 @@
 //! let mut model = dev.build_module::<f32>(Arch::default());
 //! let x: Tensor<(usize, Const<3>), f32, _> = dev.sample_uniform_like(&(100, Const));
 //! let y = model.forward_mut(x);
-//! assert_eq!(y.shape(), (100, Const::<10>));
+//! assert_eq!(y.shape(), &(100, Const::<10>));
 //! ```
 //!
 //! # Optimizers and Gradients
@@ -131,7 +133,8 @@
 //! You can use optimizers to optimize neural networks (or even tensors!). Here's
 //! a simple example of how to do this:
 //! ```rust
-//! # use dfdx::{prelude::*, optim::*};
+//! # use dfdx::prelude::*;
+//! # use dfdx_nn::*;
 //! # let dev: Cpu = Default::default();
 //! type Arch = (LinearConstConfig<3, 5>, ReLU, LinearConstConfig<5, 10>);
 //! let arch = Arch::default();
@@ -139,7 +142,7 @@
 //! // 1. allocate gradients for the model
 //! let mut grads = model.alloc_grads();
 //! // 2. create our optimizer
-//! let mut opt = Sgd::new(&model, Default::default());
+//! let mut opt = dfdx_nn::optim::Sgd::new(&model, Default::default());
 //! // 3. trace gradients through forward pass
 //! let x: Tensor<Rank2<10, 3>, f32, _> = dev.sample_normal();
 //! let y = model.forward_mut(x.traced(grads));
