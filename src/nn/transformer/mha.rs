@@ -168,7 +168,7 @@ where
         let q = q.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
 
         // Get weights
-        let scalar: E = E::from_f64(1.0 / ((K / H) as f64).sqrt()).unwrap();
+        let scalar = 1.0 / ((K / H) as f64).sqrt();
         let weights = q.try_matmul(k)?.try_mul(scalar)?;
         let weights = weights.try_softmax::<Axis<3>>()?;
 

@@ -269,13 +269,17 @@ pub use stddev_to::StddevTo;
 pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
-pub use to_dtype::to_dtype;
+pub use to_dtype::{to_dtype, ToDtypeKernel};
 pub use tri::{lower_tri, upper_tri};
 pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 pub use var_to::VarTo;
 
-pub(crate) use to_dtype::ToDtypeKernel;
 pub(crate) use upscale2d::Upscale2DKernel;
+
+#[cfg(feature = "nightly")]
+mod conv1d;
+#[cfg(feature = "nightly")]
+pub use conv1d::TryConv1D;
 
 #[cfg(feature = "nightly")]
 mod conv2d;
