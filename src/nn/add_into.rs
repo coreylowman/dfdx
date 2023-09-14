@@ -3,7 +3,7 @@ use crate::{shapes::Dtype, tensor_ops::Device};
 use super::*;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
-//// where every element of the tuple has the same output type
+/// where every element of the tuple has the same output type
 ///
 /// This provides a utility for networks where multiple inputs are needed
 ///
