@@ -59,6 +59,7 @@ macro_rules! add_into_impls {
             type Output = Out;
             type Error = A::Error;
 
+            #[allow(clippy::needless_question_mark)]
             fn try_forward(&self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Self::Error> {
                 let (a, $($ModVar, )+) = &self.0;
                 let (a_i, $($InpVar, )+) = x;
@@ -66,6 +67,7 @@ macro_rules! add_into_impls {
                 $(let $InpVar = $ModVar.try_forward($InpVar)?;)+
                 Ok(sum!(a_i, $($InpVar),*))
             }
+            #[allow(clippy::needless_question_mark)]
             fn try_forward_mut(&mut self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Self::Error> {
                 let (a, $($ModVar, )+) = &mut self.0;
                 let (a_i, $($InpVar, )+) = x;

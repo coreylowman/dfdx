@@ -22,10 +22,10 @@ macro_rules! tuple_impls {
         }
 
         impl<$($name: crate::LoadSafeTensors, )+> crate::LoadSafeTensors for ($($name,)+) {
-            fn read_safetensors<'a>(
+            fn read_safetensors(
                 &mut self,
                 location: &str,
-                tensors: &safetensors::SafeTensors<'a>,
+                tensors: &safetensors::SafeTensors,
             ) -> Result<(), safetensors::SafeTensorError> {
                 $(self.$idx.read_safetensors(&format!("{location}{}.", $idx), tensors)?;)+
                 Ok(())

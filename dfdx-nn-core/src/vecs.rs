@@ -54,10 +54,10 @@ impl<T: crate::SaveSafeTensors> crate::SaveSafeTensors for Vec<T> {
 }
 
 impl<T: crate::LoadSafeTensors> crate::LoadSafeTensors for Vec<T> {
-    fn read_safetensors<'a>(
+    fn read_safetensors(
         &mut self,
         location: &str,
-        tensors: &safetensors::SafeTensors<'a>,
+        tensors: &safetensors::SafeTensors,
     ) -> Result<(), safetensors::SafeTensorError> {
         for (i, t) in self.iter_mut().enumerate() {
             t.read_safetensors(&format!("{location}{i}."), tensors)?;

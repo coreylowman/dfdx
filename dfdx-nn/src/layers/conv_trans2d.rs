@@ -96,6 +96,7 @@ where
 {
     #[param]
     #[serialize]
+    #[allow(clippy::type_complexity)]
     pub weight: Tensor<
         (
             InChan,

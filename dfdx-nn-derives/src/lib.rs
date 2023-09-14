@@ -544,29 +544,17 @@ pub fn reset_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let name = input.ident;
 
     let mut custom_generics = input.generics.clone();
-    if custom_generics
-        .params
-        .iter()
-        .position(|param| match param {
-            syn::GenericParam::Type(type_param) if type_param.ident == "Elem" => true,
-            _ => false,
-        })
-        .is_none()
-    {
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Elem"),
+    ) {
         custom_generics
             .params
             .push(parse_quote!(Elem: dfdx::prelude::Dtype));
     }
 
-    if custom_generics
-        .params
-        .iter()
-        .position(|param| match param {
-            syn::GenericParam::Type(type_param) if type_param.ident == "Dev" => true,
-            _ => false,
-        })
-        .is_none()
-    {
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Dev"),
+    ) {
         custom_generics
             .params
             .push(parse_quote!(Dev: dfdx::prelude::Device<Elem>));
@@ -631,29 +619,17 @@ pub fn update_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let struct_name = input.ident;
 
     let mut custom_generics = input.generics.clone();
-    if custom_generics
-        .params
-        .iter()
-        .position(|param| match param {
-            syn::GenericParam::Type(type_param) if type_param.ident == "Elem" => true,
-            _ => false,
-        })
-        .is_none()
-    {
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Elem"),
+    ) {
         custom_generics
             .params
             .push(parse_quote!(Elem: dfdx::prelude::Dtype));
     }
 
-    if custom_generics
-        .params
-        .iter()
-        .position(|param| match param {
-            syn::GenericParam::Type(type_param) if type_param.ident == "Dev" => true,
-            _ => false,
-        })
-        .is_none()
-    {
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Dev"),
+    ) {
         custom_generics
             .params
             .push(parse_quote!(Dev: dfdx::prelude::Device<Elem>));
@@ -727,29 +703,17 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let name = input.ident;
 
     let mut custom_generics = input.generics.clone();
-    if custom_generics
-        .params
-        .iter()
-        .position(|param| match param {
-            syn::GenericParam::Type(type_param) if type_param.ident == "Elem" => true,
-            _ => false,
-        })
-        .is_none()
-    {
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Elem"),
+    ) {
         custom_generics
             .params
             .push(parse_quote!(Elem: dfdx::prelude::Dtype));
     }
 
-    if custom_generics
-        .params
-        .iter()
-        .position(|param| match param {
-            syn::GenericParam::Type(type_param) if type_param.ident == "Dev" => true,
-            _ => false,
-        })
-        .is_none()
-    {
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Dev"),
+    ) {
         custom_generics
             .params
             .push(parse_quote!(Dev: dfdx::prelude::Device<Elem>));

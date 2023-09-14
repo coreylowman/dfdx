@@ -153,7 +153,7 @@ pub trait SaveSafeTensors {
         let data = tensors.iter().map(|(k, dtype, shape, data)| {
             (
                 k.clone(),
-                safetensors::tensor::TensorView::new(dtype.clone(), shape.clone(), data).unwrap(),
+                safetensors::tensor::TensorView::new(*dtype, shape.clone(), data).unwrap(),
             )
         });
 
@@ -178,18 +178,18 @@ pub trait LoadSafeTensors {
         self.read_safetensors("", &tensors)
     }
 
-    fn read_safetensors<'a>(
+    fn read_safetensors(
         &mut self,
         location: &str,
-        tensors: &safetensors::SafeTensors<'a>,
+        tensors: &safetensors::SafeTensors,
     ) -> Result<(), safetensors::SafeTensorError>;
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T> LoadSafeTensors for Tensor<S, E, D, T> {
-    fn read_safetensors<'a>(
+    fn read_safetensors(
         &mut self,
         location: &str,
-        tensors: &safetensors::SafeTensors<'a>,
+        tensors: &safetensors::SafeTensors,
     ) -> Result<(), safetensors::SafeTensorError> {
         self.load_safetensor(tensors, location)
     }
@@ -230,10 +230,10 @@ macro_rules! unit_safetensors {
         }
 
         impl LoadSafeTensors for $Ty {
-            fn read_safetensors<'a>(
+            fn read_safetensors(
                 &mut self,
                 location: &str,
-                tensors: &safetensors::SafeTensors<'a>,
+                tensors: &safetensors::SafeTensors,
             ) -> Result<(), safetensors::SafeTensorError> {
                 #[allow(unused_imports)]
                 use dfdx::dtypes::FromLeBytes;
