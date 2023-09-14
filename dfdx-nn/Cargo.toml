@@ -20,7 +20,7 @@ num-traits = { workspace = true }
 rand_distr = { workspace = true }
 
 [features]
-nightly = ["dfdx/nightly"]
+nightly = ["dfdx/nightly", "dfdx-nn-core/nightly", "dfdx-nn-derives/nightly"]
 test-f16 = []
 test-amp-f16 = []
 test-f64 = []

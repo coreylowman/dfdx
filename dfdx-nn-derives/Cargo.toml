@@ -5,11 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+proc-macro = true
+
 [dependencies]
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["extra-traits"] }
 dfdx-nn-core = { path = "../dfdx-nn-core" }
 
-[lib]
-proc-macro = true
+[features]
+nightly = ["dfdx-nn-core/nightly"]
