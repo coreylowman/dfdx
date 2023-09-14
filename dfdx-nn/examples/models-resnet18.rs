@@ -7,6 +7,8 @@ fn main() {
 
 #[cfg(feature = "nightly")]
 fn main() {
+    use std::time::Instant;
+
     use dfdx_nn::*;
 
     #[derive(Default, Clone, Sequential)]
@@ -65,6 +67,8 @@ fn main() {
         let m: Resnet18<1000, f32, AutoDevice> = dev.build_module::<f32>(arch);
 
         let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();
+        let start = Instant::now();
         let _: Tensor<Rank1<1000>, f32, _> = m.forward(x.clone());
+        println!("Forward time: {:?}", start.elapsed());
     }
 }
