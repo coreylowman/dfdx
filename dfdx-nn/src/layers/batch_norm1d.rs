@@ -158,9 +158,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
         )?;
 
         // statistics for normalizing - on tape
-        let std = var_chan
-            .try_add(E::from_f64(self.epsilon).unwrap())?
-            .try_sqrt()?;
+        let std = var_chan.try_add(self.epsilon)?.try_sqrt()?;
 
         // record broadcast of scale & bias - on tape
         let scale = self
@@ -185,11 +183,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
         let shape = *x.shape();
 
         // statistics for normalizing
-        let std = self
-            .running_var
-            .clone()
-            .try_add(E::from_f64(self.epsilon).unwrap())?
-            .try_sqrt()?;
+        let std = self.running_var.clone().try_add(self.epsilon)?.try_sqrt()?;
 
         let scale = self
             .scale

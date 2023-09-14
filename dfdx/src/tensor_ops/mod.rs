@@ -277,6 +277,11 @@ pub use upscale2d::{
 pub use var_to::VarTo;
 
 #[cfg(feature = "nightly")]
+mod conv1d;
+#[cfg(feature = "nightly")]
+pub use conv1d::TryConv1D;
+
+#[cfg(feature = "nightly")]
 mod conv2d;
 #[cfg(feature = "nightly")]
 pub use conv2d::TryConv2D;

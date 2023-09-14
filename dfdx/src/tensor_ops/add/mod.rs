@@ -67,42 +67,15 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<E, D>> TryAdd<E>
-    for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, Rhs: Into<f64>, D, T: Tape<E, D>> TryAdd<Rhs> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<ScalarAddKernelOp<E>, E>,
 {
     type Output = Self;
     /// See [add]
-    fn try_add(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarAddKernelOp { scalar: rhs }, self)
-    }
-}
-
-#[cfg(feature = "f16")]
-impl<S: Shape, D: UnaryKernel<ScalarAddKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
-    TryAdd<f32> for Tensor<S, half::f16, D, T>
-{
-    type Output = Self;
-    /// See [add]
-    fn try_add(self, rhs: f32) -> Result<Self, Self::Err> {
-        let scalar = half::f16::from_f32(rhs);
-        try_unary_op(ScalarAddKernelOp { scalar }, self)
-    }
-}
-
-#[cfg(feature = "f16")]
-impl<
-        S: Shape,
-        D: UnaryKernel<
-            ScalarAddKernelOp<crate::dtypes::AMP<half::f16>>,
-            crate::dtypes::AMP<half::f16>,
-        >,
-        T: Tape<crate::dtypes::AMP<half::f16>, D>,
-    > TryAdd<f32> for Tensor<S, crate::dtypes::AMP<half::f16>, D, T>
-{
-    type Output = Self;
-    /// See [add]
-    fn try_add(self, rhs: f32) -> Result<Self, Self::Err> {
-        let scalar = crate::dtypes::AMP(half::f16::from_f32(rhs));
+    fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err> {
+        let rhs: f64 = rhs.into();
+        let scalar = E::from_f64(rhs).unwrap();
         try_unary_op(ScalarAddKernelOp { scalar }, self)
     }
 }

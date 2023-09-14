@@ -62,10 +62,9 @@ pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
-    delta: impl Into<f64>,
+    delta: impl Copy + Into<f64>,
 ) -> Tensor<Rank0, E, D, T> {
-    let delta: f64 = delta.into();
-    huber_loss(pred, targ, delta) / E::from_f64(delta).unwrap()
+    huber_loss(pred, targ, delta) / delta
 }
 
 /// [Cross entropy loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression).
@@ -83,7 +82,6 @@ pub fn cross_entropy_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {
     let inv_last_axis_numel = 1.0 / <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f64;
-    let inv_last_axis_numel = E::from_f64(inv_last_axis_numel).unwrap();
     let probs = logits.log_softmax::<S::LastAxis>();
     (probs * target_probs).mean().negate() / inv_last_axis_numel
 }
@@ -103,7 +101,6 @@ pub fn kl_div_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {
     let inv_last_axis_numel = 1.0 / <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f64;
-    let inv_last_axis_numel = E::from_f64(inv_last_axis_numel).unwrap();
     let probs = logits.log_softmax::<S::LastAxis>();
     ((probs - target_probs.clone().ln()) * target_probs)
         .mean()

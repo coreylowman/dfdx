@@ -63,39 +63,14 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarSubKernelOp<E>, E>, T: Tape<E, D>> TrySub<E>
-    for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, Rhs: Into<f64>, D, T: Tape<E, D>> TrySub<Rhs> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<ScalarSubKernelOp<E>, E>,
 {
     type Output = Self;
-    fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarSubKernelOp { scalar: rhs }, self)
-    }
-}
-
-#[cfg(feature = "f16")]
-impl<S: Shape, D: UnaryKernel<ScalarSubKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
-    TrySub<f32> for Tensor<S, half::f16, D, T>
-{
-    type Output = Self;
-    fn try_sub(self, rhs: f32) -> Result<Self, Self::Err> {
-        let scalar = half::f16::from_f32(rhs);
-        try_unary_op(ScalarSubKernelOp { scalar }, self)
-    }
-}
-
-#[cfg(feature = "f16")]
-impl<
-        S: Shape,
-        D: UnaryKernel<
-            ScalarSubKernelOp<crate::dtypes::AMP<half::f16>>,
-            crate::dtypes::AMP<half::f16>,
-        >,
-        T: Tape<crate::dtypes::AMP<half::f16>, D>,
-    > TrySub<f32> for Tensor<S, crate::dtypes::AMP<half::f16>, D, T>
-{
-    type Output = Self;
-    fn try_sub(self, rhs: f32) -> Result<Self, Self::Err> {
-        let scalar = crate::dtypes::AMP(half::f16::from_f32(rhs));
+    fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err> {
+        let rhs: f64 = rhs.into();
+        let scalar = E::from_f64(rhs).unwrap();
         try_unary_op(ScalarSubKernelOp { scalar }, self)
     }
 }

@@ -25,9 +25,7 @@ impl<C: Dim + Default> Default for PReLU1DConfig<C> {
 impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for PReLU1DConfig<C> {
     type Built = PReLU1D<C, E, D>;
     fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
-        let a = device
-            .try_ones_like(&(self.c,))?
-            .try_mul(E::from_f64(self.a).unwrap())?;
+        let a = device.try_ones_like(&(self.c,))?.try_mul(self.a)?;
         Ok(PReLU1D { a })
     }
 }

@@ -2,48 +2,34 @@ use crate::shapes::{Dtype, Shape};
 use crate::tensor::{cpu::*, *};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
-use super::{Conv2DKernel, Conv2DOp};
+use super::{Conv1DKernel, Conv1DOp};
 
 use std::sync::Arc;
 
-impl Conv2DOp {
+impl Conv1DOp {
     #[inline(always)]
-    fn unfold_idx(&self, [k1, k2, y, x]: [usize; 4]) -> Option<[usize; 2]> {
-        let mut oh = y + self.padding;
-        if oh < self.dilation * k1 {
+    fn unfold_idx(&self, [k, l]: [usize; 2]) -> Option<usize> {
+        let mut ol = l + self.padding;
+        if ol < self.dilation * k {
             return None;
         }
-        oh -= self.dilation * k1;
-        if oh % self.stride != 0 {
+        ol -= self.dilation * k;
+        if ol % self.stride != 0 {
             return None;
         }
-        oh /= self.stride;
-        if oh >= self.h_out {
+        ol /= self.stride;
+        if ol >= self.l_out {
             return None;
         }
-
-        let mut ow = x + self.padding;
-        if ow < self.dilation * k2 {
-            return None;
-        }
-        ow -= self.dilation * k2;
-        if ow % self.stride != 0 {
-            return None;
-        }
-        ow /= self.stride;
-        if ow >= self.w_out {
-            return None;
-        }
-
-        Some([oh, ow])
+        Some(ol)
     }
 }
 
 impl Cpu {
     #[inline]
-    fn fwd_conv2d<E: Dtype>(
+    fn fwd_conv1d<E: Dtype>(
         &self,
-        op: &Conv2DOp,
+        op: &Conv1DOp,
         img: &[E],
         filters: &[E],
         out: &mut [E],
@@ -55,30 +41,24 @@ impl Cpu {
         {
             let mut i = 0;
             for c in 0..op.chan_in {
-                for k1 in 0..op.kernel {
-                    for k2 in 0..op.kernel {
-                        for oh in 0..op.h_out {
-                            let y = (oh * op.stride + op.dilation * k1).wrapping_sub(op.padding);
-                            for ow in 0..op.w_out {
-                                let x =
-                                    (ow * op.stride + op.dilation * k2).wrapping_sub(op.padding);
-                                if y < op.h_in && x < op.w_in {
-                                    buf[i] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
-                                }
-                                i += 1;
-                            }
+                for k in 0..op.kernel {
+                    for ol in 0..op.l_out {
+                        let l = (ol * op.stride + op.dilation * k).wrapping_sub(op.padding);
+                        if l < op.l_in {
+                            buf[i] = img[c * op.l_in + l];
                         }
+                        i += 1;
                     }
                 }
             }
         }
 
-        // filters: (G, O/G, C/G*K*K)
-        // buf:     (G, C/G*K*K, OH*OW)
-        // output:  (G, O/G, OH*OW)
+        // filters: (G, O/G, C/G*K)
+        // buf:     (G, C/G*K, OL)
+        // output:  (G, O/G, OL)
         let m = op.chan_out / op.groups;
-        let k = (op.chan_in / op.groups) * op.kernel * op.kernel;
-        let n = op.w_out * op.h_out;
+        let k = (op.chan_in / op.groups) * op.kernel;
+        let n = op.l_out;
         for g in 0..op.groups {
             Self::matmul(
                 (m, k, n),
@@ -96,9 +76,9 @@ impl Cpu {
 
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    fn bwd_conv2d<E: Dtype>(
+    fn bwd_conv1d<E: Dtype>(
         &self,
-        op: &Conv2DOp,
+        op: &Conv1DOp,
         img: &[E],
         grad_img: &mut [E],
         filters_tr: &[E],
@@ -112,17 +92,12 @@ impl Cpu {
         {
             let mut i = 0;
             for o in 0..op.chan_out {
-                for k1 in 0..op.kernel {
-                    for k2 in 0..op.kernel {
-                        for y in 0..op.h_in {
-                            for x in 0..op.w_in {
-                                if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
-                                    buf[i] =
-                                        grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
-                                }
-                                i += 1;
-                            }
+                for k in 0..op.kernel {
+                    for l in 0..op.l_in {
+                        if let Some(ol) = op.unfold_idx([k, l]) {
+                            buf[i] = grad_out[o * op.l_out + ol];
                         }
+                        i += 1;
                     }
                 }
             }
@@ -130,10 +105,10 @@ impl Cpu {
 
         {
             // img_g += filters^T * unfold(grad_out)
-            // (G, C/G, H * W) += (G, C/G, O/G * K * K) * (G, O/G * K * K, H * W)
+            // (G, C/G, L) += (G, C/G, O/G * K) * (G, O/G * K, L)
             let m = op.chan_in / op.groups;
-            let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
-            let n = op.h_in * op.w_in;
+            let k = (op.chan_out / op.groups) * op.kernel;
+            let n = op.l_in;
             for g in 0..op.groups {
                 Self::matmul(
                     (m, k, n),
@@ -150,10 +125,10 @@ impl Cpu {
 
         {
             // weight_g^T += img * unfold(patches)^T
-            // (G, C/G, O/G * K * K) += (G, C/G, H * W) * (G, H * W, O/G * K * K)
+            // (G, C/G, O/G * K) += (G, C/G, L) * (G, L, O/G * K)
             let m = op.chan_in / op.groups;
-            let k = op.h_in * op.w_in;
-            let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
+            let k = op.l_in;
+            let n = (op.chan_out / op.groups) * op.kernel;
             for g in 0..op.groups {
                 Self::matmul(
                     (m, k, n),
@@ -171,7 +146,7 @@ impl Cpu {
     }
 }
 
-impl<E: Dtype> Conv2DKernel<E> for Cpu
+impl<E: Dtype> Conv1DKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
@@ -181,23 +156,23 @@ where
 
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: Conv2DOp,
+        op: Conv1DOp,
         lhs: &Tensor<L, E, Self>,
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        let patches = (op.chan_in, op.kernel, op.kernel, op.h_out, op.w_out);
+        let patches = (op.chan_in, op.kernel, op.l_out);
         let mut patches = self.try_alloc_zeros::<E>(patches.num_elements())?;
         let [lstride, ostride] = match L::NUM_DIMS {
-            3 => [0; 2],
-            4 => [lhs.strides[0], out.strides[0]],
+            2 => [0; 2],
+            3 => [lhs.strides[0], out.strides[0]],
             _ => unreachable!(),
         };
         let lhs = lhs.data.as_ref();
         let rhs = rhs.data.as_ref();
         let out = Arc::make_mut(&mut out.data);
         for i_batch in 0..op.batch {
-            self.fwd_conv2d(
+            self.fwd_conv1d(
                 &op,
                 &lhs[i_batch * lstride..],
                 rhs,
@@ -210,7 +185,7 @@ where
 
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: Conv2DOp,
+        op: Conv1DOp,
         lhs: &Tensor<L, E, Self>,
         grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
@@ -223,9 +198,8 @@ where
             op.chan_in / op.groups,
             op.chan_out / op.groups,
             op.kernel,
-            op.kernel,
         ];
-        let patches_shape = [op.chan_out, op.kernel, op.kernel, op.h_in, op.w_in];
+        let patches_shape = [op.chan_out, op.kernel, op.l_in];
         let mut patches = self.try_alloc_zeros::<E>(patches_shape.num_elements())?;
         let mut f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
         let mut grad_f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
@@ -234,24 +208,23 @@ where
             // transpose filters in f1023
             let buf = rhs.data.as_ref();
             let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [g, c_over_g, o_over_g, k1, k2])) = f_idx.next_with_idx() {
+            while let Some((i, [g, c_over_g, o_over_g, k])) = f_idx.next_with_idx() {
                 let idx = (g * (op.chan_out / op.groups) + o_over_g) * rhs.strides[0]
                     + c_over_g * rhs.strides[1]
-                    + k1 * rhs.strides[2]
-                    + k2 * rhs.strides[3];
+                    + k * rhs.strides[2];
                 f1023[i] = buf[idx];
             }
         }
 
         let [lstride, ostride] = match L::NUM_DIMS {
-            3 => [0; 2],
-            4 => [lhs.strides[0], out.strides()[0]],
+            2 => [0; 2],
+            3 => [lhs.strides[0], out.strides()[0]],
             _ => unreachable!(),
         };
         let lhs = lhs.data.as_ref();
 
         for i_batch in 0..op.batch {
-            self.bwd_conv2d(
+            self.bwd_conv1d(
                 &op,
                 &lhs[i_batch * lstride..],
                 &mut grad_lhs[i_batch * lstride..],
@@ -265,11 +238,10 @@ where
         {
             // untranspose filters
             let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [g, c_over_g, o_over_g, k1, k2])) = f_idx.next_with_idx() {
+            while let Some((i, [g, c_over_g, o_over_g, k])) = f_idx.next_with_idx() {
                 let idx = (g * (op.chan_out / op.groups) + o_over_g) * rhs.strides[0]
                     + c_over_g * rhs.strides[1]
-                    + k1 * rhs.strides[2]
-                    + k2 * rhs.strides[3];
+                    + k * rhs.strides[2];
                 grad_rhs[idx] += grad_f1023[i];
             }
         }
