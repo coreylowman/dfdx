@@ -122,8 +122,8 @@ where
 {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let (_, o_over_g, k, _) = self.weight.shape();
-        let scale = E::from_f64(1.0 / (k.size() * k.size() * o_over_g.size()) as f64).unwrap();
-        let b = scale.sqrt();
+        let b = (1.0 / (k.size() * k.size() * o_over_g.size()) as f64).sqrt();
+        let b = E::from_f64(b).unwrap();
         self.weight
             .try_fill_with_distr(rand_distr::Uniform::new(-b, b))
     }
