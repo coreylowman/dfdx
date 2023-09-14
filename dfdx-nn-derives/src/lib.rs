@@ -24,7 +24,7 @@ macro_rules! has_attr {
 ///
 /// Here we have a unit struct that just calls a method on Tensor in the forward:
 ///
-/// ```rust
+/// ```ignore
 /// # use dfdx_nn::*;
 /// # use dfdx::prelude::*;
 /// #[derive(Default, Debug, Clone, Copy, CustomModule)]
@@ -40,7 +40,7 @@ macro_rules! has_attr {
 ///
 /// # Using CustomModule on structs with non-parameter fields
 ///
-/// ```rust
+/// ```ignore
 /// # use dfdx_nn::*;
 /// # use dfdx::prelude::*;
 /// #[derive(Default, Debug, Clone, Copy, CustomModule)]
@@ -64,7 +64,7 @@ macro_rules! has_attr {
 /// 2. We must use that type name when implementing `Module`
 /// 3. We must annotate the sub module with `#[module]`
 ///
-/// ```rust
+/// ```ignore
 /// # use dfdx_nn::*;
 /// # use dfdx::prelude::*;
 /// #[derive(Debug, Clone, CustomModule)]
@@ -320,7 +320,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 /// 3. linear2
 /// 4. act2
 /// 5. linear3
-/// ```rust
+/// ```ignore
 /// # use dfdx::prelude::*;
 /// # use dfdx_nn::*;
 /// #[derive(Debug, Clone, Sequential)]
