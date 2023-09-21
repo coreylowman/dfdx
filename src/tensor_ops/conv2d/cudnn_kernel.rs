@@ -2,6 +2,7 @@ use cudarc::cudnn::{self, Conv2dBackwardData, Conv2dBackwardFilter, Conv2dForwar
 use cudarc::driver::DeviceSlice;
 
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{Cuda, Tensor, Tensorlike},
 };
@@ -9,6 +10,10 @@ use crate::{
 use std::sync::Arc;
 
 trait HasCudnnKernel<E> {}
+#[cfg(feature = "f16")]
+impl HasCudnnKernel<f16> for Cuda {}
+#[cfg(feature = "f16")]
+impl HasCudnnKernel<AMP<f16>> for Cuda {}
 impl HasCudnnKernel<f32> for Cuda {}
 impl HasCudnnKernel<f64> for Cuda {}
 
@@ -35,12 +40,13 @@ where
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        let conv = self.cudnn.create_conv2d::<E>(
+        let mut conv = self.cudnn.create_conv2d::<E>(
             [op.padding as i32, op.padding as i32],
             [op.stride as i32, op.stride as i32],
-            [1, 1],
+            [op.dilation as i32, op.dilation as i32],
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
+        conv.set_group_count(op.groups as i32)?;
         let img = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<L>(lhs.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<L>(lhs.strides, 0).map(|x| x as i32),
@@ -86,18 +92,19 @@ where
         &self,
         op: super::Conv2DOp,
         lhs: &Tensor<L, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
-        let conv = self.cudnn.create_conv2d::<E>(
+        let mut conv = self.cudnn.create_conv2d::<E>(
             [op.padding as i32, op.padding as i32],
             [op.stride as i32, op.stride as i32],
-            [1, 1],
+            [op.dilation as i32, op.dilation as i32],
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
+        conv.set_group_count(op.groups as i32)?;
         let img = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<L>(lhs.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<L>(lhs.strides, 0).map(|x| x as i32),

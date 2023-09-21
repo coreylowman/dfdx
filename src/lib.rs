@@ -13,12 +13,12 @@
 //!
 //! # Shapes & Tensors
 //!
-//! *See [shapes] and [tensor] for more information.*
+//! *See [dtypes], [shapes], and [tensor] for more information.*
 //!
 //! At its core a [`tensor::Tensor`] is just a nd-array. Just like
 //! rust arrays there are two parts:
-//! 1. Shape
-//! 2. Dtype
+//! 1. Shape ([shapes])
+//! 2. Dtype ([dtypes])
 //!
 //! dfdx represents shapes as **tuples** of dimensions ([`shapes::Dim`]),
 //! where a dimension can either be known at:
@@ -31,6 +31,7 @@
 //! - `(usize,)` - 1d shape with a runtime known dimension
 //! - `(usize, Const<5>)` - 2d shape with both types of dimensions
 //! - `(Const<3>, usize, Const<5>)` - 3d shape!
+//! - `Rank3<3, 5, 7>` - Equivalent to `(Const<3>, Const<5>, Const<7>)`
 //!
 //! Here are some comparisons between representing nd arrays in rust vs dfdx:
 //!
@@ -183,6 +184,7 @@ extern crate alloc;
 extern crate no_std_compat as std;
 
 pub mod data;
+pub mod dtypes;
 pub mod feature_flags;
 pub mod losses;
 pub mod nn;
@@ -241,6 +243,7 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    pub use num_traits::{Float, FromPrimitive, NumCast, Zero};
 
     #[cfg(not(feature = "cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
@@ -248,11 +251,24 @@ pub(crate) mod tests {
     #[cfg(feature = "cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
-    #[cfg(not(feature = "test-f64"))]
+    #[cfg(all(feature = "test-f64", feature = "test-f16"))]
+    compile_error!("f64 and f16 cannot be tested at the same time");
+
+    #[cfg(all(
+        not(feature = "test-amp-f16"),
+        not(feature = "test-f16"),
+        not(feature = "test-f64")
+    ))]
     pub type TestDtype = f32;
+
+    #[cfg(feature = "test-f16")]
+    pub type TestDtype = half::f16;
 
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
+
+    #[cfg(feature = "test-amp-f16")]
+    pub type TestDtype = crate::dtypes::AMP<half::f16>;
 
     pub trait AssertClose {
         type Elem: std::fmt::Display + std::fmt::Debug + Copy;
@@ -271,6 +287,35 @@ pub(crate) mod tests {
         {
             if let Some((l, r)) = self.get_far_pair(rhs, tolerance) {
                 panic!("lhs != rhs | {l} != {r}\n\n{self:?}\n\n{rhs:?}");
+            }
+        }
+    }
+
+    impl<F: Copy + std::fmt::Debug + std::fmt::Display + AssertClose> AssertClose
+        for crate::dtypes::AMP<F>
+    {
+        type Elem = crate::dtypes::AMP<F::Elem>;
+        const DEFAULT_TOLERANCE: Self::Elem = crate::dtypes::AMP(F::DEFAULT_TOLERANCE);
+        fn get_far_pair(
+            &self,
+            rhs: &Self,
+            tolerance: Self::Elem,
+        ) -> Option<(Self::Elem, Self::Elem)> {
+            self.0
+                .get_far_pair(&rhs.0, tolerance.0)
+                .map(|(l, r)| (crate::dtypes::AMP(l), crate::dtypes::AMP(r)))
+        }
+    }
+
+    #[cfg(feature = "f16")]
+    impl AssertClose for half::f16 {
+        type Elem = Self;
+        const DEFAULT_TOLERANCE: Self::Elem = half::f16::from_f32_const(1e-2);
+        fn get_far_pair(&self, rhs: &Self, tolerance: Self) -> Option<(Self, Self)> {
+            if num_traits::Float::abs(self - rhs) > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
             }
         }
     }
@@ -349,12 +394,9 @@ pub(crate) mod tests {
     macro_rules! assert_close_to_literal {
         ($Lhs:expr, $Rhs:expr) => {{
             let lhs = $Lhs.array();
+            let rhs = $Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap());
             let tol = AssertClose::get_default_tol(&lhs);
-            let far_pair = AssertClose::get_far_pair(
-                &lhs,
-                &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
-                tol,
-            );
+            let far_pair = AssertClose::get_far_pair(&lhs, &rhs, tol);
             if let Some((l, r)) = far_pair {
                 panic!("lhs != rhs | {l} != {r}");
             }
@@ -411,5 +453,6 @@ pub(crate) mod tests {
             }
         }};
     }
+
     pub(crate) use assert_close;
 }

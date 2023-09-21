@@ -11,7 +11,7 @@ pub fn lower_tri<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>>(
     diagonal: impl Into<Option<isize>>,
 ) -> Tensor<S, E, D, T>
 where
-    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>> + HasErr<Err = D::Err>,
+    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>, Output = Tensor<S, E, D, T>> + HasErr<Err = D::Err>,
 {
     t.lower_tri(diagonal)
 }
@@ -24,14 +24,14 @@ pub fn upper_tri<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>>(
     diagonal: impl Into<Option<isize>>,
 ) -> Tensor<S, E, D, T>
 where
-    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>> + HasErr<Err = D::Err>,
+    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>, Output = Tensor<S, E, D, T>> + HasErr<Err = D::Err>,
 {
     t.upper_tri(diagonal)
 }
 
 impl<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>> Tensor<S, E, D, T>
 where
-    Self: TryMul<Tensor<S, E, D>> + HasErr<Err = D::Err>,
+    Self: TryMul<Tensor<S, E, D>, Output = Self> + HasErr<Err = D::Err>,
 {
     /// See [lower_tri]
     pub fn try_lower_tri(
@@ -74,15 +74,17 @@ mod tests {
     fn test_tri() {
         let dev: TestDevice = Default::default();
 
-        let t: Tensor<_, TestDtype, _> = dev.tensor(
-            [[[
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-            ]; 4]; 3],
-        );
+        let t = dev
+            .tensor(
+                [[[
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                ]; 4]; 3],
+            )
+            .to_dtype::<TestDtype>();
         assert_close_to_literal!(
             t.clone().lower_tri(None),
             [[[

@@ -4,7 +4,7 @@ use rand_distr::uniform::SampleUniform;
 use crate::{
     nn::modules::*,
     shapes::Dtype,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape},
+    tensor::{HasErr, PutTape, SplitTape, Storage},
     tensor_ops::{Device, TryAdd},
 };
 
@@ -64,7 +64,7 @@ pub struct TransformerDecoder<
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: Storage<E>,
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>, NUM_LAYERS>);
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
@@ -127,7 +127,7 @@ pub struct TransformerDecoderBlock<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: Storage<E>,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, E, D>,
@@ -174,7 +174,7 @@ where
 impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, Tgt, Mem>
     Module<(Tgt, Mem)> for TransformerDecoderBlock<M, H, F, E, D>
 where
-    Tgt: SplitTape + TryAdd<Tgt::NoTape> + HasErr<Err = D::Err>,
+    Tgt: SplitTape + TryAdd<Tgt::NoTape, Output = Tgt> + HasErr<Err = D::Err>,
     Mem: Clone,
     MultiHeadAttention<M, H, M, M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>
         + Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,

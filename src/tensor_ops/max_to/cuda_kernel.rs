@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor},
     tensor_ops::reduction_utils::*,
@@ -14,6 +15,20 @@ trait HasCudaKernel<E> {
     const INIT: E;
     const MOD: &'static str;
     const FNS: &'static [&'static str];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
+    const INIT: f16 = f16::NEG_INFINITY;
+    const MOD: &'static str = "max_f16";
+    const FNS: &'static [&'static str] = &["max_to_fwd_f16", "max_to_bwd_f16", "fill_with_f16"];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const INIT: AMP<f16> = AMP::<f16>::NEG_INFINITY;
+    const MOD: &'static str = "max_f16";
+    const FNS: &'static [&'static str] = &["max_to_fwd_f16", "max_to_bwd_f16", "fill_with_f16"];
 }
 
 impl HasCudaKernel<f32> for Cuda {
@@ -85,9 +100,9 @@ where
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,

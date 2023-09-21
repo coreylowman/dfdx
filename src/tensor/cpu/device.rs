@@ -138,13 +138,7 @@ impl<E> std::ops::DerefMut for CachableVec<E> {
     }
 }
 
-impl DeviceStorage for Cpu {
-    type Vec<E: Unit> = CachableVec<E>;
-
-    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
-        self.try_alloc_zeros(len)
-    }
-
+impl RandomU64 for Cpu {
     fn random_u64(&self) -> u64 {
         #[cfg(not(feature = "no-std"))]
         {
@@ -155,12 +149,20 @@ impl DeviceStorage for Cpu {
             self.rng.lock().gen()
         }
     }
+}
 
-    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize {
+impl<E: Unit> Storage<E> for Cpu {
+    type Vec = CachableVec<E>;
+
+    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Self::Err> {
+        self.try_alloc_zeros(len)
+    }
+
+    fn len(&self, v: &Self::Vec) -> usize {
         v.len()
     }
 
-    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
+    fn tensor_to_vec<S: Shape, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
         let mut buf = Vec::with_capacity(tensor.shape.num_elements());
         let mut iter = tensor.iter();
         while let Some(v) = iter.next() {
@@ -168,11 +170,15 @@ impl DeviceStorage for Cpu {
         }
         buf
     }
+}
 
+impl Synchronize for Cpu {
     fn try_synchronize(&self) -> Result<(), Self::Err> {
         Ok(())
     }
+}
 
+impl Cache for Cpu {
     fn try_enable_cache(&self) -> Result<(), Self::Err> {
         self.cache.enable();
         Ok(())
@@ -214,7 +220,7 @@ impl DeviceStorage for Cpu {
                 debug_assert_eq!(std::alloc::Layout::new::<u32>().align(), 4);
                 debug_assert_eq!(std::alloc::Layout::new::<u64>().align(), 8);
                 match key.alignment {
-                    1 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u8, len, cap)) },
+                    1 => unsafe { drop(Vec::from_raw_parts(alloc.0, len, cap)) },
                     2 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u16, len, cap)) },
                     4 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u32, len, cap)) },
                     8 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u64, len, cap)) },

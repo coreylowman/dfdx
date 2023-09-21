@@ -1,7 +1,7 @@
 use crate::{
     prelude::{HasErr, HasShape},
-    shapes::{Shape, Unit},
-    tensor::DeviceStorage,
+    shapes::Shape,
+    tensor::Storage,
 };
 
 use super::{storage_traits::AllocGrad, GhostTensor, Tensor, UniqueId};
@@ -10,17 +10,18 @@ use super::{storage_traits::AllocGrad, GhostTensor, Tensor, UniqueId};
 /// exists to unify handling of [Tensor] and [GhostTensor].
 ///
 /// *If it looks like a tensor and barks like a tensor, then pet it like a tensor.*
-pub trait Tensorlike<S: Shape, E: Unit, D: DeviceStorage>:
-    AllocGrad<Gradient = D::Vec<E>> + HasErr<Err = D::Err> + HasShape<Shape = S>
+#[allow(clippy::len_without_is_empty)]
+pub trait Tensorlike<S: Shape, E, D: Storage<E>>:
+    AllocGrad<Gradient = D::Vec> + HasErr<Err = D::Err> + HasShape<Shape = S>
 {
     fn id(&self) -> UniqueId;
     fn len(&self) -> usize;
     fn strides(&self) -> S::Concrete;
     fn dev(&self) -> &D;
-    fn data(&self) -> Option<&D::Vec<E>>;
+    fn data(&self) -> Option<&D::Vec>;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensorlike<S, E, D> for Tensor<S, E, D, T> {
+impl<S: Shape, E, D: Storage<E>, T> Tensorlike<S, E, D> for Tensor<S, E, D, T> {
     fn id(&self) -> UniqueId {
         self.id
     }
@@ -37,12 +38,12 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensorlike<S, E, D> for Tensor<S, E
         &self.device
     }
 
-    fn data(&self) -> Option<&<D as DeviceStorage>::Vec<E>> {
+    fn data(&self) -> Option<&D::Vec> {
         Some(self.data.as_ref())
     }
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage> Tensorlike<S, E, D> for GhostTensor<S, E, D> {
+impl<S: Shape, E, D: Storage<E>> Tensorlike<S, E, D> for GhostTensor<S, E, D> {
     fn id(&self) -> UniqueId {
         self.id
     }
@@ -59,7 +60,7 @@ impl<S: Shape, E: Unit, D: DeviceStorage> Tensorlike<S, E, D> for GhostTensor<S,
         &self.dev
     }
 
-    fn data(&self) -> Option<&<D as DeviceStorage>::Vec<E>> {
+    fn data(&self) -> Option<&D::Vec> {
         None
     }
 }

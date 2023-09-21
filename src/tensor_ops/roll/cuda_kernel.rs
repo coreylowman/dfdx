@@ -1,7 +1,4 @@
-use crate::{
-    shapes::{Dtype, Shape},
-    tensor::*,
-};
+use crate::{dtypes::*, shapes::Shape, tensor::*};
 
 use cudarc::driver::{DeviceRepr, LaunchAsync};
 
@@ -11,6 +8,14 @@ const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/roll.ptx"));
 
 trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
+    const FNS: &'static [&'static str] = &["roll_fwd_f16", "roll_bwd_f16"];
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const FNS: &'static [&'static str] = &["roll_fwd_f16", "roll_bwd_f16"];
 }
 impl HasCudaKernel<f32> for Cuda {
     const FNS: &'static [&'static str] = &["roll_fwd_f32", "roll_bwd_f32"];
@@ -59,8 +64,8 @@ where
         &self,
         op: super::RollOp,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let numel = inp.shape.num_elements();
         let strides = inp.shape.strides();

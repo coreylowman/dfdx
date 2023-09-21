@@ -11,11 +11,7 @@ pub(crate) fn index_to_i<S: Shape>(shape: &S, strides: &S::Concrete, index: S::C
             panic!("Index out of bounds: index={index:?} shape={shape:?}");
         }
     }
-    strides
-        .into_iter()
-        .zip(index.into_iter())
-        .map(|(a, b)| a * b)
-        .sum()
+    strides.into_iter().zip(index).map(|(a, b)| a * b).sum()
 }
 
 impl<S: Shape, E: Unit, T> std::ops::Index<S::Concrete> for Tensor<S, E, Cpu, T> {

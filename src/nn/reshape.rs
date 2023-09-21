@@ -7,7 +7,16 @@ use crate::{
 
 use super::*;
 
-/// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
+/// Reshapes input tensors to a shape known *at compile time*.
+///
+/// Example usage:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let model: Reshape<Rank2<5, 24>> = Default::default();
+/// let x: Tensor<Rank4<5, 4, 3, 2>, f32, _> = dev.sample_normal();
+/// let _: Tensor<Rank2<5, 24>, f32, _> = model.forward(x);
+/// ```
 #[derive(Default, Clone, Copy)]
 pub struct Reshape<S: ConstShape>(S);
 
@@ -21,14 +30,7 @@ impl<Src: Shape, Dst: ConstShape, D: Device<E>, E: Dtype, T: Tape<E, D>>
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<Src, E, D, T>) -> Result<Self::Output, D::Err> {
-        let shape = input.shape.concrete();
-        input.try_reshape_like(&self.0).unwrap_or_else(|| {
-            panic!(
-                "Input shape {:?} could not be coerced into output shape {:?}",
-                shape,
-                self.0.concrete().as_ref()
-            )
-        })
+        input.try_reshape_like(&self.0)
     }
 }
 

@@ -1,6 +1,36 @@
-use crate::{shapes::*, tensor_ops::*};
+use crate::{shapes::*, tensor::HasErr, tensor_ops::*};
 
 use super::*;
+
+impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for () {
+    type To<E2: Dtype, D2: Device<E2>> = ();
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        _: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        Ok(None)
+    }
+}
+
+impl<D: Device<E>, E: Dtype> BuildOnDevice<D, E> for () {
+    type Built = ();
+}
+
+impl<X: HasErr> Module<X> for () {
+    type Output = X;
+    type Error = X::Err;
+    fn try_forward(&self, input: X) -> Result<Self::Output, Self::Error> {
+        Ok(input)
+    }
+}
+
+impl<X: HasErr> ModuleMut<X> for () {
+    type Output = X;
+    type Error = X::Err;
+    fn try_forward_mut(&mut self, input: X) -> Result<Self::Output, Self::Error> {
+        Ok(input)
+    }
+}
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),*]) => {
@@ -108,7 +138,7 @@ mod tests {
     fn test_2_tuple_update() {
         let dev: TestDevice = Default::default();
         type Model = (Linear<2, 3>, Linear<3, 4>);
-        let mut model = Model::build_on_device(&dev);
+        let mut model = dev.build_module::<Model, f32>();
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 3]);
         assert_ne!(model.0.bias.array(), [0.0; 3]);
         assert_ne!(model.1.weight.array(), [[0.0; 3]; 4]);

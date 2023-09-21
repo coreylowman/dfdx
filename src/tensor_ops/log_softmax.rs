@@ -30,14 +30,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
-    /// See [log_softmax]
+    /// See [log_softmax()]
     pub fn log_softmax<Ax: Axes>(self) -> Self
     where
         S: ReduceShape<Ax>,
     {
         self.try_log_softmax::<Ax>().unwrap()
     }
-    /// See [log_softmax]
+    /// See [log_softmax()]
     pub fn try_log_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
     where
         S: ReduceShape<Ax>,
@@ -103,7 +103,9 @@ mod tests {
     #[test]
     fn test_log_softmax_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().log_softmax();
         assert_close_to_literal!(
             r,
@@ -125,7 +127,9 @@ mod tests {
     #[test]
     fn test_log_softmax_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a = dev
+            .tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().log_softmax::<Axis<1>>();
         assert_close_to_literal!(
             r,

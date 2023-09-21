@@ -1,4 +1,6 @@
 use super::*;
+#[allow(unused_imports)]
+use crate::dtypes::*;
 use crate::tensor::cuda::Cuda;
 use cudarc::driver::{DeviceRepr, LaunchAsync};
 
@@ -17,6 +19,16 @@ unsafe impl DeviceRepr for AttentionReshapeOp {}
 
 trait HasCudaKernel<E: Unit> {
     const FN: &'static str;
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const FN: &'static str = "attention_reshape_f16";
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
+    const FN: &'static str = "attention_reshape_f16";
 }
 
 impl HasCudaKernel<f32> for Cuda {

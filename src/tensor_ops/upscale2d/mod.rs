@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::*,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
+    tensor::{HasErr, PutTape, SplitTape, Storage, Tape, Tensor, ZerosTensor},
 };
 
 #[repr(C)]
@@ -59,7 +59,7 @@ impl UpscaleMethod for NearestNeighbor {}
 pub struct Bilinear;
 impl UpscaleMethod for Bilinear {}
 
-pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
+pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: Storage<E> {
     fn forward<I: Shape, O: Shape>(
         &self,
         op: Upscale2DOp,
@@ -71,9 +71,9 @@ pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
         &self,
         op: Upscale2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
@@ -153,7 +153,7 @@ pub trait TryUpscale2D {
         GenericUpscale2D::generic_upscale2d_like(self, method, height, width)
     }
 }
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> TryUpscale2D for Tensor<S, E, D, T> {}
+impl<S: Shape, E: Dtype, D: Storage<E>, T> TryUpscale2D for Tensor<S, E, D, T> {}
 
 impl<
         C: Dim,
@@ -254,7 +254,9 @@ mod tests {
     fn test_upscale2d_nearest_even() {
         let dev = TestDevice::default();
 
-        let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
+        let x = dev
+            .tensor([[[1.0, 0.0], [2.0, 3.0]]])
+            .to_dtype::<TestDtype>();
         let y = x.leaky_trace().upscale2d::<4, 4, _>(NearestNeighbor);
         assert_close_to_literal!(
             y,
@@ -277,7 +279,9 @@ mod tests {
     fn test_upscale2d_nearest_uneven() {
         let dev = TestDevice::default();
 
-        let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
+        let x = dev
+            .tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]])
+            .to_dtype::<TestDtype>();
         let y = x.leaky_trace().upscale2d::<2, 7, _>(NearestNeighbor);
         assert_close_to_literal!(
             y,
@@ -301,24 +305,23 @@ mod tests {
     fn test_upscale2d_nearest_batched() {
         let dev = TestDevice::default();
 
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let x = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+            .to_dtype::<TestDtype>();
         let x: Tensor<Rank3<3, 2, 3>, _, _> = [x.clone(), x.clone(), x].stack();
         let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
             [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();
         let y = x.leaky_trace().upscale2d::<5, 6, _>(NearestNeighbor);
-        let y_array = y.array();
-        for img in y_array {
-            assert_eq!(
-                img,
-                [[
-                    [1., 1., 2., 2., 3., 3.],
-                    [1., 1., 2., 2., 3., 3.],
-                    [1., 1., 2., 2., 3., 3.],
-                    [4., 4., 5., 5., 6., 6.],
-                    [4., 4., 5., 5., 6., 6.]
-                ]; 3]
-            );
-        }
+        assert_close_to_literal!(
+            y,
+            [[[
+                [1., 1., 2., 2., 3., 3.],
+                [1., 1., 2., 2., 3., 3.],
+                [1., 1., 2., 2., 3., 3.],
+                [4., 4., 5., 5., 6., 6.],
+                [4., 4., 5., 5., 6., 6.]
+            ]; 3]; 5]
+        );
 
         let grads = y.exp().mean().backward();
         assert_close_to_literal!(
@@ -335,7 +338,9 @@ mod tests {
     fn test_upscale2d_bilinear_even() {
         let dev = TestDevice::default();
 
-        let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
+        let x = dev
+            .tensor([[[1.0, 0.0], [2.0, 3.0]]])
+            .to_dtype::<TestDtype>();
         let y = x.leaky_trace().upscale2d::<4, 4, _>(Bilinear);
         assert_close_to_literal!(
             y,
@@ -358,7 +363,9 @@ mod tests {
     fn test_upscale2d_bilinear_uneven() {
         let dev = TestDevice::default();
 
-        let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
+        let x = dev
+            .tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]])
+            .to_dtype::<TestDtype>();
         let y = x.leaky_trace().upscale2d::<2, 7, _>(Bilinear);
         assert_close_to_literal!(
             y,
@@ -382,7 +389,9 @@ mod tests {
     fn test_bilinear_upscale2d_batched() {
         let dev = TestDevice::default();
 
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let x = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+            .to_dtype::<TestDtype>();
         let x: Tensor<Rank3<3, 2, 3>, _, _> = [x.clone(), x.clone(), x].stack();
         let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
             [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();

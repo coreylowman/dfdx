@@ -64,6 +64,17 @@ __device__ void attention_reshape(
     }
 }
 
+extern "C" __global__ void attention_reshape_f16(
+    const AttentionReshapeOp op,
+    const __half *qkv,
+    const __half *past_key,
+    const __half *past_value,
+    __half *query,
+    __half *key,
+    __half *value
+) {
+    attention_reshape(op, qkv, past_key, past_value, query, key, value);
+}
 
 extern "C" __global__ void attention_reshape_f32(
     const AttentionReshapeOp op,

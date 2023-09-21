@@ -6,14 +6,14 @@ mod cuda_kernels;
 use crate::{
     prelude::{OnesTensor, Tensor, ZerosTensor},
     shapes::*,
-    tensor::DeviceStorage,
+    tensor::Storage,
 };
 
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 use super::Device;
 
-pub trait BooleanKernel: DeviceStorage + OnesTensor<bool> + ZerosTensor<bool> {
+pub trait BooleanKernel: Storage<bool> + OnesTensor<bool> + ZerosTensor<bool> {
     fn not<S: Shape>(
         &self,
         inp: &Tensor<S, bool, Self>,

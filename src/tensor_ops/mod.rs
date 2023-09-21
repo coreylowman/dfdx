@@ -150,6 +150,8 @@ mod utilities;
 pub use utilities::*;
 
 mod abs;
+mod accurate_gelu;
+mod adam;
 mod add;
 mod attention_reshape;
 pub(crate) mod axpy;
@@ -160,11 +162,12 @@ mod choose;
 mod clamp;
 mod cmp;
 mod concat;
+mod concat_along;
 mod cos;
 mod div;
 mod dropout;
 mod exp;
-mod gelu;
+mod fast_gelu;
 mod huber_error;
 mod ln;
 mod log_softmax;
@@ -179,6 +182,7 @@ mod mul;
 mod nans_to;
 mod negate;
 mod normalize;
+pub(super) mod optim;
 mod permute_to;
 mod pow;
 mod prelu;
@@ -186,8 +190,10 @@ mod realize_to;
 mod recip;
 mod relu;
 mod reshape_to;
+mod rmsprop;
 mod roll;
 mod select_and_gather;
+mod sgd;
 mod sigmoid;
 mod sin;
 mod slice;
@@ -201,9 +207,12 @@ mod sum_to;
 mod tanh;
 mod to_dtype;
 mod tri;
+mod upscale2d;
 mod var_to;
 
 pub use abs::abs;
+pub use accurate_gelu::accurate_gelu;
+pub use adam::AdamConfig;
 pub use add::{add, TryAdd};
 pub use attention_reshape::TryAttentionReshape;
 pub use axpy::axpy;
@@ -212,13 +221,17 @@ pub use boolean::{bool_and, bool_not, bool_or, bool_xor};
 pub use broadcast_to::BroadcastTo;
 pub use choose::ChooseFrom;
 pub use clamp::clamp;
-pub use cmp::{eq, ge, gt, le, lt, ne};
+pub use cmp::{eq, ge, gt, le, lt, ne, TryEq, TryGe, TryGt, TryLe, TryLt, TryNe};
+#[allow(deprecated)]
 pub use concat::TryConcat;
+pub use concat_along::TryConcatAlong;
 pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;
 pub use exp::exp;
-pub use gelu::gelu;
+pub use fast_gelu::fast_gelu;
+#[allow(deprecated)]
+pub use fast_gelu::gelu;
 pub use huber_error::huber_error;
 pub use ln::ln;
 pub use log_softmax::log_softmax;
@@ -233,6 +246,7 @@ pub use mul::{mul, TryMul};
 pub use nans_to::nans_to;
 pub use negate::negate;
 pub use normalize::normalize;
+pub use optim::*;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
 pub use prelu::{leakyrelu, prelu, TryPReLU};
@@ -240,42 +254,44 @@ pub use realize_to::RealizeTo;
 pub use recip::recip;
 pub use relu::relu;
 pub use reshape_to::ReshapeTo;
+pub use rmsprop::RMSpropConfig;
 pub use roll::Roll;
 pub use select_and_gather::{GatherTo, SelectTo};
+pub use sgd::SgdConfig;
 pub use sigmoid::sigmoid;
 pub use sin::sin;
 pub use slice::slice;
 pub use softmax::softmax;
 pub use sqrt::sqrt;
 pub use square::square;
-pub use stack::TryStack;
+pub use stack::{AddDim, TryStack};
 pub use stddev_to::StddevTo;
 pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
-pub use to_dtype::to_dtype;
+pub use to_dtype::{to_dtype, ToDtypeKernel};
 pub use tri::{lower_tri, upper_tri};
+pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 pub use var_to::VarTo;
 
-pub(crate) use to_dtype::ToDtypeKernel;
+pub(crate) use upscale2d::Upscale2DKernel;
+
+#[cfg(feature = "nightly")]
+mod conv1d;
+#[cfg(feature = "nightly")]
+pub use conv1d::TryConv1D;
 
 #[cfg(feature = "nightly")]
 mod conv2d;
 #[cfg(feature = "nightly")]
-pub use conv2d::{TryConv2D, TryConv2DTo};
+pub use conv2d::TryConv2D;
 
 #[cfg(feature = "nightly")]
 mod convtrans2d;
 #[cfg(feature = "nightly")]
-pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
-
-mod upscale2d;
-pub(crate) use upscale2d::Upscale2DKernel;
-pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
+pub use convtrans2d::TryConvTrans2D;
 
 #[cfg(feature = "nightly")]
 mod pool2d;
 #[cfg(feature = "nightly")]
-pub(crate) use pool2d::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
-#[cfg(feature = "nightly")]
-pub use pool2d::{TryAvgPool2D, TryMaxPool2D, TryMinPool2D};
+pub use pool2d::{Pool2DKind, TryPool2D};

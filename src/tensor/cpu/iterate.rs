@@ -18,7 +18,11 @@ impl<S: Shape> NdIndex<S> {
             indices: Default::default(),
             shape: shape.concrete(),
             strides,
-            next: Some(0),
+            next: if shape.num_elements() > 0 {
+                Some(0)
+            } else {
+                None
+            },
             contiguous: (strides == shape.strides()).then(|| shape.num_elements()),
         }
     }

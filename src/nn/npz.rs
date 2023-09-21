@@ -1,7 +1,8 @@
 use crate::{
+    prelude::numpy::NpyError,
     shapes::{Dtype, Shape},
     tensor::{
-        numpy::{NpzError, NumpyDtype},
+        numpy::{read_from_npz, write_to_npz, NpzError, NumpyDtype},
         Tensor,
     },
     tensor_ops::Device,
@@ -129,6 +130,18 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
         t.write_to_npz(self, full_path)?;
         Ok(None)
     }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        _opts: ScalarOptions<N>,
+        (n, full_path): (&N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        let n = n
+            .to_f64()
+            .unwrap_or_else(|| panic!("Failed to convert scalar value at {full_path} to f64!"));
+        write_to_npz(self, &[], &[n], full_path)?;
+        Ok(None)
+    }
 }
 
 impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
@@ -146,6 +159,30 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
     ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         t.read_from_npz(self, full_path)?;
         Ok(None)
+    }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        opts: ScalarOptions<N>,
+        (n, full_path): (&mut N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        match read_from_npz::<_, f64>(self, &[], full_path) {
+            Ok(buf) => {
+                *n = N::from(buf[0]).unwrap_or_else(|| {
+                    panic!(
+                        "Failed to convert f64 value {} to {} when reading from npz!",
+                        buf[0],
+                        std::any::type_name::<N>()
+                    )
+                });
+                Ok(None)
+            }
+            Err(NpyError::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                *n = opts.default;
+                Ok(None)
+            }
+            Err(x) => Err(x.into()),
+        }
     }
 }
 
@@ -282,7 +319,6 @@ mod tests {
         test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
     }
 
-    #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_mha() {
         let dev: TestDevice = Default::default();
@@ -309,7 +345,6 @@ mod tests {
         assert_eq!(y1.array(), y2.array());
     }
 
-    #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_transformer() {
         let dev: TestDevice = Default::default();

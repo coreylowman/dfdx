@@ -81,9 +81,9 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         &self,
         op: Op,
         inp: &impl Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         match (inp.data(), out.data()) {
             (None, None) => {
@@ -165,10 +165,10 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         &self,
         op: Op,
         lhs: &impl Tensorlike<S, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &impl Tensorlike<S, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         match (lhs.data(), rhs.data()) {
             (Some(lhs_buf), Some(rhs_buf)) => {

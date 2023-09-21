@@ -48,7 +48,8 @@ where
 
 /// Fallible version of [std::ops::Sub]. See [sub]
 pub trait TrySub<Rhs = Self>: HasErr {
-    fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
+    type Output;
+    fn try_sub(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: BinaryKernel<BinarySubKernelOp, E>, LTape: Tape<E, D>, R>
@@ -56,25 +57,30 @@ impl<S: Shape, E: Dtype, D: BinaryKernel<BinarySubKernelOp, E>, LTape: Tape<E, D
 where
     LTape: Merge<R>,
 {
+    type Output = Self;
     fn try_sub(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
         try_binary_op(BinarySubKernelOp, self, rhs)
     }
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarSubKernelOp<E>, E>, T: Tape<E, D>> TrySub<E>
-    for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, Rhs: Into<f64>, D, T: Tape<E, D>> TrySub<Rhs> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<ScalarSubKernelOp<E>, E>,
 {
-    fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarSubKernelOp { scalar: rhs }, self)
+    type Output = Self;
+    fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err> {
+        let rhs: f64 = rhs.into();
+        let scalar = E::from_f64(rhs).unwrap();
+        try_unary_op(ScalarSubKernelOp { scalar }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
+impl<S: Shape, E: Dtype, D: Storage<E>, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
     for Tensor<S, E, D, LTape>
 where
     Self: TrySub<Rhs>,
 {
-    type Output = Self;
+    type Output = <Self as TrySub<Rhs>>::Output;
     fn sub(self, rhs: Rhs) -> Self::Output {
         self.try_sub(rhs).unwrap()
     }
@@ -90,8 +96,8 @@ mod tests {
     fn test_sub_0d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor<_, TestDtype, _> = dev.tensor(1.0);
-        let b: Tensor<_, TestDtype, _> = dev.tensor(1.0);
+        let a = dev.tensor(1.0).to_dtype::<TestDtype>();
+        let b = dev.tensor(1.0).to_dtype::<TestDtype>();
 
         let r = b.leaky_trace() - a.clone();
         assert_close_to_literal!(r, 0.0);
@@ -103,8 +109,8 @@ mod tests {
     #[test]
     fn test_sub_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
-        let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
+        let a = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
+        let b = dev.tensor([1.0, -1.0, 0.0]).to_dtype::<TestDtype>();
 
         let r = b.leaky_trace() - a.clone();
         assert_close_to_literal!(r, [0.0, -3.0, -3.0]);
@@ -116,10 +122,12 @@ mod tests {
     #[test]
     fn test_sub_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = dev
+            .tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]])
+            .to_dtype::<TestDtype>();
 
         let r = b.leaky_trace() - a.clone();
         assert_close_to_literal!(r, [[-0.1371, 0.2136, 0.2259], [0.2601, -0.3328, -0.7954]]);
@@ -131,7 +139,7 @@ mod tests {
     #[test]
     fn test_scalar_sub_0d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor(0.0);
+        let x = dev.tensor(0.0).to_dtype::<TestDtype>();
         let r = x.leaky_trace() - 1.0;
         assert_close_to_literal!(r, -1.0);
         let g = r.exp().backward();
@@ -141,7 +149,7 @@ mod tests {
     #[test]
     fn test_scalar_sub_1d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
+        let x = dev.tensor([0.0, 1.0, 2.0]).to_dtype::<TestDtype>();
         let r = x.leaky_trace() - 1.0;
         assert_close_to_literal!(r, [-1.0, 0.0, 1.0]);
         let g = r.exp().sum().backward();
@@ -151,7 +159,7 @@ mod tests {
     #[test]
     fn test_scalar_sub_2d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[0.0; 2]; 3]);
+        let x = dev.tensor([[0.0; 2]; 3]).to_dtype::<TestDtype>();
         let r = x.leaky_trace() - 1.0;
         assert_close_to_literal!(r, [[-1.0; 2]; 3]);
         let g = r.exp().sum().backward();

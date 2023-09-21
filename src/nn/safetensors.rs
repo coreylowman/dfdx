@@ -1,9 +1,6 @@
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{
-        safetensors::{Error, SafeDtype},
-        CopySlice, Tensor,
-    },
+    tensor::{CopySlice, Tensor},
     tensor_ops::Device,
 };
 use memmap2::MmapOptions;
@@ -12,7 +9,6 @@ use safetensors::{
     tensor::{Dtype as SDtype, SafeTensors, TensorView},
     SafeTensorError,
 };
-use std::collections::BTreeMap;
 
 use super::tensor_collection::*;
 
@@ -25,30 +21,30 @@ struct TensorData {
 }
 
 pub struct Writer {
-    tensors: BTreeMap<String, TensorData>,
+    tensors: Vec<(String, TensorData)>,
 }
 
 impl Writer {
     pub fn new() -> Self {
-        let tensors = BTreeMap::new();
+        let tensors = Vec::new();
         Self { tensors }
     }
 
-    pub fn add<S: Shape, E: Dtype + SafeDtype, D: CopySlice<E>>(
+    pub fn add<S: Shape, E: Dtype, D: CopySlice<E>>(
         &mut self,
         key: String,
         tensor: &Tensor<S, E, D>,
     ) {
-        let dtype = E::safe_dtype();
+        let dtype = <E as crate::dtypes::SafeTensorsDtype>::DTYPE;
         let shape = tensor.shape().concrete().into();
         let data = tensor.as_vec();
         let data: Vec<u8> = data.iter().flat_map(|f| f.to_le_bytes()).collect();
         let tdata = TensorData { dtype, shape, data };
-        self.tensors.insert(key, tdata);
+        self.tensors.push((key, tdata));
     }
 
     pub fn save(&self, path: &Path) -> Result<(), SafeTensorError> {
-        let views: BTreeMap<String, TensorView> = self
+        let (names, views): (Vec<String>, Vec<TensorView>) = self
             .tensors
             .iter()
             .map(|(k, tensor)| {
@@ -57,12 +53,15 @@ impl Writer {
                     TensorView::new(tensor.dtype, tensor.shape.clone(), &tensor.data).unwrap(),
                 )
             })
-            .collect();
-        serialize_to_file(&views, &None, path)
+            .unzip();
+
+        let data = names.into_iter().zip(views.iter());
+
+        serialize_to_file(data, &None, path)
     }
 }
 
-impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for Writer {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Writer {
     type Viewer = (ViewTensorRef, ViewTensorName);
     type Err = SafeTensorError;
     type E2 = E;
@@ -76,12 +75,30 @@ impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for Writer {
         self.add(full_path, t);
         Ok(None)
     }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        _: ScalarOptions<N>,
+        (n, full_path): (&N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        let data = TensorData {
+            dtype: safetensors::Dtype::F64,
+            shape: Vec::new(),
+            data: n
+                .to_f64()
+                .unwrap_or_else(|| panic!("Failed to convert scalar value at {full_path} to f64!"))
+                .to_le_bytes()
+                .to_vec(),
+        };
+        self.tensors.push((full_path, data));
+        Ok(None)
+    }
 }
 
 /// Something that can be saved to a `.safetensors`.
 ///
 /// All [super::Module]s in nn implement SaveToSafetensors.
-pub trait SaveToSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollection<E, D> {
+pub trait SaveToSafetensors<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     /// Save this object into the `.safetensors` file determined located at `path`.
     ///
     /// Example:
@@ -101,12 +118,12 @@ pub trait SaveToSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollectio
         Ok(())
     }
 }
-impl<E: Dtype + SafeDtype, D: Device<E>, T: TensorCollection<E, D>> SaveToSafetensors<E, D> for T {}
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> SaveToSafetensors<E, D> for T {}
 
 /// Something that can be loaded from a `.safetensors` file.
 ///
 /// All [super::Module]s in nn implement LoadFromSafetensors.
-pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollection<E, D> {
+pub trait LoadFromSafetensors<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     /// Loads data from a `.safetensors` at the specified `path`.
     ///
     /// Example:
@@ -116,7 +133,7 @@ pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollect
     /// let mut model = dev.build_module::<Linear<15, 5>, f32>();
     /// model.load_safetensors("model.safetensors").unwrap();
     /// ```
-    fn load_safetensors<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
+    fn load_safetensors<P: AsRef<Path>>(&mut self, path: P) -> Result<(), SafeTensorError> {
         let f = std::fs::File::open(path)?;
         let buffer = unsafe { MmapOptions::new().map(&f)? };
         let mut tensors = SafeTensors::deserialize(&buffer)?;
@@ -129,14 +146,11 @@ pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollect
     }
 }
 
-impl<E: Dtype + SafeDtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromSafetensors<E, D>
-    for T
-{
-}
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromSafetensors<E, D> for T {}
 
-impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTensors<'data> {
+impl<'data, E: Dtype, D: Device<E>> TensorVisitor<E, D> for SafeTensors<'data> {
     type Viewer = (ViewTensorMut, ViewTensorName);
-    type Err = Error;
+    type Err = SafeTensorError;
     type E2 = E;
     type D2 = D;
 
@@ -148,6 +162,33 @@ impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTens
         t.load_safetensor(self, &full_path)?;
         Ok(None)
     }
+
+    fn visit_scalar<N: num_traits::NumCast>(
+        &mut self,
+        opts: ScalarOptions<N>,
+        (n, full_path): (&mut N, String),
+    ) -> Result<Option<N>, Self::Err> {
+        match self.tensor(&full_path) {
+            Ok(tensor) => {
+                let data = tensor.data();
+                let mut array = [0; 8];
+                array.copy_from_slice(data);
+                let val = f64::from_le_bytes(array);
+                *n = N::from(val).unwrap_or_else(|| {
+                    panic!(
+                        "Failed to convert f64 value {val} at {full_path} to {} when reading from safetensors!",
+                        std::any::type_name::<N>()
+                    )
+                });
+                Ok(None)
+            }
+            Err(SafeTensorError::TensorNotFound(_)) => {
+                *n = opts.default;
+                Ok(None)
+            }
+            Err(x) => Err(x),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -155,16 +196,15 @@ mod tests {
     use crate::{
         nn::builders::*,
         shapes::*,
-        tensor::{safetensors::SafeDtype, AsArray, SampleTensor, Tensor},
+        tensor::{AsArray, SampleTensor, Tensor},
         tensor_ops::Device,
         tests::{TestDevice, TestDtype},
     };
     use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
 
-    fn test_save_load<S: ConstShape, E: Dtype + SafeDtype, D: Device<E>, M: BuildOnDevice<D, E>>(
-        dev: &D,
-    ) where
+    fn test_save_load<S: ConstShape, E: Dtype, D: Device<E>, M: BuildOnDevice<D, E>>(dev: &D)
+    where
         M::Built: Module<Tensor<S, E, D>> + SaveToSafetensors<E, D> + LoadFromSafetensors<E, D>,
         <M::Built as Module<Tensor<S, E, D>>>::Output: AsArray,
         StandardNormal: Distribution<E>,
@@ -283,7 +323,6 @@ mod tests {
         test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
     }
 
-    #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_mha() {
         let dev: TestDevice = Default::default();
@@ -310,7 +349,6 @@ mod tests {
         assert_eq!(y1.array(), y2.array());
     }
 
-    #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_transformer() {
         let dev: TestDevice = Default::default();

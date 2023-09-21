@@ -22,8 +22,8 @@ impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
         &self,
         dst: &Dst,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let mut inp_idx = NdIndex::new(inp.shape, inp.strides);
         let mut out_idx = NdIndex::new(*dst, dst.strides());

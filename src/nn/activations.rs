@@ -25,7 +25,12 @@ macro_rules! activation_impls {
 }
 
 activation_impls!(ReLU, try_relu, #[doc="Calls [relu()]."]);
-activation_impls!(GeLU, try_gelu, #[doc="Calls [gelu()]."]);
+activation_impls!(FastGeLU, try_fast_gelu, #[doc="Calls [fast_gelu()]. This corresponds to `torch.nn.GELU(approximate='tanh')` in pytorch."]);
+activation_impls!(
+    AccurateGeLU,
+    try_accurate_gelu, 
+    #[doc=r#"Calls [accurate_gelu()]. The GeLU is defined as x * Phi(x) where Phi is the cumulative distribution function of a standard Normal Distribution. 
+It is often implemented with a fast approximation using tanh (see [GeLU]). This corresponds to pytorch `torch.nn.GELU(approximate='none')` in pytorch."#]);
 activation_impls!(Sin, try_sin, #[doc="Calls [sin()]."]);
 activation_impls!(Cos, try_cos, #[doc="Calls [cos()]."]);
 activation_impls!(Ln, try_ln, #[doc="Calls [ln()]."]);
@@ -35,20 +40,26 @@ activation_impls!(Tanh, try_tanh, #[doc="Calls [tanh()]."]);
 activation_impls!(Square, try_square, #[doc="Calls [square()]."]);
 activation_impls!(Sqrt, try_sqrt, #[doc="Calls [sqrt()]."]);
 activation_impls!(Abs, try_abs, #[doc="Calls [abs()]."]);
+activation_impls!(Softmax, try_softmax, #[doc="Calls [softmax()]."]);
+activation_impls!(LogSoftmax, try_log_softmax, #[doc="Calls [log_softmax()]."]);
 
-/// Calls [softmax()].
+/// Use [FastGeLU] instead
+#[deprecated(since = "0.12.0", note = "please use `FastGeLU` instead")]
 #[derive(Default, Debug, Clone, Copy)]
-pub struct Softmax;
+pub struct GeLU;
 
-impl ZeroSizedModule for Softmax {}
-impl NonMutableModule for Softmax {}
+#[allow(deprecated)]
+impl ZeroSizedModule for GeLU {}
+#[allow(deprecated)]
+impl NonMutableModule for GeLU {}
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax {
+#[allow(deprecated)]
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for GeLU {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        input.try_softmax::<S::LastAxis>()
+        input.try_fast_gelu()
     }
 }
 
@@ -78,6 +89,9 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
 mod tests {
     use crate::{nn::*, tests::TestDevice};
 
+    #[allow(deprecated)]
+    use super::GeLU;
+
     use super::*;
 
     #[test]
@@ -90,12 +104,27 @@ mod tests {
     }
 
     #[test]
-    fn test_nn_activations_gelu() {
+    fn test_nn_activations_accurate_gelu() {
         let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = GeLU.forward_mut(t.clone());
-        let r2 = gelu(t);
+        let r1 = AccurateGeLU.forward_mut(t.clone());
+        let r2 = accurate_gelu(t);
         assert_eq!(r1.array(), r2.array());
+    }
+
+    #[test]
+    fn test_nn_activations_fast_gelu() {
+        let dev: TestDevice = Default::default();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = FastGeLU.forward_mut(t.clone());
+        #[allow(deprecated)]
+        let r2 = GeLU.forward_mut(t.clone());
+        let r3 = fast_gelu(t.clone());
+        #[allow(deprecated)]
+        let r4 = gelu(t);
+        assert_eq!(r1.array(), r2.array());
+        assert_eq!(r1.array(), r3.array());
+        assert_eq!(r1.array(), r4.array());
     }
 
     #[test]
@@ -187,6 +216,21 @@ mod tests {
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax::<crate::shapes::Axis<1>>();
+        assert_eq!(r1.array(), r2.array());
+    }
+
+    #[test]
+    fn test_nn_activations_log_softmax() {
+        let dev: TestDevice = Default::default();
+
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = LogSoftmax.forward_mut(t.clone());
+        let r2 = t.log_softmax();
+        assert_eq!(r1.array(), r2.array());
+
+        let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
+        let r1 = LogSoftmax.forward_mut(t.clone());
+        let r2 = t.log_softmax::<crate::shapes::Axis<1>>();
         assert_eq!(r1.array(), r2.array());
     }
 

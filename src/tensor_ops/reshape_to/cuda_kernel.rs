@@ -21,6 +21,10 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
             let src = FWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
+                include_paths: vec![
+                    env!("CUDA_INCLUDE_DIR").to_string(),
+                    env!("OUT_DIR").to_string(),
+                ],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -56,14 +60,18 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         &self,
         dst: &Dst,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let module = std::format!("reshape_bwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_bwd") {
             let src = BWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
+                include_paths: vec![
+                    env!("CUDA_INCLUDE_DIR").to_string(),
+                    env!("OUT_DIR").to_string(),
+                ],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -101,20 +109,7 @@ typedef long int intptr_t;
 typedef int intptr_t;
 #endif
 
-__device__ unsigned int get_strided_index(
-    unsigned int idx,
-    const size_t num_dims,
-    const size_t *dims,
-    const size_t *strides
-) {
-    unsigned int strided_i = 0;
-    for (unsigned int d = 0; d < num_dims; d++) {
-        unsigned int dim_idx = num_dims - 1 - d;
-        strided_i += (idx % dims[dim_idx]) * strides[dim_idx];
-        idx /= dims[dim_idx];
-    }
-    return strided_i;
-}
+#include \"cuda_utils.cuh\"
 
 extern \"C\" __global__ void reshape_fwd(
     const size_t numel,
@@ -124,20 +119,15 @@ extern \"C\" __global__ void reshape_fwd(
     const $T *inp,
     $T *out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
-    }
-
     const size_t *inp_dims = info;
     const size_t *inp_strides = info + inp_num_dims;
     const size_t *out_dims = info + 2 * inp_num_dims;
     const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
-
-    unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
-
-    out[out_i] = inp[inp_i];
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
+        unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
+        out[out_i] = inp[inp_i];
+    }
 }
 ";
 
@@ -148,20 +138,7 @@ typedef long int intptr_t;
 typedef int intptr_t;
 #endif
 
-__device__ unsigned int get_strided_index(
-    unsigned int idx,
-    const size_t num_dims,
-    const size_t *dims,
-    const size_t *strides
-) {
-    unsigned int strided_i = 0;
-    for (unsigned int d = 0; d < num_dims; d++) {
-        unsigned int dim_idx = num_dims - 1 - d;
-        strided_i += (idx % dims[dim_idx]) * strides[dim_idx];
-        idx /= dims[dim_idx];
-    }
-    return strided_i;
-}
+#include \"cuda_utils.cuh\"
 
 extern \"C\" __global__ void reshape_bwd(
     const size_t numel,
@@ -171,19 +148,14 @@ extern \"C\" __global__ void reshape_bwd(
     $T *grad_inp,
     const $T *grad_out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
-    }
-
     const size_t *inp_dims = info;
     const size_t *inp_strides = info + inp_num_dims;
     const size_t *out_dims = info + 2 * inp_num_dims;
     const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
-
-    unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
-
-    atomicAdd(grad_inp + inp_i, grad_out[out_i]);
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
+        unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
+        atomicAdd(grad_inp + inp_i, grad_out[out_i]);
+    }
 }
 ";

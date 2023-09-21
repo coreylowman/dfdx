@@ -5,25 +5,11 @@ use crate::tensor::{Cpu, Tensor, ZerosTensor};
 
 use std::sync::Arc;
 
-#[cfg(feature = "cpu-mkl-matmul")]
-use cblas_sys::{
-    cblas_dgemm as dgemm, cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
-    CblasRowMajor as RowMajor, CblasTrans as Tr,
-};
-
-#[cfg(all(
-    any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
-    not(feature = "cpu-mkl-matmul")
-))]
-use matrixmultiply::{dgemm, sgemm};
-
-#[cfg(not(any(
-    feature = "cpu-seq-matmul",
-    feature = "cpu-par-matmul",
-    feature = "cpu-mkl-matmul"
-)))]
-fn gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
+#[allow(unused)]
+#[allow(clippy::too_many_arguments)]
+fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
     (m, k, n): (M, K, N),
+    accum: bool,
     ap: *const F,
     a_strides: [usize; 2],
     bp: *const F,
@@ -38,7 +24,11 @@ fn gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
                     let a = *ap.add(a_strides[0] * i_m + a_strides[1] * i_k);
                     let b = *bp.add(b_strides[0] * i_k + b_strides[1] * i_n);
                     let c = cp.add(c_strides[0] * i_m + c_strides[1] * i_n);
-                    *c += a * b;
+                    if accum {
+                        *c += a * b;
+                    } else {
+                        *c = a * b;
+                    }
                 }
             }
         }
@@ -46,8 +36,10 @@ fn gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
 }
 
 pub(crate) trait MatMulImpl<E> {
+    #[allow(clippy::too_many_arguments)]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         dims: (M, K, N),
+        accum: bool,
         ap: *const E,
         a_strides: [usize; 2],
         bp: *const E,
@@ -57,53 +49,140 @@ pub(crate) trait MatMulImpl<E> {
     );
 }
 
+#[cfg(feature = "f16")]
+impl MatMulImpl<crate::dtypes::AMP<half::f16>> for Cpu {
+    #[inline]
+    fn matmul<M: Dim, K: Dim, N: Dim>(
+        (m, k, n): (M, K, N),
+        accum: bool,
+        ap: *const crate::dtypes::AMP<half::f16>,
+        astr: [usize; 2],
+        bp: *const crate::dtypes::AMP<half::f16>,
+        bstr: [usize; 2],
+        cp: *mut crate::dtypes::AMP<half::f16>,
+        cstr: [usize; 2],
+    ) {
+        #[cfg(not(feature = "cpu"))]
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
+
+        #[cfg(feature = "cpu")]
+        unsafe {
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp as *mut gemm::f16,
+                cstr[1] as isize,
+                cstr[0] as isize,
+                accum,
+                ap as *const gemm::f16,
+                astr[1] as isize,
+                astr[0] as isize,
+                bp as *const gemm::f16,
+                bstr[1] as isize,
+                bstr[0] as isize,
+                if accum {
+                    gemm::f16::ONE
+                } else {
+                    gemm::f16::ZERO
+                },
+                gemm::f16::ONE,
+                false,
+                false,
+                false,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+            )
+        }
+    }
+}
+
+#[cfg(feature = "f16")]
+impl MatMulImpl<half::f16> for Cpu {
+    #[inline]
+    fn matmul<M: Dim, K: Dim, N: Dim>(
+        (m, k, n): (M, K, N),
+        accum: bool,
+        ap: *const half::f16,
+        astr: [usize; 2],
+        bp: *const half::f16,
+        bstr: [usize; 2],
+        cp: *mut half::f16,
+        cstr: [usize; 2],
+    ) {
+        #[cfg(not(feature = "cpu"))]
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
+
+        #[cfg(feature = "cpu")]
+        #[allow(clippy::unnecessary_cast)]
+        unsafe {
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp as *mut gemm::f16,
+                cstr[1] as isize,
+                cstr[0] as isize,
+                accum,
+                ap as *const gemm::f16,
+                astr[1] as isize,
+                astr[0] as isize,
+                bp as *const gemm::f16,
+                bstr[1] as isize,
+                bstr[0] as isize,
+                if accum {
+                    gemm::f16::ONE
+                } else {
+                    gemm::f16::ZERO
+                },
+                gemm::f16::ONE,
+                false,
+                false,
+                false,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+            )
+        }
+    }
+}
+
 impl MatMulImpl<f32> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         (m, k, n): (M, K, N),
+        accum: bool,
         ap: *const f32,
-        a_strides: [usize; 2],
+        astr: [usize; 2],
         bp: *const f32,
-        b_strides: [usize; 2],
+        bstr: [usize; 2],
         cp: *mut f32,
-        c_strides: [usize; 2],
+        cstr: [usize; 2],
     ) {
-        let (m, k, n) = (m.size(), k.size(), n.size());
-        #[cfg(feature = "cpu-mkl-matmul")]
-        unsafe {
-            let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
-            let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
-            let (ldc, c_tr) = super::matrix_strides((m, n), c_strides);
-            let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-            let layout = if c_tr { ColMajor } else { RowMajor };
-            let (a_tr, b_tr) = if c_tr {
-                (if a_tr { NoTr } else { Tr }, if b_tr { NoTr } else { Tr })
-            } else {
-                (if a_tr { Tr } else { NoTr }, if b_tr { Tr } else { NoTr })
-            };
-            sgemm(
-                layout, a_tr, b_tr, m, n, k, 1.0, ap, lda as i32, bp, ldb as i32, 1.0, cp,
-                ldc as i32,
-            );
-        }
+        #[cfg(not(feature = "cpu"))]
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
 
-        #[cfg(all(
-            any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
-            not(feature = "cpu-mkl-matmul")
-        ))]
+        #[cfg(feature = "cpu")]
         unsafe {
-            let [ar, ac] = a_strides.map(|x| x as isize);
-            let [br, bc] = b_strides.map(|x| x as isize);
-            let [cr, cc] = c_strides.map(|x| x as isize);
-            sgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp,
+                cstr[1] as isize,
+                cstr[0] as isize,
+                accum,
+                ap,
+                astr[1] as isize,
+                astr[0] as isize,
+                bp,
+                bstr[1] as isize,
+                bstr[0] as isize,
+                if accum { 1.0 } else { 0.0 },
+                1.0,
+                false,
+                false,
+                false,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+            )
         }
-
-        #[cfg(not(any(
-            feature = "cpu-seq-matmul",
-            feature = "cpu-par-matmul",
-            feature = "cpu-mkl-matmul"
-        )))]
-        gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
     }
 }
 
@@ -111,52 +190,41 @@ impl MatMulImpl<f64> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
         (m, k, n): (M, K, N),
+        accum: bool,
         ap: *const f64,
-        a_strides: [usize; 2],
+        astr: [usize; 2],
         bp: *const f64,
-        b_strides: [usize; 2],
+        bstr: [usize; 2],
         cp: *mut f64,
-        c_strides: [usize; 2],
+        cstr: [usize; 2],
     ) {
-        let (m, k, n) = (m.size(), k.size(), n.size());
+        #[cfg(not(feature = "cpu"))]
+        naive_gemm((m, k, n), accum, ap, astr, bp, bstr, cp, cstr);
 
-        #[cfg(feature = "cpu-mkl-matmul")]
+        #[cfg(feature = "cpu")]
         unsafe {
-            let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
-            let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
-            let (ldc, c_tr) = super::matrix_strides((m, n), c_strides);
-            let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-            let layout = if c_tr { ColMajor } else { RowMajor };
-            let (a_tr, b_tr) = if c_tr {
-                (if a_tr { NoTr } else { Tr }, if b_tr { NoTr } else { Tr })
-            } else {
-                (if a_tr { Tr } else { NoTr }, if b_tr { Tr } else { NoTr })
-            };
-            dgemm(
-                layout, a_tr, b_tr, m, n, k, 1.0, ap, lda as i32, bp, ldb as i32, 1.0, cp,
-                ldc as i32,
-            );
-            return;
+            gemm::gemm(
+                m.size(),
+                n.size(),
+                k.size(),
+                cp,
+                cstr[1] as isize,
+                cstr[0] as isize,
+                accum,
+                ap,
+                astr[1] as isize,
+                astr[0] as isize,
+                bp,
+                bstr[1] as isize,
+                bstr[0] as isize,
+                if accum { 1.0 } else { 0.0 },
+                1.0,
+                false,
+                false,
+                false,
+                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+            )
         }
-
-        #[cfg(all(
-            any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
-            not(feature = "cpu-mkl-matmul")
-        ))]
-        unsafe {
-            let [ar, ac] = a_strides.map(|x| x as isize);
-            let [br, bc] = b_strides.map(|x| x as isize);
-            let [cr, cc] = c_strides.map(|x| x as isize);
-            dgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
-            return;
-        }
-
-        #[cfg(not(any(
-            feature = "cpu-seq-matmul",
-            feature = "cpu-par-matmul",
-            feature = "cpu-mkl-matmul"
-        )))]
-        gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
     }
 }
 
@@ -174,6 +242,7 @@ where
         let mut out = self.try_zeros_like(&(m, n))?;
         Self::matmul(
             (m, k, n),
+            false,
             lhs.data.as_ptr(),
             lhs.strides,
             rhs.data.as_ptr(),
@@ -186,16 +255,17 @@ where
     fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (m, k) = lhs.shape;
         let n = rhs.shape.1;
         let strides = (m, n).strides();
         Self::matmul(
             (m, n, k),
+            true,
             grad_out.as_ptr(),
             strides,
             rhs.data.as_ptr(),
@@ -205,6 +275,7 @@ where
         );
         Self::matmul(
             (k, m, n),
+            true,
             lhs.data.as_ptr(),
             [lhs.strides[1], lhs.strides[0]],
             grad_out.as_ptr(),
@@ -232,6 +303,7 @@ where
         for i in 0..batch.size() {
             Self::matmul(
                 (m, k, n),
+                false,
                 lhs.data[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[1], lhs.strides[2]],
                 rhs.data.as_ptr(),
@@ -245,10 +317,10 @@ where
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (batch, m, k) = lhs.shape;
         let n = rhs.shape.1;
@@ -256,6 +328,7 @@ where
         for i in 0..batch.size() {
             Self::matmul(
                 (m, n, k),
+                true,
                 grad_out[i * strides[0]..].as_ptr(),
                 [strides[1], strides[2]],
                 rhs.data.as_ptr(),
@@ -265,6 +338,7 @@ where
             );
             Self::matmul(
                 (k, m, n),
+                true,
                 lhs.data[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[2], lhs.strides[1]],
                 grad_out[i * strides[0]..].as_ptr(),
@@ -295,6 +369,7 @@ where
         for i in 0..b.size() {
             Self::matmul(
                 (m, k, n),
+                false,
                 ap[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[1], lhs.strides[2]],
                 bp[i * rhs.strides[0]..].as_ptr(),
@@ -308,10 +383,10 @@ where
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(B, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (b, m, k) = lhs.shape;
         let n = rhs.shape.2;
@@ -319,6 +394,7 @@ where
         for i in 0..b.size() {
             Self::matmul(
                 (m, n, k),
+                true,
                 grad_out[i * strides[0]..].as_ptr(),
                 [strides[1], strides[2]],
                 rhs.data[i * rhs.strides[0]..].as_ptr(),
@@ -328,6 +404,7 @@ where
             );
             Self::matmul(
                 (k, m, n),
+                true,
                 lhs.data[i * lhs.strides[0]..].as_ptr(),
                 [lhs.strides[2], lhs.strides[1]],
                 grad_out[i * strides[0]..].as_ptr(),
@@ -357,6 +434,7 @@ where
             for j in 0..s.size() {
                 Self::matmul(
                     (m, k, n),
+                    false,
                     lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
                     [lhs.strides[2], lhs.strides[3]],
                     rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
@@ -371,10 +449,10 @@ where
     fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<(B, S, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let (b, s, m, k) = lhs.shape;
         let n = rhs.shape.3;
@@ -383,6 +461,7 @@ where
             for j in 0..s.size() {
                 Self::matmul(
                     (m, n, k),
+                    true,
                     grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
                     [strides[2], strides[3]],
                     rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
@@ -392,6 +471,7 @@ where
                 );
                 Self::matmul(
                     (k, m, n),
+                    true,
                     lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
                     [lhs.strides[3], lhs.strides[2]],
                     grad_out[i * strides[0] + j * strides[1]..].as_ptr(),

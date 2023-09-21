@@ -43,7 +43,7 @@ where
 /// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
+pub struct Linear<const I: usize, const O: usize, E: Dtype, D: Storage<E>> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<O, I>, E, D>,
 
@@ -51,13 +51,17 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
     pub bias: Tensor<Rank1<O>, E, D>,
 }
 
-impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModule
+impl<const I: usize, const O: usize, E: Dtype, D: Storage<E>> NonMutableModule
     for Linear<I, O, E, D>
 {
 }
 
-impl<const I: usize, const O: usize, E: Dtype + num_traits::Float, D: Device<E>>
-    TensorCollection<E, D> for Linear<I, O, E, D>
+impl<
+        const I: usize,
+        const O: usize,
+        E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,
+        D: Device<E>,
+    > TensorCollection<E, D> for Linear<I, O, E, D>
 {
     type To<E2: Dtype, D2: Device<E2>> = Linear<I, O, E2, D2>;
 
@@ -107,7 +111,7 @@ where
 }
 
 #[derive(Clone, Debug)]
-struct Bias1D<'a, const M: usize, E: Dtype, D: DeviceStorage> {
+struct Bias1D<'a, const M: usize, E: Dtype, D: Storage<E>> {
     beta: &'a Tensor<Rank1<M>, E, D>,
 }
 
@@ -154,11 +158,11 @@ mod tests {
     use super::*;
     use crate::tests::*;
 
-    const W: [[TestDtype; 5]; 2] = [
+    const W: [[f64; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
-    const B: [TestDtype; 2] = [0.3765365, -0.290717];
+    const B: [f64; 2] = [0.3765365, -0.290717];
 
     #[test]
     fn test_linear_ondevice() {
@@ -173,13 +177,12 @@ mod tests {
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
         let m = dev.build_module::<builder::Linear<2000, 1>, TestDtype>();
-        let bound: TestDtype = 1.0 / 2000.0;
-        let bound = bound.sqrt();
+        let bound: TestDtype = NumCast::from((1.0 / 2000.0f64).sqrt()).unwrap();
         for v in m.weight.as_vec() {
-            assert!(-bound <= v && v <= bound && v != 0.0);
+            assert!(-bound <= v && v <= bound);
         }
         for v in m.bias.as_vec() {
-            assert!(-bound <= v && v <= bound && v != 0.0);
+            assert!(-bound <= v && v <= bound);
         }
     }
 
@@ -190,9 +193,12 @@ mod tests {
         let model = Linear {
             weight: dev.tensor(W),
             bias: dev.tensor(B),
-        };
+        }
+        .to_dtype::<TestDtype>();
 
-        let x = dev.tensor([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
+        let x = dev
+            .tensor([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299])
+            .to_dtype::<TestDtype>();
         let y = model.forward(x.leaky_trace());
         assert_close_to_literal!(y, [-0.93430865, 0.08624211]);
 
@@ -214,13 +220,16 @@ mod tests {
         let model = Linear {
             weight: dev.tensor(W),
             bias: dev.tensor(B),
-        };
+        }
+        .to_dtype::<TestDtype>();
 
-        let x = dev.tensor([
-            [-1.9468665, 1.4611785, -1.6698982, 1.408863, 1.3425643],
-            [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705],
-            [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455],
-        ]);
+        let x = dev
+            .tensor([
+                [-1.9468665, 1.4611785, -1.6698982, 1.408863, 1.3425643],
+                [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705],
+                [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455],
+            ])
+            .to_dtype::<TestDtype>();
         let y = model.forward(x.leaky_trace());
         assert_close_to_literal!(
             y,
@@ -249,13 +258,14 @@ mod tests {
         let model = Linear {
             weight: dev.tensor(W),
             bias: dev.tensor(B),
-        };
+        }
+        .to_dtype::<TestDtype>();
 
         #[rustfmt::skip]
         let x = dev.tensor([
             [[-1.9468665, 1.4611785, -1.6698982, 1.408863, 1.3425643], [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705], [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455]],
             [[1.2879219, 0.70150787, -1.6746868, 1.7261779, -0.94021803], [-2.6883178, 2.9369607, 2.9256766, 0.27559614, -0.17530347], [0.17499207, -0.11440835, 0.16627812, -0.91773695, 1.1128315]],
-        ]);
+        ]).to_dtype::<TestDtype>();
         let y = model.forward(x.leaky_trace());
         assert_close_to_literal!(
             y,

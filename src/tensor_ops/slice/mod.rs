@@ -4,7 +4,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-pub trait SliceKernel<E: Unit>: DeviceStorage {
+pub trait SliceKernel<E: Unit>: Storage<E> {
     fn forward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -14,8 +14,8 @@ pub trait SliceKernel<E: Unit>: DeviceStorage {
     fn backward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
         slice: &Slice,
     ) -> Result<(), Self::Err>;
 }
@@ -37,11 +37,11 @@ pub trait SliceKernel<E: Unit>: DeviceStorage {
 /// ]);
 ///
 /// // Slice the first row to get a 1x2 tensor
-/// let b: Tensor<Rank2<1, 2>, _, _> = a.clone().slice((0..1, 0..2)).realize().unwrap();
+/// let b: Tensor<Rank2<1, 2>, _, _> = a.clone().slice((0..1, 0..2)).realize();
 /// assert_eq!(b.array(), [[1., 2.]]);
 ///
 /// // Slice the last column to get a 2x1 tensor
-/// let c: Tensor<Rank2<2, 1>, _, _> = a.clone().slice((0..2, 1..)).realize().unwrap();
+/// let c: Tensor<Rank2<2, 1>, _, _> = a.clone().slice((0..2, 1..)).realize();
 /// assert_eq!(c.array(), [[2.], [4.]]);
 /// ```
 pub fn slice<S: SliceShape<Slice>, E: Unit, D: SliceKernel<E>, T: Tape<E, D>, Slice: 'static>(
@@ -89,85 +89,95 @@ mod tests {
     #[test]
     fn test_slice() {
         let dev = TestDevice::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([
-            [1., 2., 3., 4.],
-            [5., 6., 7., 8.],
-            [9., 10., 11., 12.],
-            [13., 14., 15., 16.],
-        ]);
+        let a = dev
+            .tensor([
+                [1., 2., 3., 4.],
+                [5., 6., 7., 8.],
+                [9., 10., 11., 12.],
+                [13., 14., 15., 16.],
+            ])
+            .to_dtype::<TestDtype>();
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((2.., 2..)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((2.., 2..)).realize();
         assert_close_to_literal!(b, [[11., 12.], [15., 16.]]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 1..3)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 1..3)).realize();
         assert_close_to_literal!(b, [[6., 7.], [10., 11.]]);
 
-        let b: Tensor<Rank2<1, 3>, _, _> = a.clone().slice((..1, 1..4)).realize().unwrap();
+        let b: Tensor<Rank2<1, 3>, _, _> = a.clone().slice((..1, 1..4)).realize();
         assert_close_to_literal!(b, [[2., 3., 4.]]);
 
-        let b: Tensor<Rank2<2, 3>, _, _> = a.clone().slice((1..3, ..3)).realize().unwrap();
+        let b: Tensor<Rank2<2, 3>, _, _> = a.clone().slice((1..3, ..3)).realize();
         assert_close_to_literal!(b, [[5., 6., 7.], [9., 10., 11.]]);
 
-        let b: Tensor<Rank2<2, 3>, _, _> = a.clone().slice((1..=2, 1..=3)).realize().unwrap();
+        let b: Tensor<Rank2<2, 3>, _, _> = a.clone().slice((1..=2, 1..=3)).realize();
         assert_close_to_literal!(b, [[6., 7., 8.], [10., 11., 12.]]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((0..=1, 2..=3)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((0..=1, 2..=3)).realize();
         assert_close_to_literal!(b, [[3., 4.], [7., 8.]]);
 
-        let b: Tensor<Rank2<3, 2>, _, _> = a.clone().slice((1.., ..2)).realize().unwrap();
+        let b: Tensor<Rank2<3, 2>, _, _> = a.clone().slice((1.., ..2)).realize();
         assert_close_to_literal!(b, [[5., 6.], [9., 10.], [13., 14.]]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.slice((..2, 2..)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.slice((..2, 2..)).realize();
         assert_close_to_literal!(b, [[3., 4.], [7., 8.]]);
     }
 
     #[test]
     fn test_slice_broadcast_top() {
         let dev = TestDevice::default();
-        let a: Tensor<Rank2<5, 4>, TestDtype, _> = dev.tensor([1., 2., 3., 4.]).broadcast();
+        let a = dev
+            .tensor([1., 2., 3., 4.])
+            .to_dtype::<TestDtype>()
+            .broadcast::<Rank2<5, 4>, _>();
 
-        let b: Tensor<Rank2<3, 4>, _, _> = a.clone().slice((..3, ..)).realize().unwrap();
+        let b: Tensor<Rank2<3, 4>, _, _> = a.clone().slice((..3, ..)).realize();
         assert_close_to_literal!(b, [[1., 2., 3., 4.]; 3]);
 
-        let b: Tensor<Rank2<5, 2>, _, _> = a.clone().slice((.., 1..3)).realize().unwrap();
+        let b: Tensor<Rank2<5, 2>, _, _> = a.clone().slice((.., 1..3)).realize();
         assert_close_to_literal!(b, [[2., 3.]; 5]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 1..3)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 1..3)).realize();
         assert_close_to_literal!(b, [[2., 3.], [2., 3.]]);
 
-        let b: Tensor<Rank2<3, 3>, _, _> = a.slice((1..4, 1..4)).realize().unwrap();
+        let b: Tensor<Rank2<3, 3>, _, _> = a.slice((1..4, 1..4)).realize();
         assert_close_to_literal!(b, [[2., 3., 4.]; 3]);
     }
 
     #[test]
     fn test_slice_broadcast_bottom() {
         let dev = TestDevice::default();
-        let a: Tensor<Rank2<4, 5>, TestDtype, _> = dev.tensor([1., 2., 3., 4.]).broadcast();
+        let a: Tensor<Rank2<4, 5>, TestDtype, _> = dev
+            .tensor([1., 2., 3., 4.])
+            .to_dtype::<TestDtype>()
+            .broadcast();
 
-        let b: Tensor<Rank2<2, 5>, _, _> = a.clone().slice((1..3, ..)).realize().unwrap();
+        let b: Tensor<Rank2<2, 5>, _, _> = a.clone().slice((1..3, ..)).realize();
         assert_close_to_literal!(b, [[2.; 5], [3.; 5]]);
 
-        let b: Tensor<Rank2<4, 2>, _, _> = a.clone().slice((.., 1..3)).realize().unwrap();
+        let b: Tensor<Rank2<4, 2>, _, _> = a.clone().slice((.., 1..3)).realize();
         assert_close_to_literal!(b, [[1., 1.], [2., 2.], [3., 3.], [4., 4.]]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 3..)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 3..)).realize();
         assert_close_to_literal!(b, [[2., 2.], [3., 3.]]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.slice((..2, 1..3)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.slice((..2, 1..3)).realize();
         assert_close_to_literal!(b, [[1., 1.], [2., 2.]]);
     }
 
     #[test]
     fn test_slice_backward() {
         let dev = TestDevice::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([
-            [1., 2., 3., 4.],
-            [5., 6., 7., 8.],
-            [9., 10., 11., 12.],
-            [13., 14., 15., 16.],
-        ]);
+        let a = dev
+            .tensor([
+                [1., 2., 3., 4.],
+                [5., 6., 7., 8.],
+                [9., 10., 11., 12.],
+                [13., 14., 15., 16.],
+            ])
+            .to_dtype::<TestDtype>();
 
-        let b: Tensor<Rank2<2, 2>, _, _, _> = a.leaky_trace().slice((2.., 2..)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _, _> = a.leaky_trace().slice((2.., 2..)).realize();
         assert_close_to_literal!(b, [[11., 12.], [15., 16.]]);
         let g = b.square().sum().backward();
         assert_close_to_literal!(

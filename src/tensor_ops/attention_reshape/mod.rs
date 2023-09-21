@@ -19,7 +19,7 @@ type QkvTuple<const NUM_HEADS: usize, const HEAD_DIM: usize, E, D> = (
 
 /// AttentionReshape qkv + past_key + past_value into (q, k, v) used
 /// in attention layer
-pub trait TryAttentionReshape<E: Dtype>: DeviceStorage {
+pub trait TryAttentionReshape<E: Dtype>: Storage<E> {
     /// This is an inference only kernel:
     /// Within `transformers` architecture, a core component is the `attention`
     /// layer, which can be written in many forms.
@@ -60,7 +60,7 @@ pub trait TryAttentionReshape<E: Dtype>: DeviceStorage {
     ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Self::Err>;
 }
 
-pub trait AttentionReshapeKernel<E: Dtype>: DeviceStorage {
+pub trait AttentionReshapeKernel<E: Dtype>: Storage<E> {
     fn forward<const THREE_HIDDEN_DIM: usize, const NUM_HEADS: usize, const HEAD_DIM: usize>(
         &self,
         qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), E, Self>,
@@ -89,7 +89,7 @@ impl<E: Dtype, D: AttentionReshapeKernel<E>> TryAttentionReshape<E> for D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::*;
+    use crate::{tensor_ops::*, tests::*};
 
     #[test]
     fn test_attention_reshape() {
@@ -100,37 +100,53 @@ mod tests {
         let sequence_length = 1;
         let past_length = 3;
 
-        {
-            let qkv: Tensor<(usize, Const<{ NUM_HEADS * HEAD_DIM * 3 }>), TestDtype, _> =
-                dev.zeros_like(&(sequence_length, Const)) + 1.0;
-            let past_key: Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), TestDtype, _> =
-                dev.zeros_like(&(Const, Const, past_length)) + 2.0;
-            let past_value: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), TestDtype, _> =
-                dev.zeros_like(&(Const, past_length, Const)) + 3.0;
+        let qkv: Tensor<(usize, Const<{ NUM_HEADS * HEAD_DIM * 3 }>), f32, _> =
+            dev.ones_like(&(sequence_length, Const));
+        let past_key: Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), f32, _> =
+            dev.ones_like(&(Const, Const, past_length));
+        let past_key = past_key * 2.0;
+        let past_value: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, _> =
+            dev.ones_like(&(Const, past_length, Const));
+        let past_value = past_value * 3.0;
 
-            let (q, k, v) = dev.attention_reshape(&qkv, &past_key, &past_value);
+        let (q, k, v) = dev.attention_reshape(&qkv, &past_key, &past_value);
 
-            assert_eq!(q.as_vec(), std::vec![1.0; 6]);
-            #[rustfmt::skip]
-        assert_eq!(
-            k.as_vec(),
-            std::vec![
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0
+        let q = q.realize::<(Const<NUM_HEADS>, Const<1>, Const<HEAD_DIM>)>();
+        let k = k.realize::<(Const<NUM_HEADS>, Const<HEAD_DIM>, Const<4>)>();
+        let v = v.realize::<(Const<NUM_HEADS>, Const<4>, Const<HEAD_DIM>)>();
+
+        assert_close_to_literal!(q, [[[1.0; HEAD_DIM]; 1]; NUM_HEADS]);
+        assert_close_to_literal!(
+            k,
+            [
+                [
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0]
+                ],
+                [
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0]
+                ]
             ]
         );
-            #[rustfmt::skip]
-        assert_eq!(
-            v.as_vec(),
-            std::vec![
-                3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1.0,
-                3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1.0
+        assert_close_to_literal!(
+            v,
+            [
+                [
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [1.0, 1.0, 1.0]
+                ],
+                [
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [1.0, 1.0, 1.0]
+                ]
             ]
         );
-        }
     }
 }

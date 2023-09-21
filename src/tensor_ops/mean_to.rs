@@ -39,8 +39,8 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> MeanTo for Tensor<S, E, D,
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
-        let num_elements_reduced = E::from_usize(<S as HasAxes<Ax>>::size(self.shape())).unwrap();
-        self.try_sum()?.try_div(num_elements_reduced)
+        let num_elements_reduced = <S as HasAxes<Ax>>::size(self.shape()) as f64;
+        self.try_sum()?.try_mul(1.0 / num_elements_reduced)
     }
 }
 
@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn test_mean_1d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let t = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
         let r = t.leaky_trace().mean();
         assert_close_to_literal!(r, 2.0);
         // NOTE: .exp() so we cover the case where .mean() has to use result grad.
@@ -82,7 +82,9 @@ mod tests {
     #[test]
     fn test_mean_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().mean();
         assert_close_to_literal!(r, 3.5);
         let g = r.backward();
@@ -92,7 +94,7 @@ mod tests {
     #[test]
     fn test_mean_3d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.ones::<Rank3<4, 2, 3>>();
+        let t: Tensor<Rank3<4, 2, 3>, TestDtype, _> = dev.ones();
         let r = t.leaky_trace().mean();
         assert_close_to_literal!(r, 1.0);
         let g = r.backward();
@@ -102,7 +104,9 @@ mod tests {
     #[test]
     fn test_mean_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().mean::<Rank1<3>, _>();
         assert_close_to_literal!(r, [-0.5, 3.0, -1.5]);
         let g = r.exp().mean().backward();
@@ -112,7 +116,9 @@ mod tests {
     #[test]
     fn test_mean_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().mean::<Rank1<2>, _>();
         assert_close_to_literal!(r, [2.0, -4.0 / 3.0]);
         let g = r.exp().mean().backward();

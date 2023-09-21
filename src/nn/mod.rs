@@ -188,7 +188,11 @@ mod add_into;
 mod batchnorm1d;
 mod batchnorm2d;
 mod bias2d;
-mod conv;
+#[cfg(feature = "nightly")]
+mod conv1d;
+#[cfg(feature = "nightly")]
+mod conv2d;
+#[cfg(feature = "nightly")]
 mod convtrans;
 mod dropout;
 mod ema;
@@ -241,7 +245,7 @@ pub mod modules {
     pub use super::batchnorm2d::BatchNorm2D;
     pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
-    pub use super::conv::Conv2D;
+    pub use super::conv2d::Conv2D;
     #[cfg(feature = "nightly")]
     pub use super::convtrans::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
@@ -277,7 +281,7 @@ pub mod builders {
     pub use super::batchnorm2d::builder::BatchNorm2D;
     pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
-    pub use super::conv::builder::Conv2D;
+    pub use super::conv2d::builder::Conv2D;
     #[cfg(feature = "nightly")]
     pub use super::convtrans::builder::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};

@@ -55,7 +55,7 @@ pub struct MultiHeadAttention<
     const K_DIM: usize,
     const V_DIM: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: Storage<E>,
 > {
     pub w_q: Linear<EMBED_DIM, K_DIM, E, D>,
     pub w_k: Linear<EMBED_DIM, K_DIM, E, D>,
@@ -113,29 +113,11 @@ where
         assert_eq!(k.shape.0, v.shape.0);
         let s1 = q.shape.0;
         let s2 = k.shape.0;
-        let v = self.w_v.try_forward(v.retaped::<T>())?;
-        let v = v.try_reshape_like(&(s2, H, V / H)).unwrap()?;
-        let v = v.try_permute::<_, Axes3<1, 0, 2>>()?;
-
-        let k = self.w_k.try_forward(k.retaped::<T>())?;
-        let k = k.try_reshape_like(&(s2, H, K / H)).unwrap()?;
-        let k = k.try_permute::<_, Axes3<1, 2, 0>>()?;
-
-        let q = self.w_q.try_forward(q)?;
-        let q = q.try_reshape_like(&(s1, H, K / H)).unwrap()?;
-        let q = q.try_permute::<_, Axes3<1, 0, 2>>()?;
-
-        // Get weights
-        let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
-        let weights = q.try_matmul(k)?.try_mul(scalar)?;
-        let weights = weights.try_softmax::<Axis<2>>()?;
-
-        // Get new tokens
-        let tokens = weights.try_matmul(v)?;
-        let tokens = tokens.try_permute::<_, Axes3<1, 0, 2>>()?;
-        let tokens = tokens.try_reshape_like(&(s1, Const::<V>)).unwrap()?;
-
-        self.w_o.try_forward(tokens)
+        let q = q.broadcast_like(&(Const::<1>, s1, Const::<M>));
+        let k = k.broadcast_like(&(Const::<1>, s2, Const::<M>));
+        let v = v.broadcast_like(&(Const::<1>, s2, Const::<M>));
+        let out = self.try_forward((q, k, v))?;
+        out.try_reshape_like(&(s1, Const::<M>))
     }
 }
 
@@ -174,26 +156,26 @@ where
         let s2 = v.shape.1;
 
         let v = self.w_v.try_forward(v.retaped::<T>())?;
-        let v = v.try_reshape_like(&(b, s2, H, V / H)).unwrap()?;
+        let v = v.try_reshape_like(&(b, s2, H, V / H))?;
         let v = v.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
 
         let k = self.w_k.try_forward(k.retaped::<T>())?;
-        let k = k.try_reshape_like(&(b, s2, H, K / H)).unwrap()?;
+        let k = k.try_reshape_like(&(b, s2, H, K / H))?;
         let k = k.try_permute::<_, Axes4<0, 2, 3, 1>>()?;
 
         let q = self.w_q.try_forward(q)?;
-        let q = q.try_reshape_like(&(b, s1, H, K / H)).unwrap()?;
+        let q = q.try_reshape_like(&(b, s1, H, K / H))?;
         let q = q.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
 
         // Get weights
-        let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
+        let scalar = 1.0 / ((K / H) as f64).sqrt();
         let weights = q.try_matmul(k)?.try_mul(scalar)?;
         let weights = weights.try_softmax::<Axis<3>>()?;
 
         // Get new tokens
         let tokens = weights.try_matmul(v)?;
         let tokens = tokens.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
-        let tokens = tokens.try_reshape_like(&(b, s1, Const::<V>)).unwrap()?;
+        let tokens = tokens.try_reshape_like(&(b, s1, Const::<V>))?;
 
         self.w_o.try_forward(tokens)
     }

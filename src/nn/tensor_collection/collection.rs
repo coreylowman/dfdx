@@ -1,4 +1,5 @@
 #![allow(clippy::type_complexity)]
+use num_traits::NumCast;
 
 use crate::{
     shapes::{ConstShape, Dtype, Shape},
@@ -6,7 +7,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{ModuleField, ModuleFields, TensorField};
+use super::{ModuleField, ModuleFields, ScalarField, TensorField};
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, including resetting, counting number of params, updating gradients,
@@ -23,7 +24,7 @@ use super::{ModuleField, ModuleFields, TensorField};
 ///     relu: ReLU,
 /// }
 ///
-/// impl<E: Dtype + num_traits::Float, D: Device<E>> TensorCollection<E, D> for Mlp<E, D> {
+/// impl<E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform, D: Device<E>> TensorCollection<E, D> for Mlp<E, D> {
 ///     type To<E2: Dtype, D2: Device<E2>> = Mlp<E2, D2>;
 ///
 ///     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
@@ -105,6 +106,29 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
             m: Default::default(),
         }
     }
+
+    /// Creates a [ModuleFields] that represents a scalar field.
+    ///
+    /// See also: [TensorField], [TensorCollection], [TensorOptions].
+    fn scalar<F1, F2, N>(
+        name: &str,
+        get_ref: F1,
+        get_mut: F2,
+        options: ScalarOptions<N>,
+    ) -> ScalarField<F1, F2, Self, N>
+    where
+        F1: FnMut(&Self) -> &N,
+        F2: FnMut(&mut Self) -> &mut N,
+        N: NumCast,
+    {
+        ScalarField {
+            name,
+            get_ref,
+            get_mut,
+            options,
+            m: Default::default(),
+        }
+    }
 }
 
 /// An object that can visit [TensorCollection]s and [Tensor]s recursively.
@@ -136,6 +160,18 @@ pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Size
     where
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;
+
+    fn visit_scalar<N, GetRef, GetMut>(
+        &mut self,
+        name: &str,
+        get_refs: GetRef,
+        get_muts: GetMut,
+        opts: ScalarOptions<N>,
+    ) -> Result<Option<N>, Self::Err>
+    where
+        N: NumCast,
+        GetRef: FnMut(&T) -> &N,
+        GetMut: FnMut(&mut T) -> &mut N;
 
     /// Takes something that implements [ModuleFields] and function that takes
     /// [ModuleFields::Output] and returns an instance of T.
@@ -227,5 +263,19 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
             reset,
             shape: S::default(),
         }
+    }
+}
+
+/// Options to change behavior of [ModuleVisitor]
+#[non_exhaustive]
+pub struct ScalarOptions<N: NumCast> {
+    /// The default value for this parameter
+    pub default: N,
+}
+
+impl<N: NumCast> ScalarOptions<N> {
+    // Constructs a ScalarOptions using the parameter's default value
+    pub fn from_default(default: N) -> Self {
+        Self { default }
     }
 }

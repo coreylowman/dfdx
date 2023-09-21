@@ -1,6 +1,5 @@
-use crate::prelude::Tensorlike;
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{cpu::*, Tensor, ZerosTensor};
+use crate::tensor::{cpu::*, *};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use super::{Conv2DKernel, Conv2DOp};
@@ -11,10 +10,10 @@ impl Conv2DOp {
     #[inline(always)]
     fn unfold_idx(&self, [k1, k2, y, x]: [usize; 4]) -> Option<[usize; 2]> {
         let mut oh = y + self.padding;
-        if oh < k1 {
+        if oh < self.dilation * k1 {
             return None;
         }
-        oh -= k1;
+        oh -= self.dilation * k1;
         if oh % self.stride != 0 {
             return None;
         }
@@ -24,10 +23,10 @@ impl Conv2DOp {
         }
 
         let mut ow = x + self.padding;
-        if ow < k2 {
+        if ow < self.dilation * k2 {
             return None;
         }
-        ow -= k2;
+        ow -= self.dilation * k2;
         if ow % self.stride != 0 {
             return None;
         }
@@ -42,7 +41,7 @@ impl Conv2DOp {
 
 impl Cpu {
     #[inline]
-    fn conv2d_forward<E: Dtype>(
+    fn fwd_conv2d<E: Dtype>(
         &self,
         op: &Conv2DOp,
         img: &[E],
@@ -59,15 +58,12 @@ impl Cpu {
                 for k1 in 0..op.kernel {
                     for k2 in 0..op.kernel {
                         for oh in 0..op.h_out {
-                            let y = (oh * op.stride + k1).wrapping_sub(op.padding);
+                            let y = (oh * op.stride + op.dilation * k1).wrapping_sub(op.padding);
                             for ow in 0..op.w_out {
-                                let x = (ow * op.stride + k2).wrapping_sub(op.padding);
+                                let x =
+                                    (ow * op.stride + op.dilation * k2).wrapping_sub(op.padding);
                                 if y < op.h_in && x < op.w_in {
-                                    unsafe {
-                                        *buf.get_unchecked_mut(i) = *img.get_unchecked(
-                                            c * (op.w_in * op.h_in) + y * op.w_in + x,
-                                        )
-                                    };
+                                    buf[i] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
                                 }
                                 i += 1;
                             }
@@ -77,25 +73,30 @@ impl Cpu {
             }
         }
 
-        // (O, C * K * K) * (C * K * K, OH * OW) = (O, OH * OW)
-        let m = op.chan_out;
-        let k = op.chan_in * op.kernel * op.kernel;
+        // filters: (G, O/G, C/G*K*K)
+        // buf:     (G, C/G*K*K, OH*OW)
+        // output:  (G, O/G, OH*OW)
+        let m = op.chan_out / op.groups;
+        let k = (op.chan_in / op.groups) * op.kernel * op.kernel;
         let n = op.w_out * op.h_out;
-        Self::matmul(
-            (m, k, n),
-            filters.as_ptr(),
-            [k, 1],
-            buf.as_ptr(),
-            [n, 1],
-            out.as_mut_ptr(),
-            [n, 1],
-        );
+        for g in 0..op.groups {
+            Self::matmul(
+                (m, k, n),
+                false,
+                filters[g * m * k..].as_ptr(),
+                [k, 1],
+                buf[g * k * n..].as_ptr(),
+                [n, 1],
+                out[g * m * n..].as_mut_ptr(),
+                [n, 1],
+            );
+        }
         Ok(())
     }
 
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    fn conv2d_backward<E: Dtype>(
+    fn bwd_conv2d<E: Dtype>(
         &self,
         op: &Conv2DOp,
         img: &[E],
@@ -116,11 +117,8 @@ impl Cpu {
                         for y in 0..op.h_in {
                             for x in 0..op.w_in {
                                 if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
-                                    unsafe {
-                                        *buf.get_unchecked_mut(i) = *grad_out.get_unchecked(
-                                            o * (op.h_out * op.w_out) + oh * op.w_out + ow,
-                                        );
-                                    }
+                                    buf[i] =
+                                        grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
                                 }
                                 i += 1;
                             }
@@ -132,36 +130,42 @@ impl Cpu {
 
         {
             // img_g += filters^T * unfold(grad_out)
-            // (C, H * W) += (C, O * K * K) * (O * K * K, H * W)
-            let m = op.chan_in;
-            let k = op.chan_out * op.kernel * op.kernel;
+            // (G, C/G, H * W) += (G, C/G, O/G * K * K) * (G, O/G * K * K, H * W)
+            let m = op.chan_in / op.groups;
+            let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
-            Self::matmul(
-                (m, k, n),
-                filters_tr.as_ptr(),
-                [k, 1],
-                buf.as_ptr(),
-                [n, 1],
-                grad_img.as_mut_ptr(),
-                [n, 1],
-            );
+            for g in 0..op.groups {
+                Self::matmul(
+                    (m, k, n),
+                    true,
+                    filters_tr[g * m * k..].as_ptr(),
+                    [k, 1],
+                    buf[g * k * n..].as_ptr(),
+                    [n, 1],
+                    grad_img[g * m * n..].as_mut_ptr(),
+                    [n, 1],
+                );
+            }
         }
 
         {
-            // weight_g^T += img * patches^T
-            // (C, O * K * K) += (C, H * W) * (H * W, O * K * K)
-            let m = op.chan_in;
+            // weight_g^T += img * unfold(patches)^T
+            // (G, C/G, O/G * K * K) += (G, C/G, H * W) * (G, H * W, O/G * K * K)
+            let m = op.chan_in / op.groups;
             let k = op.h_in * op.w_in;
-            let n = op.chan_out * op.kernel * op.kernel;
-            Self::matmul(
-                (m, k, n),
-                img.as_ptr(),
-                [k, 1],
-                buf.as_ptr(),
-                [1, k],
-                grad_filters_tr.as_mut_ptr(),
-                [n, 1],
-            );
+            let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
+            for g in 0..op.groups {
+                Self::matmul(
+                    (m, k, n),
+                    true,
+                    img[g * m * k..].as_ptr(),
+                    [k, 1],
+                    buf[g * k * n..].as_ptr(),
+                    [1, k],
+                    grad_filters_tr[g * m * n..].as_mut_ptr(),
+                    [n, 1],
+                );
+            }
         }
         Ok(())
     }
@@ -182,7 +186,8 @@ where
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        let mut patches = self.try_alloc_zeros::<E>(op.inp_patches_shape().num_elements())?;
+        let patches = (op.chan_in, op.kernel, op.kernel, op.h_out, op.w_out);
+        let mut patches = self.try_alloc_zeros::<E>(patches.num_elements())?;
         let [lstride, ostride] = match L::NUM_DIMS {
             3 => [0; 2],
             4 => [lhs.strides[0], out.strides[0]],
@@ -192,7 +197,7 @@ where
         let rhs = rhs.data.as_ref();
         let out = Arc::make_mut(&mut out.data);
         for i_batch in 0..op.batch {
-            self.conv2d_forward(
+            self.fwd_conv2d(
                 &op,
                 &lhs[i_batch * lstride..],
                 rhs,
@@ -207,14 +212,21 @@ where
         &self,
         op: Conv2DOp,
         lhs: &Tensor<L, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
-        let f_tr_shape = op.filters_tr_shape();
-        let mut patches = self.try_alloc_zeros::<E>(op.out_patches_shape().num_elements())?;
+        let f_tr_shape = [
+            op.groups,
+            op.chan_in / op.groups,
+            op.chan_out / op.groups,
+            op.kernel,
+            op.kernel,
+        ];
+        let patches_shape = [op.chan_out, op.kernel, op.kernel, op.h_in, op.w_in];
+        let mut patches = self.try_alloc_zeros::<E>(patches_shape.num_elements())?;
         let mut f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
         let mut grad_f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
 
@@ -222,9 +234,9 @@ where
             // transpose filters in f1023
             let buf = rhs.data.as_ref();
             let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [c, o, k1, k2])) = f_idx.next_with_idx() {
-                let idx = o * rhs.strides[0]
-                    + c * rhs.strides[1]
+            while let Some((i, [g, c_over_g, o_over_g, k1, k2])) = f_idx.next_with_idx() {
+                let idx = (g * (op.chan_out / op.groups) + o_over_g) * rhs.strides[0]
+                    + c_over_g * rhs.strides[1]
                     + k1 * rhs.strides[2]
                     + k2 * rhs.strides[3];
                 f1023[i] = buf[idx];
@@ -239,7 +251,7 @@ where
         let lhs = lhs.data.as_ref();
 
         for i_batch in 0..op.batch {
-            self.conv2d_backward(
+            self.bwd_conv2d(
                 &op,
                 &lhs[i_batch * lstride..],
                 &mut grad_lhs[i_batch * lstride..],
@@ -253,9 +265,9 @@ where
         {
             // untranspose filters
             let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [c, o, k1, k2])) = f_idx.next_with_idx() {
-                let idx = o * rhs.strides[0]
-                    + c * rhs.strides[1]
+            while let Some((i, [g, c_over_g, o_over_g, k1, k2])) = f_idx.next_with_idx() {
+                let idx = (g * (op.chan_out / op.groups) + o_over_g) * rhs.strides[0]
+                    + c_over_g * rhs.strides[1]
                     + k1 * rhs.strides[2]
                     + k2 * rhs.strides[3];
                 grad_rhs[idx] += grad_f1023[i];

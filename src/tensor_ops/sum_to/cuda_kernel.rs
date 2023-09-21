@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
     tensor_ops::reduction_utils::*,
@@ -13,6 +14,18 @@ const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 trait HasCudaKernel<E> {
     const MOD: &'static str;
     const FNS: &'static [&'static str];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
+    const MOD: &'static str = "sum_f16";
+    const FNS: &'static [&'static str] = &["sum_to_fwd_f16", "sum_to_bwd_f16"];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const MOD: &'static str = "sum_amp_f16";
+    const FNS: &'static [&'static str] = &["sum_to_fwd_amp_f16", "sum_to_bwd_f16"];
 }
 
 impl HasCudaKernel<f32> for Cuda {
@@ -84,8 +97,8 @@ where
         &self,
         dst: Dst,
         inp: &impl Tensorlike<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,

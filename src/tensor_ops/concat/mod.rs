@@ -8,7 +8,7 @@ mod cuda_kernel;
 ///
 /// **Pytorch equivalent** `torch.concat`.
 ///
-/// Stacking with const dims **requires nightly**:
+/// Concat with const dims **requires nightly**:
 /// ```ignore
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
@@ -17,7 +17,7 @@ mod cuda_kernel;
 /// let _: Tensor<Rank2<6, 4>, f32, _> = a.concat(b);
 /// ```
 ///
-/// Stacking with usize dims:
+/// Concat with usize dims:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
@@ -26,18 +26,25 @@ mod cuda_kernel;
 /// let c: Tensor<(usize, Const<3>), f32, _> = a.concat(b);
 /// assert_eq!(c.shape().0, 6);
 /// ```
+#[deprecated = "Use TryConcatAlong instead"]
 pub trait TryConcat<Rhs>: HasErr {
     type Output;
 
     /// Concatenate two tensors along the first dimension.
+    #[deprecated = "Use TryConcatAlong::concat_along instead"]
+    #[allow(deprecated)]
     fn concat(self, rhs: Rhs) -> Self::Output {
+        #[allow(deprecated)]
         self.try_concat(rhs).unwrap()
     }
 
     /// Fallible version of [TryConcat::concat].
+    #[deprecated = "Use TryConcatAlong::try_concat_along instead"]
+    #[allow(deprecated)]
     fn try_concat(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
+#[allow(deprecated)]
 impl<A: Shape, B: Shape, T, R, E: Dtype, D: ConcatKernel<E>> TryConcat<Tensor<B, E, D, R>>
     for Tensor<A, E, D, T>
 where
@@ -46,6 +53,7 @@ where
     R: Tape<E, D>,
 {
     type Output = Tensor<A::Catted, E, D, T>;
+    #[allow(deprecated)]
     fn try_concat(self, rhs: Tensor<B, E, D, R>) -> Result<Self::Output, Self::Err> {
         assert_eq!(
             self.strides,
@@ -76,7 +84,7 @@ where
     }
 }
 
-pub trait ConcatKernel<E: Dtype>: DeviceStorage {
+pub trait ConcatKernel<E: Dtype>: Storage<E> {
     fn forward<A: Shape, B: Shape>(
         &self,
         a: &Tensor<A, E, Self>,
@@ -86,9 +94,9 @@ pub trait ConcatKernel<E: Dtype>: DeviceStorage {
         A: ConcatShape<B>;
     fn backward(
         &self,
-        grad_a: &mut Self::Vec<E>,
-        grad_b: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_a: &mut Self::Vec,
+        grad_b: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
@@ -137,6 +145,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
     use crate::{tensor_ops::*, tests::*};
@@ -183,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "left: `10`,\n right: `7`"]
+    #[should_panic = "left: 10\n right: 7"]
     fn test_concat_shape_fails() {
         (5, 10).concat_shape(&(3, 7));
     }

@@ -5,8 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::{boxed::Box, vec::Vec};
 
 use super::tensorlike::Tensorlike;
-use super::{storage_traits::DeviceStorage, unique_id, Tensor, UniqueId};
-use crate::shapes::{Shape, Unit};
+use super::{storage_traits::Storage, unique_id, Tensor, UniqueId};
+use crate::shapes::Shape;
 
 /// A generic container for keeping gradients of tensors keyed by the
 /// tensor's [UniqueId].
@@ -17,14 +17,14 @@ use crate::shapes::{Shape, Unit};
 /// 3. Access references to arrays
 /// 4. Access mutable references to arrays
 #[derive(Clone, Debug)]
-pub struct Gradients<E: Unit, D: DeviceStorage> {
+pub struct Gradients<E, D: Storage<E>> {
     /// Using BTreeMap for no-std support
-    gradient_by_id: BTreeMap<UniqueId, D::Vec<E>>,
+    gradient_by_id: BTreeMap<UniqueId, D::Vec>,
     /// Using BTreeSet for no-std support
     leaf_ids: Option<BTreeSet<UniqueId>>,
 }
 
-impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
+impl<E, D: Storage<E>> Gradients<E, D> {
     /// Creates a [Gradients] object without any leaf tensor ids.
     /// **This will never drop gradients for temporary tensors**.
     ///
@@ -42,22 +42,18 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
+impl<E, D: Storage<E>> Gradients<E, D> {
     /// Retrieves mutable gradient for `t`, allocating one if it isn't present.
-    pub(crate) fn get_or_alloc_mut<S: Shape>(
+    pub fn get_or_alloc_mut<S: Shape>(
         &mut self,
-        t: &Tensor<S, E, D>,
-    ) -> Result<&mut D::Vec<E>, D::Err> {
-        let ghost = t.ghost();
-        self.try_alloc_for(&ghost)?;
-        Ok(self.get_mut(&ghost))
+        t: &impl Tensorlike<S, E, D>,
+    ) -> Result<&mut D::Vec, D::Err> {
+        self.try_alloc_for(t)?;
+        Ok(self.get_mut(t))
     }
 
     /// Inserts a gradient for `t`
-    pub(crate) fn try_alloc_for<S: Shape>(
-        &mut self,
-        t: &impl Tensorlike<S, E, D>,
-    ) -> Result<(), D::Err> {
+    pub fn try_alloc_for<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> Result<(), D::Err> {
         if let std::collections::btree_map::Entry::Vacant(e) = self.gradient_by_id.entry(t.id()) {
             e.insert(t.try_alloc_grad()?);
         }
@@ -72,6 +68,11 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         self.drop_non_leafs();
     }
 
+    /// Marks all existing gradients as leaf gradients.
+    pub fn retain_current_grads_as_leafs(&mut self) {
+        self.leaf_ids = Some(self.gradient_by_id.keys().copied().collect());
+    }
+
     /// Keeps all gradients marked previously by [Gradients::retain_leafs], and drops all
     /// others.
     pub fn drop_non_leafs(&mut self) {
@@ -81,24 +82,21 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     }
 
     /// Returns a reference to the underlying gradient if found.
-    pub(crate) fn get_ref_checked<S: Shape, T>(
-        &self,
-        t: &Tensor<S, E, D, T>,
-    ) -> Option<&D::Vec<E>> {
+    pub fn get_ref_checked<S: Shape, T>(&self, t: &Tensor<S, E, D, T>) -> Option<&D::Vec> {
         self.gradient_by_id.get(&t.id)
     }
 
     /// Returns a mutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_mut<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &mut D::Vec<E> {
+    pub(crate) fn get_mut<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &mut D::Vec {
         self.gradient_by_id.get_mut(&t.id()).unwrap()
     }
 
-    /// Returns a mutable reference to the data associated with `t`.
+    /// Returns an immutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_ref<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &D::Vec<E> {
+    pub(crate) fn get_ref<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &D::Vec {
         self.gradient_by_id.get(&t.id()).unwrap()
     }
 
@@ -107,14 +105,14 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// # Panics
     /// If no data is associated with `t` yet, this will panic due to an unwrap()
     /// on a .get() to the underlying hashmap.
-    pub fn get<S: Shape, T>(&self, t: &Tensor<S, E, D, T>) -> Tensor<S, E, D> {
-        let buf = self.gradient_by_id.get(&t.id).unwrap().clone();
+    pub fn get<S: Shape>(&self, t: &impl Tensorlike<S, E, D>) -> Tensor<S, E, D> {
+        let buf = self.gradient_by_id.get(&t.id()).unwrap().clone();
         Tensor {
             id: unique_id(),
             data: std::sync::Arc::new(buf),
-            shape: t.shape,
-            strides: t.strides,
-            device: t.device.clone(),
+            shape: *t.shape(),
+            strides: t.strides(),
+            device: t.dev().clone(),
             tape: Default::default(),
         }
     }
@@ -127,7 +125,7 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         &mut self,
         l: &impl Tensorlike<L, E, D>,
         r: &impl Tensorlike<R, E, D>,
-    ) -> (&mut D::Vec<E>, &D::Vec<E>) {
+    ) -> (&mut D::Vec, &D::Vec) {
         assert_ne!(l.id(), r.id());
         let l_ptr = self.get_mut(l) as *mut _;
         let r_ptr = self.get_ref(r) as *const _;
@@ -142,7 +140,7 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         l1: &impl Tensorlike<L1, E, D>,
         l2: &impl Tensorlike<L2, E, D>,
         r: &impl Tensorlike<R, E, D>,
-    ) -> (&mut D::Vec<E>, &mut D::Vec<E>, &D::Vec<E>) {
+    ) -> (&mut D::Vec, &mut D::Vec, &D::Vec) {
         assert_ne!(l1.id(), l2.id());
         assert_ne!(l1.id(), r.id());
         assert_ne!(l2.id(), r.id());
@@ -160,17 +158,17 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         &mut self,
         ls: &Vec<impl Tensorlike<L, E, D>>,
         r: &impl Tensorlike<R, E, D>,
-    ) -> (Vec<&mut D::Vec<E>>, &D::Vec<E>) {
+    ) -> (Vec<&mut D::Vec>, &D::Vec) {
         for i in 0..ls.len() {
             assert_ne!(ls[i].id(), r.id());
             for j in (i + 1)..ls.len() {
                 assert_ne!(ls[i].id(), ls[j].id());
             }
         }
-        let l_refs: Vec<&mut D::Vec<E>> = ls
+        let l_refs: Vec<&mut D::Vec> = ls
             .iter()
             .map(|l| {
-                let l_ptr = self.get_mut(l) as *mut D::Vec<E>;
+                let l_ptr = self.get_mut(l) as *mut D::Vec;
                 unsafe { &mut *l_ptr }
             })
             .collect();
@@ -181,14 +179,14 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
 }
 
 /// Contains a [Gradients] and list of backward operations.
-pub struct OwnedTape<E: Unit, D: DeviceStorage> {
+pub struct OwnedTape<E, D: Storage<E>> {
     /// A list of (Time, BackwardOp) pairs. The Time is used to ensure operations
     /// from merged tapes are executed in the correct order.
     pub(crate) operations: Vec<(UniqueId, BackwardOp<E, D, D::Err>)>,
     pub(crate) gradients: Gradients<E, D>,
 }
 
-impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
+impl<E, D: Storage<E>> Default for OwnedTape<E, D> {
     fn default() -> Self {
         Self {
             operations: Default::default(),
@@ -197,7 +195,7 @@ impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> std::fmt::Debug for OwnedTape<E, D> {
+impl<E: std::fmt::Debug, D: Storage<E>> std::fmt::Debug for OwnedTape<E, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OwnedTape")
             .field("num_operations", &self.operations.len())
@@ -206,19 +204,30 @@ impl<E: Unit, D: DeviceStorage> std::fmt::Debug for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> OwnedTape<E, D> {
+impl<E, D: Storage<E>> From<Gradients<E, D>> for OwnedTape<E, D> {
+    fn from(gradients: Gradients<E, D>) -> Self {
+        Self {
+            operations: Default::default(),
+            gradients,
+        }
+    }
+}
+
+impl<E, D: Storage<E>> OwnedTape<E, D> {
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
-    pub(crate) fn execute(mut self) -> Result<Gradients<E, D>, D::Err> {
+    pub(crate) fn execute(&mut self) -> Result<Gradients<E, D>, D::Err> {
         // We must ensure that the operations are sorted in execution time order.
         // Otherwise an backward operation may not be executed in the right order
         // if multiple tapes were merged together.
         self.operations.sort_by_key(|(k, _)| *k);
+        // In case the same operation is present multiple times, we dedup it.
+        self.operations.dedup_by_key(|(k, _)| *k);
         for (_, operation) in self.operations.drain(..).rev() {
             (operation)(&mut self.gradients)?;
         }
-        Ok(self.gradients)
+        Ok(std::mem::replace(&mut self.gradients, Gradients::leaky()))
     }
 }
 
@@ -229,7 +238,7 @@ type BackwardOp<E, D, Err> = Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), 
 pub struct NoneTape;
 
 /// Something that can track backward operations.
-pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
+pub trait Tape<E, D: Storage<E>>: Default + Merge<Self> + Merge<NoneTape> {
     /// Whether this object is currently tracking gradients. This is known at compile time.
     const OWNS_TAPE: bool;
     fn add_backward_op<F>(&mut self, operation: F)
@@ -237,7 +246,7 @@ pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTap
         F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>;
 }
 
-impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
+impl<E, D: Storage<E>> Tape<E, D> for OwnedTape<E, D> {
     const OWNS_TAPE: bool = true;
     fn add_backward_op<F>(&mut self, operation: F)
     where
@@ -247,7 +256,7 @@ impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Tape<E, D> for NoneTape {
+impl<E, D: Storage<E>> Tape<E, D> for NoneTape {
     const OWNS_TAPE: bool = false;
     fn add_backward_op<F>(&mut self, _: F)
     where
@@ -268,13 +277,13 @@ impl Merge<NoneTape> for NoneTape {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Merge<NoneTape> for OwnedTape<E, D> {
+impl<E, D: Storage<E>> Merge<NoneTape> for OwnedTape<E, D> {
     fn merge(self, _: NoneTape) -> Self {
         self
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
+impl<E, D: Storage<E>> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
     fn merge(mut self, mut other: Self) -> Self {
         self.gradients
             .gradient_by_id
@@ -287,5 +296,45 @@ impl<E: Unit, D: DeviceStorage> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
         }
         self.operations.append(&mut other.operations);
         self
+    }
+}
+
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Merge<NoneTape> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
+    fn merge(self, _: NoneTape) -> Self {
+        self
+    }
+}
+
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Merge<Self> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
+    fn merge(self, other: Self) -> Self {
+        if !std::sync::Arc::ptr_eq(&self, &other) {
+            let mut lhs = self.lock().unwrap();
+            let mut rhs = other.lock().unwrap();
+            lhs.gradients
+                .gradient_by_id
+                .append(&mut rhs.gradients.gradient_by_id);
+            if let Some(leafs) = &mut rhs.gradients.leaf_ids {
+                lhs.gradients
+                    .leaf_ids
+                    .get_or_insert_with(Default::default)
+                    .append(leafs);
+            }
+            lhs.operations.append(&mut rhs.operations);
+        }
+        self
+    }
+}
+
+#[cfg(feature = "std")]
+impl<E, D: Storage<E>> Tape<E, D> for std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>> {
+    const OWNS_TAPE: bool = true;
+    fn add_backward_op<F>(&mut self, operation: F)
+    where
+        F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>,
+    {
+        let mut tape = self.lock().unwrap();
+        tape.add_backward_op(operation);
     }
 }

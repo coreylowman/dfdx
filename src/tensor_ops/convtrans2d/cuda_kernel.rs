@@ -2,6 +2,7 @@ use cudarc::cublas::{CudaBlas, Gemm};
 use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
 };
@@ -17,13 +18,32 @@ trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const MOD: &'static str = "convtrans2d_f16";
+    const FNS: &'static [&'static str] = &[
+        "unfold_input_into_patches_f16",
+        "unfold_output_into_patches_f16",
+        "transpose_filters_f16",
+    ];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
+    const MOD: &'static str = "convtrans2d_f16";
+    const FNS: &'static [&'static str] = &[
+        "unfold_input_into_patches_f16",
+        "unfold_output_into_patches_f16",
+        "transpose_filters_f16",
+    ];
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "convtrans2d_f32";
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f32",
         "unfold_output_into_patches_f32",
         "transpose_filters_f32",
-        "sum_transposed_filters_f32",
     ];
 }
 
@@ -33,7 +53,6 @@ impl HasCudaKernel<f64> for Cuda {
         "unfold_input_into_patches_f64",
         "unfold_output_into_patches_f64",
         "transpose_filters_f64",
-        "sum_transposed_filters_f64",
     ];
 }
 
@@ -50,6 +69,11 @@ where
     Self: HasCudaKernel<E>,
     CudaBlas: Gemm<E>,
 {
+    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
+        Ok(self.build_tensor(shape, shape.strides(), data))
+    }
+
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: super::ConvTrans2DOp,
@@ -65,28 +89,63 @@ where
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
-        let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
-        let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
-        let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
-        unsafe { unfold_fn.launch(cfg, params) }?;
+        let ftr_numel = op.groups
+            * (op.chan_out / op.groups)
+            * (op.chan_in / op.groups)
+            * op.kernel
+            * op.kernel;
+        let mut ftr = unsafe { self.alloc_empty::<E>(ftr_numel) }?;
 
-        // (O, C * K * K) * (B, C * K * K, OH * OW) = (B, O, OH * OW)
-        let m = op.chan_out;
-        let k = op.chan_in * op.kernel * op.kernel;
+        let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
+        let f_strides = self.dev.htod_copy(rhs.strides.into())?;
+
+        let out_buf = Arc::get_mut(&mut out.data).unwrap();
+
+        // LHS    (G, O/G, C/G*K*K)
+        // RHS (B, G, C/G*K*K, OH*OW)
+        // OUT (B, G, O/G, OH*OW)
+        let m = op.chan_out / op.groups;
+        let k = (op.chan_in / op.groups) * op.kernel * op.kernel;
         let n = op.h_out * op.w_out;
         unsafe {
-            self.gemm_batch(
-                (op.batch, m, k, n),
-                rhs.data.as_ref(),
-                [0, k, 1],
-                &patches,
-                [k * n, n, 1],
-                Default::default(),
-                Arc::get_mut(&mut out.data).unwrap(),
-                [m * n, n, 1],
-            )
-            .unwrap();
+            // generate patches for matmul
+            let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
+            let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
+            unfold_fn.launch(cfg, (op, lhs.data.as_ref(), &img_strides, &mut patches))?;
+
+            // prepare filters for backward operations by
+            // swapping dims 0 and 1 and adding a batch dimension
+            let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
+            let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
+            tr_fn.launch(cfg, (op, rhs.data.as_ref(), &f_strides, &mut ftr))?;
+
+            if op.groups == 1 {
+                self.gemm_batch(
+                    (op.batch, m, k, n),
+                    &ftr,
+                    [0, k, 1],
+                    &patches,
+                    [k * n, n, 1],
+                    Default::default(),
+                    out_buf,
+                    [m * n, n, 1],
+                )
+                .unwrap();
+            } else {
+                for i_batch in 0..op.batch {
+                    self.gemm_batch(
+                        (op.groups, m, k, n),
+                        &ftr,
+                        [m * k, k, 1],
+                        &patches.slice(i_batch * op.groups * k * n..),
+                        [k * n, n, 1],
+                        Default::default(),
+                        &mut out_buf.slice_mut(i_batch * op.groups * m * n..),
+                        [m * n, n, 1],
+                    )
+                    .unwrap();
+                }
+            }
         }
 
         Ok(())
@@ -96,23 +155,16 @@ where
         &self,
         op: super::ConvTrans2DOp,
         lhs: &Tensor<L, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Vec,
         rhs: &Tensor<R, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
+        grad_rhs: &mut Self::Vec,
         _: &impl Tensorlike<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
-        let filters_numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
-
-        let mut f_b1023 = unsafe { self.alloc_empty::<E>(filters_numel) }?;
-        let mut grad_f_b1023 = unsafe { self.alloc_empty::<E>(op.batch * filters_numel) }?;
-        let f_strides = self.dev.htod_copy(rhs.strides.into())?;
-
-        self.par_stream.wait_for_default()?;
 
         {
             // unfold grad_out into patches
@@ -121,31 +173,25 @@ where
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
-        {
-            // prepare filters for backward operations by
-            // swapping dims 0 and 1 and adding a batch dimension
-            let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
-            let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
-            unsafe {
-                tr_fn.launch_on_stream(
-                    self.par_stream.as_ref(),
-                    cfg,
-                    (op, rhs.data.as_ref(), &f_strides, &mut f_b1023),
-                )
-            }?;
+        let rhs_buf = rhs.data.as_ref();
+        let lhs_buf = lhs.data.as_ref();
 
+        unsafe {
             self.par_stream.wait_for_default()?;
 
             // img_g += filters * patches
-            // (B, C, H * W) += (B, C, O * K * K) * (B, O * K * K, H * W)
-            let m = op.chan_in;
-            let k = op.chan_out * op.kernel * op.kernel;
+            // LHS =    (G, C/G, O/G*K*K)
+            // RHS = (B, G, O/G*K*K, H*W)
+            // OUT = (B, G, C/G, H*W)
+            let m = op.chan_in / op.groups;
+            let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
-            unsafe {
-                self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            if op.groups == 1 {
+                // optimizing here for common case
                 self.gemm_batch(
                     (op.batch, m, k, n),
-                    &f_b1023,
+                    rhs_buf,
                     [0, k, 1],
                     &patches,
                     [k * n, n, 1],
@@ -154,35 +200,62 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
-                self.blas.set_stream(None)?;
+            } else {
+                for i_batch in 0..op.batch {
+                    self.gemm_batch(
+                        (op.groups, m, k, n),
+                        rhs_buf,
+                        [m * k, k, 1],
+                        &patches.slice(i_batch * op.groups * k * n..),
+                        [k * n, n, 1],
+                        <E>::ONE,
+                        &mut grad_lhs.slice_mut(i_batch * op.groups * m * n..),
+                        [m * n, n, 1],
+                    )
+                    .unwrap();
+                }
             }
+            self.blas.set_stream(None)?;
         }
 
-        {
+        unsafe {
             // weight_g += img * patches^T
-            // (B, C, O * K * K) += (B, C, H * W) * (B, H * W, O * K * K)
-            let m = op.chan_in;
+            // LHS = (B, G, C/G, H*W)
+            // RHS = (B, H*W, G, O/G*K*K)
+            // OUT =    (G, C/G, O/G*K*K)
+            let m = op.chan_in / op.groups;
             let k = op.h_in * op.w_in;
-            let n = op.chan_out * op.kernel * op.kernel;
-            unsafe {
-                self.gemm_batch(
-                    (op.batch, m, k, n),
-                    lhs.data.as_ref(),
-                    [m * k, k, 1],
-                    &patches,
-                    [k * n, 1, k],
-                    Default::default(),
-                    &mut grad_f_b1023,
-                    [m * n, n, 1],
-                )
-                .unwrap();
+            let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
+            if op.groups == 1 {
+                // optimizing here for common case
+                for i_batch in 0..op.batch {
+                    self.gemm(
+                        (m, k, n),
+                        &lhs_buf.slice(i_batch * m * k..),
+                        [k, 1],
+                        &patches.slice(i_batch * k * n..),
+                        [1, k],
+                        E::ONE,
+                        grad_rhs,
+                        [n, 1],
+                    )
+                    .unwrap()
+                }
+            } else {
+                for i_batch in 0..op.batch {
+                    self.gemm_batch(
+                        (op.groups, m, k, n),
+                        &lhs_buf.slice(i_batch * op.groups * m * k..),
+                        [m * k, k, 1],
+                        &patches.slice(i_batch * op.groups * k * n..),
+                        [k * n, 1, k],
+                        E::ONE,
+                        grad_rhs,
+                        [m * n, n, 1],
+                    )
+                    .unwrap();
+                }
             }
-
-            // sum all the gradients collected in our broadcasted grad_f
-            // into grad_rhs
-            let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
-            let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
-            unsafe { sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
         }
 
         self.dev.wait_for(self.par_stream.as_ref())?;

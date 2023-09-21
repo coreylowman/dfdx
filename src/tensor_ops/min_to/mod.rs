@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
+pub trait MinReduceKernel<E: Dtype>: Storage<E> {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
@@ -16,9 +16,9 @@ pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>;
@@ -90,7 +90,9 @@ mod tests {
     #[test]
     fn test_min_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t = dev
+            .tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().min::<Rank1<3>, _>();
         assert_close_to_literal!(r, [1.0, -2.0, 2.0]);
         let g = r.exp().mean().backward();
@@ -103,7 +105,9 @@ mod tests {
     #[test]
     fn test_min_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t = dev
+            .tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().min::<Rank1<2>, _>();
         assert_close_to_literal!(r, [1.0, -2.0]);
         let g = r.sum().backward();
@@ -113,7 +117,7 @@ mod tests {
     #[test]
     fn test_min_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.sample_normal::<Rank3<2, 3, 4>>();
+        let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = t.leaky_trace().min::<Rank1<4>, _>();
         let r2 = t.leaky_trace().min::<Rank2<3, 4>, _>().min::<Rank1<4>, _>();
         assert_close_to_tensor!(r, r2);
@@ -125,8 +129,9 @@ mod tests {
     #[test]
     fn test_min_negative_zero() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> =
-            dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
+        let t = dev
+            .tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().min::<_, Axis<1>>();
         assert_close_to_literal!(r, [-0.0, -0.0, -1.0, -1.0]);
         let g = r.sum().backward();

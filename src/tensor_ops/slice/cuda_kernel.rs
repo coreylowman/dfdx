@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     prelude::cpu::NdIndex,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor},
@@ -24,6 +25,18 @@ macro_rules! has_kernels {
 }
 
 has_kernels!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, bool);
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
+    const MOD: &'static str = "slice_f16";
+    const FNS: &'static [&'static str] = &["slice_fwd_f16", "slice_bwd_f16"];
+}
+
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const MOD: &'static str = "slice_f16";
+    const FNS: &'static [&'static str] = &["slice_fwd_f16", "slice_bwd_f16"];
+}
 
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "slice_f32";
@@ -78,8 +91,8 @@ where
     fn backward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
+        grad_out: &Self::Vec,
         slice: &Slice,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[1]) {

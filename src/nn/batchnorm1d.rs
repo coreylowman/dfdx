@@ -1,5 +1,4 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
-use num_traits::FromPrimitive;
 
 use super::{
     batchnorm2d::{infer_fwd, train_fwd},
@@ -56,7 +55,7 @@ where
 /// - Running statistics: **not** updated
 /// - Normalization: calculated using running stats
 #[derive(Clone, Debug)]
-pub struct BatchNorm1D<const C: usize, E: Dtype, D: DeviceStorage> {
+pub struct BatchNorm1D<const C: usize, E: Dtype, D: Storage<E>> {
     /// Scale for affine transform. Defaults to 1.0
     pub scale: Tensor<Rank1<C>, E, D>,
     /// Bias for affine transform. Defaults to 0.0
@@ -66,11 +65,11 @@ pub struct BatchNorm1D<const C: usize, E: Dtype, D: DeviceStorage> {
     /// Spatial variance that is updated during training. Defaults to 1.0
     pub running_var: Tensor<Rank1<C>, E, D>,
     /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
-    pub epsilon: E,
+    pub epsilon: f64,
     /// Controls exponential moving average of running stats.Defaults to 0.1
     ///
     /// `running_stat * (1.0 - momentum) + stat * momentum`.
-    pub momentum: E,
+    pub momentum: f64,
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
@@ -200,14 +199,26 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
                     |s| &mut s.running_var,
                     TensorOptions::detached(|t| t.try_fill_with_ones()),
                 ),
+                Self::scalar(
+                    "epsilon",
+                    |s| &s.epsilon,
+                    |s| &mut s.epsilon,
+                    ScalarOptions::from_default(1e-5),
+                ),
+                Self::scalar(
+                    "momentum",
+                    |s| &s.momentum,
+                    |s| &mut s.momentum,
+                    ScalarOptions::from_default(0.1),
+                ),
             ),
-            |(scale, bias, running_mean, running_var)| BatchNorm1D {
+            |(scale, bias, running_mean, running_var, epsilon, momentum)| BatchNorm1D {
                 scale,
                 bias,
                 running_mean,
                 running_var,
-                epsilon: V::E2::from_f32(1e-5).unwrap(),
-                momentum: V::E2::from_f32(0.1).unwrap(),
+                epsilon,
+                momentum,
             },
         )
     }

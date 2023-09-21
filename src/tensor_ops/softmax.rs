@@ -25,14 +25,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
-    /// See [softmax]
+    /// See [softmax()]
     pub fn softmax<Ax: Axes>(self) -> Self
     where
         S: ReduceShape<Ax>,
     {
         self.try_softmax::<Ax>().unwrap()
     }
-    /// See [softmax]
+    /// See [softmax()]
     pub fn try_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
     where
         S: ReduceShape<Ax>,
@@ -113,13 +113,17 @@ mod tests {
     #[test]
     fn test_softmax_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().softmax();
         assert_close_to_literal!(
             r,
             [0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087]
         );
-        let l = r * dev.tensor([0.0, 0.0, 1.0, 0.0, 0.0]);
+        let l = r * dev
+            .tensor([0.0, 0.0, 1.0, 0.0, 0.0])
+            .to_dtype::<TestDtype>();
         assert_close_to_literal!(l, [0.0, 0.0, 0.086128555, 0.0, 0.0]);
         let g = l.mean().backward();
         assert_close_to_literal!(
@@ -137,7 +141,9 @@ mod tests {
     #[test]
     fn test_softmax_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a = dev
+            .tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().softmax::<Axis<1>>();
         assert_close_to_literal!(
             r,
@@ -146,7 +152,9 @@ mod tests {
                 [0.002355633, 0.047314156, 0.9503302],
             ]
         );
-        let l = r * dev.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]);
+        let l = r * dev
+            .tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+            .to_dtype::<TestDtype>();
         assert_close_to_literal!(l, [[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]]);
         let g = l.mean().backward();
         assert_close_to_literal!(
@@ -161,7 +169,9 @@ mod tests {
     #[test]
     fn test_softmax_2d_0th_axis() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a = dev
+            .tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().softmax::<Axis<0>>();
         assert_close_to_literal!(
             r,
@@ -170,7 +180,9 @@ mod tests {
                 [0.95257413, 0.9933072, 0.9990892],
             ]
         );
-        let l = r * dev.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]);
+        let l = r * dev
+            .tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+            .to_dtype::<TestDtype>();
         assert_close_to_literal!(l, [[0.047425874, 0.0, 0.0], [0.0, 0.9933072, 0.0]]);
         let g = l.mean().backward();
         assert_close_to_literal!(

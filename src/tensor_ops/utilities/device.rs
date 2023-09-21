@@ -1,24 +1,27 @@
 use super::super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
-    shapes::Dtype,
-    tensor::{CopySlice, DeviceStorage},
+    dtypes::*,
+    tensor::{CopySlice, RandomU64, Storage},
 };
 
-/// A [DeviceStorage] that requires all the tensor ops implementations
+/// A [Storage] that requires all the tensor ops implementations
 pub trait Device<E: Dtype>:
-    DeviceStorage
+    Storage<E>
+    + RandomU64
     + CopySlice<E>
     + crate::tensor::TensorFromVec<E>
     + crate::tensor::TensorFromVec<usize>
+    + crate::tensor::TriangleTensor<E>
 
     // appends
     + super::super::stack::StackKernel<E>
     + super::super::concat::ConcatKernel<E>
+    + super::super::concat_along::ConcatAlongKernel<E>
 
     // optimizers
-    + crate::optim::AdamKernel<E>
-    + crate::optim::SgdKernel<E>
-    + crate::optim::RMSpropKernel<E>
+    + super::super::adam::AdamKernel<E>
+    + super::super::sgd::SgdKernel<E>
+    + super::super::rmsprop::RMSpropKernel<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>
@@ -60,6 +63,12 @@ pub trait Device<E: Dtype>:
 
     // boolean operations
     + super::super::boolean::BooleanKernel
+    + super::super::cmp::CmpKernel<super::super::cmp::EqKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::NeKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::GtKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::GeKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::LtKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::LeKernelOp, E>
     + super::super::cmp::ScalarCmpKernel<super::super::cmp::EqKernelOp, E>
     + super::super::cmp::ScalarCmpKernel<super::super::cmp::NeKernelOp, E>
     + super::super::cmp::ScalarCmpKernel<super::super::cmp::GtKernelOp, E>
@@ -77,7 +86,8 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::nans_to::NansToKernelOp<E>, E>
     + UnaryKernel<super::super::negate::NegateKernelOp, E>
     + UnaryKernel<super::super::relu::ReLUKernelOp, E>
-    + UnaryKernel<super::super::gelu::GeLUKernelOp, E>
+    + UnaryKernel<super::super::fast_gelu::FastGeLUKernelOp, E>
+    + UnaryKernel<super::super::accurate_gelu::AccurateGeLUKernelOp, E>
     + UnaryKernel<super::super::sigmoid::SigmoidKernelOp, E>
     + UnaryKernel<super::super::sin::SinKernelOp, E>
     + UnaryKernel<super::super::sqrt::SqrtKernelOp, E>
@@ -102,11 +112,18 @@ pub trait Device<E: Dtype>:
 {
 }
 
+#[cfg(feature = "f16")]
+impl Device<f16> for crate::tensor::Cpu {}
+#[cfg(feature = "f16")]
+impl Device<AMP<f16>> for crate::tensor::Cpu {}
 impl Device<f32> for crate::tensor::Cpu {}
 impl Device<f64> for crate::tensor::Cpu {}
 
+#[cfg(all(feature = "cuda", feature = "f16"))]
+impl Device<f16> for crate::tensor::Cuda {}
+#[cfg(all(feature = "cuda", feature = "f16"))]
+impl Device<AMP<f16>> for crate::tensor::Cuda {}
 #[cfg(feature = "cuda")]
 impl Device<f32> for crate::tensor::Cuda {}
-
 #[cfg(feature = "cuda")]
 impl Device<f64> for crate::tensor::Cuda {}

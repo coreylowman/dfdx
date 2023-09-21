@@ -1,5 +1,4 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
-use num_traits::FromPrimitive;
 
 use super::*;
 
@@ -37,13 +36,13 @@ where
 /// ```
 
 #[derive(Debug, Clone)]
-pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
+pub struct LayerNorm1D<const M: usize, E: Dtype, D: Storage<E>> {
     pub gamma: Tensor<Rank1<M>, E, D>,
     pub beta: Tensor<Rank1<M>, E, D>,
-    pub epsilon: E,
+    pub epsilon: f64,
 }
 
-impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1D<M, E, D> {}
+impl<const M: usize, E: Dtype, D: Storage<E>> NonMutableModule for LayerNorm1D<M, E, D> {}
 
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;
@@ -65,11 +64,17 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
                     |s| &mut s.beta,
                     TensorOptions::reset_to_zeros(),
                 ),
+                Self::scalar(
+                    "epsilon",
+                    |s| &s.epsilon,
+                    |s| &mut s.epsilon,
+                    ScalarOptions::from_default(1e-5),
+                ),
             ),
-            |(gamma, beta)| LayerNorm1D {
+            |(gamma, beta, epsilon)| LayerNorm1D {
                 gamma,
                 beta,
-                epsilon: V::E2::from_f32(1e-5).unwrap(),
+                epsilon,
             },
         )
     }
@@ -126,19 +131,19 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let mut m = dev.build_module::<builder::LayerNorm1D<5>, TestDtype>();
-        assert_eq!(m.gamma.array(), [1.0; 5]);
-        assert_eq!(m.beta.array(), [0.0; 5]);
+        assert_close_to_literal!(m.gamma, [1.0; 5]);
+        assert_close_to_literal!(m.beta, [0.0; 5]);
 
         m.gamma = dev.sample_normal();
         m.beta = dev.sample_normal();
 
-        assert_ne!(m.gamma.array(), [1.0; 5]);
-        assert_ne!(m.beta.array(), [0.0; 5]);
+        assert_ne!(m.gamma.array(), [TestDtype::ONE; 5]);
+        assert_ne!(m.beta.array(), [TestDtype::default(); 5]);
 
         m.reset_params();
 
-        assert_eq!(m.gamma.array(), [1.0; 5]);
-        assert_eq!(m.beta.array(), [0.0; 5]);
+        assert_close_to_literal!(m.gamma, [1.0; 5]);
+        assert_close_to_literal!(m.beta, [0.0; 5]);
     }
 
     #[test]

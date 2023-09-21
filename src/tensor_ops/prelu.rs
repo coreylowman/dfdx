@@ -1,12 +1,12 @@
 use crate::{shapes::*, tensor::*};
 
-use super::{BroadcastTo, ChooseFrom, Device, TryMul};
+use super::{cmp::*, BroadcastTo, ChooseFrom, Device, TryMul};
 
 /// [Parametric Rectified Linear Unit (PReLU)](https://pytorch.org/docs/stable/generated/torch.nn.PReLU.html). `max(0, lhs) + rhs*min(0, lhs)`
 ///
 /// In other words, for each element i:
-/// - if lhs[i] < 0, use `lhs[i] * rhs[i]`
-/// - if lhs[i] >= 0, use `lhs[i]`
+/// - if `lhs[i] < 0`, use `lhs[i] * rhs[i]`
+/// - if `lhs[i] >= 0`, use `lhs[i]`
 ///
 ///
 /// Examples:
@@ -66,7 +66,7 @@ where
     /// See [prelu]
     fn try_prelu(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
         let scaled = self.with_empty_tape().try_mul(rhs)?;
-        self.try_scalar_lt(E::default())?.try_choose(scaled, self)
+        self.try_lt(E::default())?.try_choose(scaled, self)
     }
 }
 
@@ -76,7 +76,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TryPReLU<E> for Tensor<S, 
         let dev = self.device.clone();
         let scale = dev.tensor(rhs).retaped::<T>().broadcast_like(self.shape());
         let scaled = self.with_empty_tape().try_mul(scale)?;
-        self.try_scalar_lt(E::default())?.try_choose(scaled, self)
+        self.try_lt(E::default())?.try_choose(scaled, self)
     }
 }
 
@@ -91,8 +91,12 @@ mod tests {
     #[test]
     fn test_prelu() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let y: Tensor<_, TestDtype, _> = dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]);
+        let x = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
+        let y = dev
+            .tensor([0.05, 0.05, 0.05, 0.05, 0.05])
+            .to_dtype::<TestDtype>();
         let r = x.leaky_trace().prelu(y.clone());
         assert_close_to_literal!(r, [-0.1, -0.05, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .prelu() uses the result's gradient

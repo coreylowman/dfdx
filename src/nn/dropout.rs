@@ -44,7 +44,7 @@ use super::*;
 /// let grads = dropout.alloc_grads();
 /// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
 /// let r = dropout.forward_mut(x.trace(grads));
-/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// assert_eq!(r.array(), [[2.0, 0.0, 2.0, 0.0, 2.0], [0.0, 2.0, 0.0, 2.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug, Default)]
 pub struct DropoutOneIn<const N: usize>;
@@ -74,7 +74,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
         &mut self,
         input: Tensor<S, E, D, OwnedTape<E, D>>,
     ) -> Result<Self::Output, D::Err> {
-        input.try_dropout(E::ONE / E::from_usize(N).unwrap())
+        input.try_dropout(1.0 / N as f64)
     }
 }
 
@@ -115,7 +115,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// let grads = dropout.alloc_grads();
 /// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
 /// let r = dropout.forward_mut(x.trace(grads));
-/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// assert_eq!(r.array(), [[2.0, 0.0, 2.0, 0.0, 2.0], [0.0, 2.0, 0.0, 2.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Dropout {
@@ -129,7 +129,27 @@ impl Default for Dropout {
     }
 }
 
-impl ZeroSizedModule for Dropout {}
+impl<D: Device<E>, E: Dtype> BuildOnDevice<D, E> for Dropout {
+    type Built = Dropout;
+}
+
+impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for Dropout {
+    type To<E2: Dtype, D2: Device<E2>> = Dropout;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            <Self as TensorCollection<E, D>>::scalar(
+                "p",
+                |s| &s.p,
+                |s| &mut s.p,
+                ScalarOptions::from_default(0.5),
+            ),
+            |p| Dropout { p },
+        )
+    }
+}
 
 impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout {
     type Output = Tensor<S, E, D, NoneTape>;
@@ -150,7 +170,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>
         &mut self,
         input: Tensor<S, E, D, OwnedTape<E, D>>,
     ) -> Result<Self::Output, D::Err> {
-        input.try_dropout(E::from_f32(self.p).unwrap())
+        input.try_dropout(self.p)
     }
 }
 

@@ -61,14 +61,18 @@ mod tests {
     #[test]
     fn test_bce() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([
-            [-0.8424031, 0.6309481, 1.0416432],
-            [1.325225, 0.5840275, 1.9167633],
-        ]);
-        let b: Tensor<_, TestDtype, _> = dev.tensor([
-            [0.52022195, 0.578804, 0.17535722],
-            [0.75429636, 0.66566986, 0.6182751],
-        ]);
+        let a = dev
+            .tensor([
+                [-0.8424031, 0.6309481, 1.0416432],
+                [1.325225, 0.5840275, 1.9167633],
+            ])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([
+                [0.52022195, 0.578804, 0.17535722],
+                [0.75429636, 0.66566986, 0.6182751],
+            ])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().bce_with_logits(b);
         assert_close_to_literal!(
             r,

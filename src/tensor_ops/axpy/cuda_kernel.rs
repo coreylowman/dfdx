@@ -1,5 +1,5 @@
 use crate::{
-    shapes::*,
+    dtypes::*,
     tensor::{launch_cfg, Cuda},
 };
 
@@ -9,6 +9,14 @@ const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/axpy.ptx"));
 
 trait HasCudaKernel<E> {
     const FN: &'static str;
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>> for Cuda {
+    const FN: &'static str = "axpy_f16";
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16> for Cuda {
+    const FN: &'static str = "axpy_f16";
 }
 impl HasCudaKernel<f32> for Cuda {
     const FN: &'static str = "axpy_f32";
@@ -23,9 +31,9 @@ where
 {
     fn forward(
         &self,
-        a: &mut Self::Vec<E>,
+        a: &mut Self::Vec,
         alpha: E,
-        b: &Self::Vec<E>,
+        b: &Self::Vec,
         beta: E,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::FN, Self::FN) {

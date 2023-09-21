@@ -1,9 +1,9 @@
 # dfdx: shape checked deep learning in rust
 
-[![CUDA](https://badgen.net/badge/CUDA/passing/green)](#)
-[![crates.io](https://img.shields.io/crates/v/dfdx.svg)](https://crates.io/crates/dfdx)
-[![docs.rs](https://img.shields.io/docsrs/dfdx)](https://docs.rs/dfdx)
-[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
+[![](https://dcbadge.vercel.app/api/server/AtUhGqBDP5)](https://discord.gg/AtUhGqBDP5)
+[![crates.io](https://img.shields.io/crates/v/dfdx?style=for-the-badge)](https://crates.io/crates/dfdx)
+[![docs.rs](https://img.shields.io/docsrs/dfdx?label=docs.rs%20latest&style=for-the-badge)](https://docs.rs/dfdx)
+
 
 Ergonomics & safety focused deep learning in Rust.
 
@@ -20,7 +20,7 @@ Features at a glance:
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
 ```toml
-dfdx = "0.11.1"
+dfdx = "0.13.0"
 ```
 
 See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
@@ -43,13 +43,6 @@ allocations when tensors are cloned.
 ## GPU acceleration with CUDA
 
 Enable the `cuda` feature to start using the `Cuda` device! Requires the installation of nvidia's cuda toolkit. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
-
-## BLAS libraries
-
-The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
-to do download/install anything for this to work!**
-
-To link to the `Intel MKL` libraries (assuming you installed it already) use the `cpu-mkl-matmul` feature. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
 
 ## API Preview
 

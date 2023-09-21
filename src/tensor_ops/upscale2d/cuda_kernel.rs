@@ -1,4 +1,5 @@
 use crate::{
+    dtypes::*,
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor},
 };
@@ -24,6 +25,26 @@ fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
 trait HasCudaKernel<E, Mode> {
     const FWD: &'static str;
     const BWD: &'static str;
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16, NearestNeighbor> for Cuda {
+    const FWD: &'static str = "nearest_upscale2d_fwd_f16";
+    const BWD: &'static str = "nearest_upscale2d_bwd_f16";
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<f16, Bilinear> for Cuda {
+    const FWD: &'static str = "bilinear_upscale2d_fwd_f16";
+    const BWD: &'static str = "bilinear_upscale2d_bwd_f16";
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>, NearestNeighbor> for Cuda {
+    const FWD: &'static str = "nearest_upscale2d_fwd_f16";
+    const BWD: &'static str = "nearest_upscale2d_bwd_f16";
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<AMP<f16>, Bilinear> for Cuda {
+    const FWD: &'static str = "bilinear_upscale2d_fwd_f16";
+    const BWD: &'static str = "bilinear_upscale2d_bwd_f16";
 }
 impl HasCudaKernel<f32, NearestNeighbor> for Cuda {
     const FWD: &'static str = "nearest_upscale2d_fwd_f32";
@@ -72,9 +93,9 @@ where
         &self,
         op: super::Upscale2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
         let bwd_fn = self.dev.get_func(Self::FWD, Self::BWD).unwrap();

@@ -30,15 +30,16 @@ impl<E: Dtype + CudaTypeName> super::ConcatKernel<E> for Cuda {
     }
     fn backward(
         &self,
-        grad_a: &mut Self::Vec<E>,
-        grad_b: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_a: &mut Self::Vec,
+        grad_b: &mut Self::Vec,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err> {
         let module_name = std::format!("concat_bwd_{}", E::NAME);
         if !self.dev.has_func(&module_name, "concat_bwd") {
             let src = BWD_KERNEL.replace("$Ty", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
+                include_paths: vec![env!("CUDA_INCLUDE_DIR").to_string()],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -64,8 +65,10 @@ impl<E: Dtype + CudaTypeName> super::ConcatKernel<E> for Cuda {
 }
 
 const BWD_KERNEL: &str = "
+#include \"cuda_fp16.h\"
 extern \"C\" __global__ void concat_bwd(const size_t numel, const $Ty *inp, $Ty *out) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < numel) { out[i] += inp[i]; }
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < numel; i += blockDim.x * gridDim.x) {
+        out[i] += inp[i];
+    }
 }
 ";

@@ -1,6 +1,8 @@
 use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError};
-use crate::tensor::{cache::TensorCache, DeviceStorage, HasErr, NoneTape, Tensor};
+use crate::tensor::{
+    cache::TensorCache, Cache, HasErr, NoneTape, RandomU64, Storage, Synchronize, Tensor,
+};
 
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
@@ -237,50 +239,13 @@ impl<E> Drop for CachableCudaSlice<E> {
     }
 }
 
-impl DeviceStorage for Cuda {
-    type Vec<E: Unit> = CachableCudaSlice<E>;
-
-    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
-        let mut data = unsafe { self.alloc_empty(len) }?;
-        self.dev.memset_zeros(&mut data)?;
-        Ok(CachableCudaSlice {
-            data,
-            cache: self.cache.clone(),
-        })
-    }
-
+impl RandomU64 for Cuda {
     fn random_u64(&self) -> u64 {
         self.cpu.random_u64()
     }
+}
 
-    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize {
-        v.len()
-    }
-
-    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
-        let buf = self
-            .cpu
-            .try_alloc_elem(tensor.data.data.len(), Default::default())
-            .unwrap();
-        let mut cpu_tensor = Tensor {
-            id: tensor.id,
-            data: Arc::new(buf),
-            shape: tensor.shape,
-            strides: tensor.strides,
-            device: self.cpu.clone(),
-            tape: NoneTape,
-        };
-        let buf = std::sync::Arc::get_mut(&mut cpu_tensor.data).unwrap();
-        self.dev
-            .dtoh_sync_copy_into(&tensor.data.data, &mut buf.data)
-            .unwrap();
-        self.cpu.tensor_to_vec::<S, E, _>(&cpu_tensor)
-    }
-
-    fn try_synchronize(&self) -> Result<(), CudaError> {
-        self.dev.synchronize().map_err(CudaError::from)
-    }
-
+impl Cache for Cuda {
     fn try_enable_cache(&self) -> Result<(), Self::Err> {
         self.cache.enable();
         Ok(())
@@ -304,5 +269,48 @@ impl DeviceStorage for Cuda {
         }
         cache.clear();
         Ok(())
+    }
+}
+
+impl Synchronize for Cuda {
+    fn try_synchronize(&self) -> Result<(), CudaError> {
+        self.dev.synchronize().map_err(CudaError::from)
+    }
+}
+
+impl<E: Unit> Storage<E> for Cuda {
+    type Vec = CachableCudaSlice<E>;
+
+    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Self::Err> {
+        let mut data = unsafe { self.alloc_empty(len) }?;
+        self.dev.memset_zeros(&mut data)?;
+        Ok(CachableCudaSlice {
+            data,
+            cache: self.cache.clone(),
+        })
+    }
+
+    fn len(&self, v: &Self::Vec) -> usize {
+        v.len()
+    }
+
+    fn tensor_to_vec<S: Shape, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
+        let buf = self
+            .cpu
+            .try_alloc_elem(tensor.data.data.len(), Default::default())
+            .unwrap();
+        let mut cpu_tensor = Tensor {
+            id: tensor.id,
+            data: Arc::new(buf),
+            shape: tensor.shape,
+            strides: tensor.strides,
+            device: self.cpu.clone(),
+            tape: NoneTape,
+        };
+        let buf = std::sync::Arc::get_mut(&mut cpu_tensor.data).unwrap();
+        self.dev
+            .dtoh_sync_copy_into(&tensor.data.data, &mut buf.data)
+            .unwrap();
+        self.cpu.tensor_to_vec::<S, _>(&cpu_tensor)
     }
 }

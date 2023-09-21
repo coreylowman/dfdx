@@ -2,10 +2,10 @@ use super::tensor_collection::*;
 
 use crate::{shapes::*, tensor::*, tensor_ops::Device};
 
-struct ModelEMAOp<E> {
-    decay: E,
+struct ModelEMAOp {
+    decay: f64,
 }
-impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for ModelEMAOp {
     type Viewer = (ViewTensorMut, ViewTensorRef);
     type Err = D::Err;
     type E2 = E;
@@ -17,7 +17,7 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
         (dst, src): (&mut Tensor<S, E, D>, &Tensor<S, E, D>),
     ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if opts.do_gradient_update {
-            dst.try_axpy(self.decay, src, E::ONE - self.decay)?;
+            dst.try_axpy(self.decay, src, 1.0 - self.decay)?;
         }
         Ok(None)
     }
@@ -42,11 +42,12 @@ pub trait ModelEMA<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     ///
     /// **Only updates trainable parameters**. For example, batch normalization
     /// running parameters are not updated.
-    fn ema(&mut self, other: &Self, decay: E) {
+    fn ema(&mut self, other: &Self, decay: impl Into<f64>) {
         self.try_ema(other, decay).unwrap();
     }
 
-    fn try_ema(&mut self, other: &Self, decay: E) -> Result<(), D::Err> {
+    fn try_ema(&mut self, other: &Self, decay: impl Into<f64>) -> Result<(), D::Err> {
+        let decay = decay.into();
         let mut op = ModelEMAOp { decay };
         Self::iter_tensors(&mut RecursiveWalker {
             m: (self, other),
@@ -75,7 +76,7 @@ mod tests {
         ema1.1 .1.running_var.fill_with_distr(distr);
         let ema0 = ema1.clone();
 
-        let decay: TestDtype = 0.5;
+        let decay = 0.5;
 
         ema1.ema(&model, decay);
         // check that batchnorm running params aren't updated

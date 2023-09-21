@@ -38,9 +38,9 @@ fn main() {
 
     // now you can extract gradients for specific tensors
     // by querying with them
-    let weight_grad: [[f32; 2]; 4] = gradients.get(&weight).array();
-    dbg!(weight_grad);
-
     let a_grad: [[f32; 4]; 3] = gradients.get(&a).array();
     dbg!(a_grad);
+
+    // NOTE: this will panic, because we didn't allocate gradients for `weight`
+    // let weight_grad: [[f32; 2]; 4] = gradients.get(&weight).array();
 }

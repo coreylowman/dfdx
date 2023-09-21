@@ -110,7 +110,7 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, New: Dim> AddDim<New> for (D1, D2, D3, 
     }
 }
 
-pub trait StackKernel<E: Dtype>: DeviceStorage {
+pub trait StackKernel<E: Dtype>: Storage<E> {
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
@@ -120,8 +120,8 @@ pub trait StackKernel<E: Dtype>: DeviceStorage {
         S: AddDim<Num>;
     fn backward(
         &self,
-        grad_inp: Vec<&mut Self::Vec<E>>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: Vec<&mut Self::Vec>,
+        grad_out: &Self::Vec,
     ) -> Result<(), Self::Err>;
 }
 
@@ -152,7 +152,7 @@ where
         assert_eq!(t.shape(), &shape);
     }
 
-    // we map to storage refs so kernels don't have to know about tensors
+    // we map to Storage<E> refs so kernels don't have to know about tensors
     let out = device.forward(new_dim, &tensors)?;
 
     let inp_ghosts: Vec<_> = tensors.iter().map(|t| t.ghost()).collect();
