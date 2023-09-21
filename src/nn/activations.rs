@@ -36,6 +36,7 @@ activation_impls!(Cos, try_cos, #[doc="Calls [cos()]."]);
 activation_impls!(Ln, try_ln, #[doc="Calls [ln()]."]);
 activation_impls!(Exp, try_exp, #[doc="Calls [exp()]."]);
 activation_impls!(Sigmoid, try_sigmoid, #[doc="Calls [sigmoid()]."]);
+activation_impls!(Sigmoidr, try_sigmoidr, #[doc="Calls [sigmoidr()]."]);
 activation_impls!(Tanh, try_tanh, #[doc="Calls [tanh()]."]);
 activation_impls!(Square, try_square, #[doc="Calls [square()]."]);
 activation_impls!(Sqrt, try_sqrt, #[doc="Calls [sqrt()]."]);
