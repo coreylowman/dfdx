@@ -176,6 +176,30 @@ impl<E, D: Storage<E>> Gradients<E, D> {
         let r_ref = unsafe { &*r_ptr };
         (l_refs, r_ref)
     }
+
+    #[inline]
+    pub(crate) fn many_mut_and_ref<L: Shape, R: Shape>(
+        &mut self,
+        ls: &Vec<impl Tensorlike<L, E, D>>,
+        r: &impl Tensorlike<R, E, D>,
+    ) -> (Vec<&D::Vec>, &mut D::Vec) {
+        for i in 0..ls.len() {
+            assert_ne!(ls[i].id(), r.id());
+            for j in (i + 1)..ls.len() {
+                assert_ne!(ls[i].id(), ls[j].id());
+            }
+        }
+        let l_refs: Vec<&D::Vec> = ls
+            .iter()
+            .map(|l| {
+                let l_ptr = self.get_ref(l) as *const D::Vec;
+                unsafe { &*l_ptr }
+            })
+            .collect();
+        let r_ptr = self.get_mut(r) as *mut _;
+        let r_ref = unsafe { &mut *r_ptr };
+        (l_refs, r_ref)
+    }
 }
 
 /// Contains a [Gradients] and list of backward operations.

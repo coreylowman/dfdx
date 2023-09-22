@@ -207,6 +207,7 @@ mod sum_to;
 mod tanh;
 mod to_dtype;
 mod tri;
+mod unstack;
 mod upscale2d;
 mod var_to;
 
@@ -271,6 +272,7 @@ pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use to_dtype::{to_dtype, ToDtypeKernel};
 pub use tri::{lower_tri, upper_tri};
+pub use unstack::TryUnstack;
 pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 pub use var_to::VarTo;
 
