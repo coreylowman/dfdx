@@ -10,6 +10,6 @@ impl<F: num_traits::Float> UnaryDerivative<F> for super::SigmoidrKernelOp {
     #[inline(always)]
     fn df(&self, &fx: &F) -> F {
         let d = fx * (F::one() - fx);
-        F::max(d, F::from(0.0001).unwrap())
+        F::max(d, F::from(0.0000001).unwrap())
     }
 }

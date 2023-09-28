@@ -12,7 +12,7 @@ template<typename T>
 __device__ __forceinline__ T sigmoidr_bwd(T y) {
     T one = 1.0;
   T d = y * (one - y);
-    return max(d, 0.0001);
+    return max(d, 0.0000001);
 }
 
 UNARY_OP(__half, sigmoidr_fwd_f16, sigmoidr_bwd_f16, SigmoidrKernelOp,
