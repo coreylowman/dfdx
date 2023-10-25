@@ -1,0 +1,77 @@
+[package]
+name = "dfdx"
+version = "0.13.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.65"
+
+description = "Ergonomic auto differentiation in Rust, with pytorch like apis."
+homepage = "https://github.com/coreylowman/dfdx"
+documentation = "https://docs.rs/dfdx"
+repository = "https://github.com/coreylowman/dfdx"
+readme = "README.md"
+
+keywords = [
+    "deep-learning",
+    "neural-network",
+    "backprop",
+    "tensor",
+    "autodiff",
+]
+
+[package.metadata.docs.rs]
+features = ["nightly", "numpy", "safetensors", "cuda", "ci-check"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dev-dependencies]
+tempfile = "3.3.0"
+mnist = "0.5.0"
+indicatif = "0.17.3"
+rand = { workspace = true }
+
+[dependencies]
+dfdx-core = { path = "../dfdx-core" }
+dfdx-derives = { path = "../dfdx-derives" }
+safetensors = { workspace = true, optional = true }
+num-traits = { workspace = true }
+rand_distr = { workspace = true }
+
+[features]
+default = ["std", "fast-alloc", "cpu"]
+nightly = ["dfdx-core/nightly", "dfdx-derives/nightly"]
+
+std = ["dfdx-core/std"]
+no-std = ["dfdx-core/no-std"]
+
+cpu = ["dfdx-core/cpu"]
+fast-alloc = ["dfdx-core/fast-alloc"]
+
+cuda = ["dfdx-core/cuda"]
+cudnn = ["dfdx-core/cudnn"]
+
+f16 = ["dfdx-core/f16"]
+
+numpy = ["dfdx-core/numpy"]
+safetensors = ["dep:safetensors", "dfdx-core/safetensors"]
+
+test-f16 = ["f16", "dfdx-core/f16"]
+test-amp-f16 = ["f16", "dfdx-core/f16"]
+test-f64 = []
+ci-check = ["dfdx-core/ci-check"]
+
+[[bench]]
+name = "batchnorm2d"
+harness = false
+
+[[bench]]
+name = "conv2d"
+harness = false
+
+[[bench]]
+name = "sum"
+harness = false
+
+[[bench]]
+name = "softmax"
+harness = false

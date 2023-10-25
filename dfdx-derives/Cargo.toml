@@ -1,0 +1,18 @@
+[package]
+name = "dfdx-derives"
+version = "0.13.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["extra-traits"] }
+dfdx-core = { path = "../dfdx-core" }
+
+[features]
+nightly = ["dfdx-core/nightly"]

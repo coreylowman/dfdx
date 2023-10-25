@@ -1,87 +1,11 @@
-[package]
-name = "dfdx"
-version = "0.13.0"
-edition = "2021"
-license = "MIT OR Apache-2.0"
-rust-version = "1.65"
+[workspace]
+members = ["dfdx-core", "dfdx-derives", "dfdx"]
+resolver = "2"
 
-description = "Ergonomic auto differentiation in Rust, with pytorch like apis."
-homepage = "https://github.com/coreylowman/dfdx"
-documentation = "https://docs.rs/dfdx"
-repository = "https://github.com/coreylowman/dfdx"
-readme = "README.md"
-
-keywords = [
-    "deep-learning",
-    "neural-network",
-    "backprop",
-    "tensor",
-    "autodiff",
-]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[package.metadata.docs.rs]
-features = ["nightly", "numpy", "safetensors", "cuda", "ci-check"]
-
-[dependencies]
-no-std-compat = { version = "0.4.1", default-features = false, features = [ "alloc", "compat_hash" ], optional = true }
-spin = { version = "0.9.8", default-features = false, features = ["spin_mutex", "rwlock", "portable_atomic"], optional = true }
+[workspace.dependencies]
+num-traits = { version = "0.2.15", default-features = false }
+safetensors = { version = "0.3.3", default-features = false }
+memmap2 = { version = "0.5", default-features = false }
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false }
-zip = { version = "0.6.6", default-features = false, optional = true }
-cudarc = { version = "0.9.13", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc"] }
-num-traits = { version = "0.2.15", default-features = false }
-safetensors = { version = "0.3", default-features = false, optional = true }
-memmap2 = { version = "0.5", default-features = false, optional = true }
-half = { version = "2.3.1", optional = true, features = ["num-traits", "rand_distr"] }
-gemm = { version = "0.15.4", default-features = false, optional = true }
-rayon = { version = "1.7.0", optional = true }
 libm = "0.2.7"
-
-[dev-dependencies]
-tempfile = "3.3.0"
-mnist = "0.5.0"
-indicatif = "0.17.3"
-
-[build-dependencies]
-glob = { version = "0.3.1", optional = true }
-
-[features]
-default = ["std", "fast-alloc", "cpu"]
-nightly = ["half?/use-intrinsics", "gemm?/nightly"]
-
-std = ["cudarc?/std", "rand_distr/std_math", "gemm?/std"]
-fast-alloc = ["std"]
-no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std", "num-traits/libm"]
-
-cpu = ["dep:gemm", "dep:rayon"]
-cuda = ["dep:cudarc", "dep:glob"]
-cudnn = ["cuda", "cudarc?/cudnn"]
-
-f16 = ["dep:half", "cudarc?/f16"]
-
-numpy = ["dep:zip", "std"]
-safetensors = ["dep:safetensors", "std", "dep:memmap2"]
-
-test-f16 = ["f16"]
-test-amp-f16 = ["f16"]
-test-f64 = []
-test-integrations = []
-ci-check = ["cudarc?/ci-check"]
-
-[[bench]]
-name = "batchnorm2d"
-harness = false
-
-[[bench]]
-name = "conv2d"
-harness = false
-
-[[bench]]
-name = "sum"
-harness = false
-
-[[bench]]
-name = "softmax"
-harness = false
