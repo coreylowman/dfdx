@@ -4,7 +4,7 @@ use cudarc::driver::DeviceSlice;
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{Cuda, Tensor, Tensorlike},
+    tensor::{Cuda, Error, Tensor, Tensorlike},
 };
 
 use std::sync::Arc;

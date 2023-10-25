@@ -9,7 +9,7 @@ pub enum Error {
     UnusedTensors(Vec<crate::tensor::UniqueId>),
 
     #[cfg(feature = "cuda")]
-    CublasError(cudarc::cublas::CublasError),
+    CublasError(cudarc::cublas::result::CublasError),
     #[cfg(feature = "cuda")]
     CudaDriverError(cudarc::driver::DriverError),
 
@@ -19,11 +19,7 @@ pub enum Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::OutOfMemory => f.write_str("Error::OutOfMemory"),
-            Self::WrongNumElements => f.write_str("Error::WrongNumElements"),
-            _ => todo!(),
-        }
+        write!(f, "{self:?}")
     }
 }
 

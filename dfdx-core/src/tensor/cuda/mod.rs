@@ -1,7 +1,7 @@
 mod allocate;
 mod device;
 
-pub use device::{Cuda, CudaError};
+pub use device::Cuda;
 
 pub(crate) fn launch_cfg<const NUM_THREADS: u32>(n: u32) -> cudarc::driver::LaunchConfig {
     let num_blocks = (n + NUM_THREADS - 1) / NUM_THREADS;

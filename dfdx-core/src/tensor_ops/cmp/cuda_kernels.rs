@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::Shape,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
 };
 use cudarc::driver::{CudaSlice, LaunchAsync};
 

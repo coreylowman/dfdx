@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{cuda::Cuda, Tensor},
+    tensor::{cuda::Cuda, Error, Tensor},
 };
 
 use cudarc::{

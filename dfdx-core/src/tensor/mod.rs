@@ -168,7 +168,7 @@ pub type AutoDevice = Cpu;
 #[cfg(feature = "cuda")]
 pub(crate) use cuda::launch_cfg;
 #[cfg(feature = "cuda")]
-pub use cuda::{Cuda, CudaError};
+pub use cuda::Cuda;
 #[cfg(feature = "cuda")]
 pub type AutoDevice = Cuda;
 

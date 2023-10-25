@@ -22,13 +22,13 @@ impl Cpu {
         numel: usize,
         elem: E,
     ) -> Result<CachableVec<E>, Error> {
-        let data = self.cache.try_pop::<E>(numel).map_or_else(
+        let data: Result<Vec<E>, Error> = self.cache.try_pop::<E>(numel).map_or_else(
             #[cfg(feature = "fast-alloc")]
             || Ok(std::vec![elem; numel]),
             #[cfg(not(feature = "fast-alloc"))]
             || {
                 let mut data: Vec<E> = Vec::new();
-                data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
+                data.try_reserve(numel).map_err(|_| Error::OutOfMemory)?;
                 data.resize(numel, elem);
                 Ok(data)
             },
@@ -45,10 +45,10 @@ impl Cpu {
                 data.fill(elem);
                 Ok(data)
             },
-        )?;
+        );
 
         Ok(CachableVec {
-            data,
+            data: data?,
             cache: self.cache.clone(),
         })
     }

@@ -2,7 +2,7 @@
 use crate::{
     dtypes::*,
     shapes::{RemoveDimTo, ReplaceDimTo, Shape},
-    tensor::{launch_cfg, Cuda, Storage, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Storage, Tensor},
 };
 use cudarc::driver::{DeviceSlice, LaunchAsync};
 

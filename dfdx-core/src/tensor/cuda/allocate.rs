@@ -2,10 +2,10 @@
 
 use crate::{
     shapes::*,
-    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, CpuError, NoneTape, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, Error, NoneTape, Tensor},
 };
 
-use super::{device::CachableCudaSlice, Cuda, CudaError};
+use super::{device::CachableCudaSlice, Cuda};
 
 use cudarc::driver::{CudaSlice, DeviceSlice};
 use rand::Rng;
@@ -16,7 +16,7 @@ impl Cuda {
         &self,
         shape: S,
         buf: Vec<E>,
-    ) -> Result<Tensor<S, E, Self>, CudaError> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let mut slice = unsafe { self.alloc_empty(buf.len()) }?;
         self.dev.htod_copy_into(buf, &mut slice)?;
         Ok(self.build_tensor(shape, shape.strides(), slice))
@@ -184,7 +184,7 @@ impl<E: Unit> TensorFromVec<E> for Cuda {
         let num_elements = shape.num_elements();
 
         if src.len() != num_elements {
-            Err(CudaError::Cpu(CpuError::WrongNumElements))
+            Err(Error::WrongNumElements)
         } else {
             self.tensor_from_host_buf(shape, src)
         }

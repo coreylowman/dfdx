@@ -1,7 +1,7 @@
 use super::BooleanKernel;
 use crate::{
     shapes::Shape,
-    tensor::{launch_cfg, Cuda, CudaError, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
 };
 use cudarc::driver::*;
 
@@ -15,7 +15,7 @@ impl Cuda {
         fn_name: &str,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, CudaError> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         if !self.dev.has_func(MODULE_NAME, fn_name) {
             self.dev
                 .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;

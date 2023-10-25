@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
+    tensor::{launch_cfg, Cuda, Error, Tensor, Tensorlike},
     tensor_ops::reduction_utils::*,
 };
 

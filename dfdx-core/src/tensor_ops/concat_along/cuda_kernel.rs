@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, GhostTensor, Tensor},
+    tensor::{launch_cfg, Cuda, Error, GhostTensor, Tensor},
 };
 use cudarc::{
     driver::{DeviceSlice, LaunchAsync},

@@ -4,7 +4,7 @@ use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
+    tensor::{launch_cfg, Cuda, Error, Tensor, Tensorlike},
 };
 
 use std::sync::Arc;
