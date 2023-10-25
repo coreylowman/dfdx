@@ -25,7 +25,7 @@ macro_rules! has_attr {
 /// Here we have a unit struct that just calls a method on Tensor in the forward:
 ///
 /// ```ignore
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # use dfdx_core::prelude::*;
 /// #[derive(Default, Debug, Clone, Copy, CustomModule)]
 /// pub struct Abs;
@@ -41,7 +41,7 @@ macro_rules! has_attr {
 /// # Using CustomModule on structs with non-parameter fields
 ///
 /// ```ignore
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # use dfdx_core::prelude::*;
 /// #[derive(Default, Debug, Clone, Copy, CustomModule)]
 /// pub struct Reshape<S: Shape>(pub S);
@@ -65,7 +65,7 @@ macro_rules! has_attr {
 /// 3. We must annotate the sub module with `#[module]`
 ///
 /// ```ignore
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # use dfdx_core::prelude::*;
 /// #[derive(Debug, Clone, CustomModule)]
 /// #[built(ResidualMatMul)]
@@ -324,7 +324,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 /// 5. linear3
 /// ```ignore
 /// # use dfdx_core::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// #[derive(Debug, Clone, Sequential)]
 /// #[built(Mlp)]
 /// struct MlpConfig {

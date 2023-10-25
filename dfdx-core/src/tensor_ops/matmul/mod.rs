@@ -17,7 +17,7 @@ use super::reshape_to::{ReshapeKernel, ReshapeTo};
 /// # Examples
 /// 1. Matrix & Matrix
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let x: Tensor<Rank2<3, 10>, f32, _> = dev.zeros();
 /// let y: Tensor<Rank2<10, 5>, f32, _> = dev.zeros();
@@ -26,7 +26,7 @@ use super::reshape_to::{ReshapeKernel, ReshapeTo};
 ///
 /// 2. Vector x Matrix
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let x: Tensor<Rank1<2>, f32, _> = dev.zeros();
 /// let y: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
@@ -35,7 +35,7 @@ use super::reshape_to::{ReshapeKernel, ReshapeTo};
 ///
 /// 3. Vector x Vector
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let x: Tensor<Rank1<2>, f32, _> = dev.zeros();
 /// let y: Tensor<Rank1<4>, f32, _> = dev.zeros();
@@ -44,7 +44,7 @@ use super::reshape_to::{ReshapeKernel, ReshapeTo};
 ///
 /// 4. Batched matmul
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let x: Tensor<Rank3<10, 3, 2>, f32, _> = dev.zeros();
 /// let y: Tensor<Rank3<10, 2, 4>, f32, _> = dev.zeros();
@@ -53,7 +53,7 @@ use super::reshape_to::{ReshapeKernel, ReshapeTo};
 ///
 /// 5. Broadcasted matmul
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let x: Tensor<Rank3<10, 3, 2>, f32, _> = dev.zeros();
 /// let y: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
@@ -179,7 +179,7 @@ where
 {
     type Output = Tensor<(M, N), E, D, T>;
     /// ```compile_fail
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
     /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
@@ -216,7 +216,7 @@ where
 {
     type Output = Tensor<(B, M, N), E, D, T>;
     /// ```compile_fail
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
     /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
@@ -254,7 +254,7 @@ where
 {
     type Output = Tensor<(B, M, N), E, D, T>;
     /// ```compile_fail
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
     /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
@@ -293,7 +293,7 @@ where
 {
     type Output = Tensor<(B, S, M, N), E, D, T>;
     /// ```compile_fail
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank4<1, 5, 3, 2>, f32, _> = dev.zeros();
     /// let y: Tensor<Rank4<1, 5, 3, 4>, f32, _> = dev.zeros();

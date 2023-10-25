@@ -12,7 +12,7 @@ pub trait ToDtypeKernel<E1: Unit, E2: Unit>: Storage<E1> + Storage<E2> {
 ///
 /// Example usage:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1usize, 2, 3, 4, 5]);
 ///

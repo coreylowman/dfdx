@@ -16,7 +16,7 @@ pub struct ReLUKernelOp;
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.relu();

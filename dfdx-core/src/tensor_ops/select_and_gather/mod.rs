@@ -61,7 +61,7 @@ pub trait RemoveDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
 ///
 /// Here is an example selecting from a 2d tensor:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 5>, f32, _> = dev.zeros();
 ///
@@ -134,7 +134,7 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<E, D>
 ///
 /// Here is an example gathering from a 2d tensor:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 5>, f32, _> = dev.zeros();
 ///

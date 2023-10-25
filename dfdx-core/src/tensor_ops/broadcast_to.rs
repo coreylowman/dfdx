@@ -6,7 +6,7 @@ use crate::{shapes::*, tensor::*};
 ///
 /// Use shape generic or output type to dictate what shape you want:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 7>, f32, _> = dev.zeros();
 /// // broadcast axis 1
@@ -17,7 +17,7 @@ use crate::{shapes::*, tensor::*};
 ///
 /// Use axes generic to dis-ambiguate:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank1<1>, f32, _> = dev.zeros();
 /// // It's ambiguous what axes to broadcast here - explicitly say axes 0 and 2

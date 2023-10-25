@@ -10,7 +10,7 @@ use super::{BroadcastTo, Device, MeanTo, TryAdd, TryDiv, TrySub};
 ///
 /// Normalizing a single axis:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
 /// let _ = t.normalize::<Axis<1>>(1e-5);

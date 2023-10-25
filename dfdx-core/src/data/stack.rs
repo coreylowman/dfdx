@@ -29,7 +29,7 @@ pub trait IteratorStackExt: Iterator {
     ///
     /// Example implementations:
     /// ```rust
-    /// # use dfdx::{data::IteratorStackExt, prelude::*};
+    /// # use dfdx_core::{data::IteratorStackExt, prelude::*};
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank1<3>, f32, _> = dev.zeros();
     /// let data = [[a.clone(), a.clone(), a]];

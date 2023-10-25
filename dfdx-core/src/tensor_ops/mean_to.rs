@@ -7,7 +7,7 @@ pub trait MeanTo: HasErr + HasShape {
     ///
     /// Example:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
     /// let r = t.mean::<Rank0, _>(); // or `mean::<_, Axes2<0, 1>>()`
@@ -16,7 +16,7 @@ pub trait MeanTo: HasErr + HasShape {
     ///
     /// Reducing 1 axis:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
     /// let r = t.mean::<Rank1<2>, _>(); // or `mean::<_, Axis<1>>()`

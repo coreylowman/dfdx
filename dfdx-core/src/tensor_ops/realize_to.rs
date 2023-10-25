@@ -3,7 +3,7 @@ use crate::{shapes::*, tensor::*};
 /// Realizes the concrete shape of the tensor as another compatable shape,
 /// or returns the original tensor if the new shape's dimensions are incompatable.
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
 /// let a = a.realize::<(usize, usize)>();

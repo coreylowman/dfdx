@@ -94,7 +94,7 @@ pub trait GenericUpscale2D<M: UpscaleMethod>: HasErr {
 ///
 /// Compile time upscale:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank3<3, 32, 32>, f32, _> = dev.zeros();
 /// let y: Tensor<Rank3<3, 64, 64>, f32, _> = t.upscale2d(NearestNeighbor);
@@ -102,7 +102,7 @@ pub trait GenericUpscale2D<M: UpscaleMethod>: HasErr {
 ///
 /// Runtime upscale:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank3<3, 32, 32>, f32, _> = dev.zeros();
 /// let y: Tensor<(Const<3>, usize, usize), f32, _> = t.upscale2d_like(NearestNeighbor, 64, 64);

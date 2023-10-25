@@ -43,7 +43,7 @@
 //!
 //! For example:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank3<2, 4, 6>, f32, _> = dev.zeros();
 //! // shape version
@@ -74,7 +74,7 @@
 //!
 //! For example:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank1<4>, f32, _> = dev.zeros();
 //! // shape version
@@ -85,7 +85,7 @@
 //!
 //! Rust can also infer the output type if you use it in another operation:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let big: Tensor<Rank2<2, 5>, f32, _> = dev.zeros();
 //! let small: Tensor<Rank1<5>, f32, _> = dev.zeros();
@@ -96,7 +96,7 @@
 //!
 //! Permuting has an identical interface to broadcasts/reductions:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank3<2, 3, 4>, f32, _> = dev.zeros();
 //! // shape version
@@ -113,7 +113,7 @@
 //!
 //! For example you can select from the 0th axis like so:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 //! let r: Tensor<Rank1<3>, f32, _> = t.select(dev.tensor(1));
@@ -122,7 +122,7 @@
 //!
 //! Or you can gather from the 0th axis to select multiple entries:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 //! let r: Tensor<Rank2<3, 3>, f32, _> = t.gather(dev.tensor([1, 1, 0]));
@@ -139,7 +139,7 @@
 //! But you can use [BroadcastTo] to make this easy! In this example we select
 //! the same index from the 1st axis of a tensor:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 //! let r = t.select::<Rank1<2>, _>(dev.tensor(1).broadcast());

@@ -17,7 +17,7 @@ use crate::prelude::*;
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = EmbeddingConstConfig<7, 2>;
 /// let mut model = dev.build_module::<f32>(Model::default());

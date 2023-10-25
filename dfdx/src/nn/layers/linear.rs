@@ -12,7 +12,7 @@ use rand_distr::Uniform;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = LinearConstConfig<5, 2>;
 /// let model = dev.build_module::<f32>(Model::default());

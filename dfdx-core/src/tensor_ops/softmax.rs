@@ -10,7 +10,7 @@ use crate::{shapes::*, tensor::*};
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank3<2, 3, 5>, f32, _> = dev.zeros();
 /// let _ = t.softmax::<Axis<2>>();

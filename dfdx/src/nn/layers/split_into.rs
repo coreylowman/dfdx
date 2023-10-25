@@ -15,7 +15,7 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = SplitInto<(LinearConstConfig<5, 3>, LinearConstConfig<5, 7>)>;
 /// let model = dev.build_module::<f32>(Model::default());

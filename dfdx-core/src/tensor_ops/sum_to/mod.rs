@@ -30,7 +30,7 @@ pub trait SumTo: HasErr + HasShape {
     ///
     /// Example reducing a single axis:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let t: Tensor<Rank2<2, 3>, f32, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
     /// let r = t.sum::<Rank1<2>, _>(); // or `sum::<_, Axis<1>>()`
@@ -39,7 +39,7 @@ pub trait SumTo: HasErr + HasShape {
     ///
     /// Reducing multiple axes:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// # let t = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
     /// let r = t.sum::<Rank0, _>(); // or `sum::<_, Axes2<0, 1>>()`

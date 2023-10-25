@@ -6,7 +6,7 @@ use crate::prelude::*;
 ///
 /// Example usage:
 /// ```rust
-/// # use dfdx_nn::Conv2DConfig;
+/// # use dfdx::nn::Conv2DConfig;
 /// # use dfdx::shapes::Const;
 /// // compile time channels/kernel
 /// let m: Conv2DConfig<Const<3>, Const<5>, Const<3>> = Default::default();

@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// let m: MaxPoolGlobal = Default::default();
 /// let _: Tensor<Rank1<5>, f32, _> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());

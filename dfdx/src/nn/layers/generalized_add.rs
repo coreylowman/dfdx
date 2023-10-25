@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = GeneralizedAdd<ReLU, Square>;
 /// let model = dev.build_module::<f32>(Model::default());

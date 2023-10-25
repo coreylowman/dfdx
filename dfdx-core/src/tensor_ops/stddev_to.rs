@@ -9,7 +9,7 @@ pub trait StddevTo<E: Dtype>: HasErr + HasShape {
     ///
     /// Examples:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let t = dev.tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
     /// let r = t.stddev::<Rank1<2>, _>(0.0); // or `stddev::<_, Axis<1>>(0.0)`

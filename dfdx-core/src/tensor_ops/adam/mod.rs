@@ -14,7 +14,7 @@ use super::WeightDecay;
 ///
 /// Changing all default parameters:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.1, 0.2],

@@ -12,11 +12,10 @@ use crate::{
 /// # Example Usage
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::{*, optim::*};
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let dev: Cpu = Default::default();
 /// # let model: Model = dev.zeros();
-/// let mut opt: Adam<Model, f32, Cpu> = Adam::new(&model, AdamConfig {
+/// let mut opt: Adam<Model, f32, Cpu> = optim::Adam::new(&model, AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.5, 0.25],
 ///     eps: 1e-6,

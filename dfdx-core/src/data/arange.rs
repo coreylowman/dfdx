@@ -11,7 +11,7 @@ pub trait Arange<E: Dtype>: Storage<E> + ZerosTensor<E> + TensorFromVec<E> {
     ///
     /// Const sized tensor:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::Arange};
+    /// # use dfdx_core::{prelude::*, data::Arange};
     /// # let dev: Cpu = Default::default();
     /// let t: Tensor<Rank1<5>, f32, _> = dev.arange(Const::<5>);
     /// assert_eq!(t.array(), [0.0, 1.0, 2.0, 3.0, 4.0]);
@@ -19,7 +19,7 @@ pub trait Arange<E: Dtype>: Storage<E> + ZerosTensor<E> + TensorFromVec<E> {
     ///
     /// Runtime sized tensor:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::Arange};
+    /// # use dfdx_core::{prelude::*, data::Arange};
     /// # let dev: Cpu = Default::default();
     /// let t: Tensor<(usize, ), f32, _> = dev.arange(5);
     /// assert_eq!(t.as_vec(), [0.0, 1.0, 2.0, 3.0, 4.0]);

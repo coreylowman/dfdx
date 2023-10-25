@@ -10,7 +10,7 @@ mod cuda_kernel;
 ///
 /// Concat with const dims **requires nightly**:
 /// ```ignore
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
@@ -19,7 +19,7 @@ mod cuda_kernel;
 ///
 /// Concat with usize dims:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
 /// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));

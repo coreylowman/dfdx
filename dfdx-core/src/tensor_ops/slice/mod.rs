@@ -29,7 +29,7 @@ pub trait SliceKernel<E: Unit>: Storage<E> {
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev = Cpu::default();
 /// let a = dev.tensor([
 ///     [1., 2.],

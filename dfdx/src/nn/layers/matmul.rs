@@ -8,7 +8,7 @@ use rand_distr::Uniform;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = MatMulConstConfig<5, 2>;
 /// let model = dev.build_module::<f32>(Model::default());

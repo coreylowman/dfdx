@@ -21,7 +21,7 @@ pub struct HuberErrorKernelOp<E> {
 /// 2. otherwise: `delta * (|x - y| - 0.5 * delta)`
 ///
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1.0, 1.0, 1.0]);
 /// let b = dev.tensor([1.5, 1.75, 2.5]);

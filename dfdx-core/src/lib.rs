@@ -67,7 +67,7 @@
 //! Here's how you might use a device:
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! let dev: Cpu = Default::default();
 //! let t: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
 //! ```

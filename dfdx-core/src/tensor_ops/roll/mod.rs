@@ -32,7 +32,7 @@ pub trait RollKernel<E: Dtype>: Storage<E> {
 /// Shifts data along an axis by a specified amount.
 ///
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([1.0, 2.0, 3.0, 4.0]);
 /// let r = t.roll::<Axis<0>>(1);
@@ -41,7 +41,7 @@ pub trait RollKernel<E: Dtype>: Storage<E> {
 ///
 /// Won't compile if you try to roll an axis that doesn't exist:
 /// ```compile_fail
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([1.0, 2.0, 3.0, 4.0]);
 /// let r = t.roll::<Axis<3>>(1);

@@ -104,7 +104,7 @@ impl<S: Shape, E, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Copy *physical* data from a slice - **panics** if there are not enough elements in the slice.
     ///
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let data = [1.0, 2.0, 3.0, 4.0];
     /// let mut t: Tensor<Rank2<2, 2>, f32, _> = dev.zeros();
@@ -118,7 +118,7 @@ impl<S: Shape, E, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Copy *physical* data into a slice - **panics** if there are not enough elements in the tensor.
     ///
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let t: Tensor<Rank2<2, 2>, f32, _> = dev.tensor([[1.0, 2.0], [3.0, 4.0]]);
     /// let mut data = [0.0; 4];
@@ -134,7 +134,7 @@ impl<S: Shape, E, D: CopySlice<E>, T> Tensor<S, E, D, T> {
 pub trait ZerosTensor<E>: Storage<E> {
     /// Creates a tensor filled with zeros.
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
     /// ```
@@ -151,14 +151,14 @@ pub trait ZerosTensor<E>: Storage<E> {
     ///
     /// Given a shape directly:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(5, Const));
     /// ```
     ///
     /// Given another tensor:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
     /// let b: Tensor<Rank2<2, 3>, f32, _> = dev.zeros_like(&a);
@@ -179,7 +179,7 @@ pub trait ZeroFillStorage<E>: Storage<E> {
 pub trait OnesTensor<E>: Storage<E> {
     /// Creates a tensor filled with ones.
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _> = dev.ones();
     /// ```
@@ -196,14 +196,14 @@ pub trait OnesTensor<E>: Storage<E> {
     ///
     /// Given a shape directly:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<(usize, Const<3>), f32, _> = dev.ones_like(&(5, Const));
     /// ```
     ///
     /// Given another tensor:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _> = dev.ones();
     /// let b: Tensor<_, f32, _> = dev.ones_like(&a);
@@ -231,7 +231,7 @@ pub trait TriangleTensor<E>: Storage<E> {
     /// ## Examples
     ///
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<3, 3>, f32, _> = dev.upper_tri(1.0, None);
     /// assert_eq!(a.array(),
@@ -297,7 +297,7 @@ pub trait TriangleTensor<E>: Storage<E> {
     /// ## Examples
     ///
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<3, 3>, f32, _> = dev.lower_tri(1.0, None);
     /// assert_eq!(a.array(),
@@ -480,7 +480,7 @@ impl<S: Shape, E, D: Storage<E>, T> Tensor<S, E, D, T> {
 pub trait TensorFrom<Src, S: Shape, E>: Storage<E> {
     /// Create a tensor from rust data
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
     /// let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.tensor(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);

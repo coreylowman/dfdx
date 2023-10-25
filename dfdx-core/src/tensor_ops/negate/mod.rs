@@ -14,7 +14,7 @@ pub struct NegateKernelOp;
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2.0, 0.0, 5.0]);
 /// let r = -a;

@@ -30,7 +30,7 @@ pub trait ChooseKernel<E: Dtype>: Storage<E> + Storage<bool> {
 /// Choose values from two tensors using a boolean mask. Equivalent to `torch.where` from pytorch.
 ///
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let cond: Tensor<Rank1<3>, bool, _> = dev.tensor([true, false, true]);
 /// let a: Tensor<Rank1<3>, f32, _> = dev.tensor([1.0, 2.0, 3.0]);

@@ -49,7 +49,7 @@ pub enum LeKernelOp {}
 ///
 /// Examples:
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1.2, 3.4, -0.5, -6.7]);
 /// let b = dev.tensor([1.2, 0.0, 3.14, -6.7]);
@@ -57,7 +57,7 @@ pub enum LeKernelOp {}
 /// assert_eq!(r.array(), [true, false, false, true]);
 /// ```
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
 /// let r = a.eq(1);
@@ -74,7 +74,7 @@ pub fn eq<S: Shape, E, D: CmpKernel<EqKernelOp, E>, T: Tape<E, D>>(
 ///
 /// Examples:
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1.2, 3.4, -0.5, -6.7]);
 /// let b = dev.tensor([1.2, 0.0, 3.14, -6.7]);
@@ -82,7 +82,7 @@ pub fn eq<S: Shape, E, D: CmpKernel<EqKernelOp, E>, T: Tape<E, D>>(
 /// assert_eq!(r.array(), [false, true, true, false]);
 /// ```
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
 /// let r = a.ne(1);
@@ -99,7 +99,7 @@ pub fn ne<S: Shape, E, D: CmpKernel<NeKernelOp, E>, T: Tape<E, D>>(
 ///
 /// Examples:
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1.2, 3.4, -0.5, -1.0]);
 /// let b = dev.tensor([1.2, 0.0, 3.14, -6.7]);
@@ -107,7 +107,7 @@ pub fn ne<S: Shape, E, D: CmpKernel<NeKernelOp, E>, T: Tape<E, D>>(
 /// assert_eq!(r.array(), [false, true, false, true]);
 /// ```
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
 /// let r = a.gt(-1);
@@ -124,7 +124,7 @@ pub fn gt<S: Shape, E, D: CmpKernel<GtKernelOp, E>, T: Tape<E, D>>(
 ///
 /// Examples:
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1.2, 3.4, -0.5, -1.0]);
 /// let b = dev.tensor([1.2, 0.0, 3.14, -6.7]);
@@ -132,7 +132,7 @@ pub fn gt<S: Shape, E, D: CmpKernel<GtKernelOp, E>, T: Tape<E, D>>(
 /// assert_eq!(r.array(), [true, true, false, true]);
 /// ```
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
 /// let r = a.ge(-1);
@@ -149,7 +149,7 @@ pub fn ge<S: Shape, E, D: CmpKernel<GeKernelOp, E>, T: Tape<E, D>>(
 ///
 /// Examples:
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1.2, 3.4, -0.5, -1.0]);
 /// let b = dev.tensor([1.2, 0.0, 3.14, -6.7]);
@@ -157,7 +157,7 @@ pub fn ge<S: Shape, E, D: CmpKernel<GeKernelOp, E>, T: Tape<E, D>>(
 /// assert_eq!(r.array(), [false, false, true, false]);
 /// ```
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
 /// let r = a.lt(1);
@@ -174,7 +174,7 @@ pub fn lt<S: Shape, E, D: CmpKernel<LtKernelOp, E>, T: Tape<E, D>>(
 ///
 /// Examples:
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([1.2, 3.4, -0.5, -1.0]);
 /// let b = dev.tensor([1.2, 0.0, 3.14, -6.7]);
@@ -182,7 +182,7 @@ pub fn lt<S: Shape, E, D: CmpKernel<LtKernelOp, E>, T: Tape<E, D>>(
 /// assert_eq!(r.array(), [true, false, true, false]);
 /// ```
 /// ```
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
 /// let r = a.le(1);

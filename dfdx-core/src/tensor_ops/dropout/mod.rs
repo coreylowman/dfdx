@@ -36,7 +36,7 @@ pub trait DropoutKernel<E: Dtype>: Storage<E> + RandomU64 {
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([1.0f32, 2.0, 3.0, 4.0]);
 /// let r = t.dropout(0.5);

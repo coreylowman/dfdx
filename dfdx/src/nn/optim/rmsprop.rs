@@ -22,11 +22,10 @@ use crate::{
 /// Constructing using new:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::{*, optim::*};
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let dev: Cpu = Default::default();
 /// # let model: Model = dev.zeros();
-/// let rmsprop: RMSprop<Model, f32, Cpu> = RMSprop::new(&model, RMSpropConfig {
+/// let rmsprop: RMSprop<Model, f32, Cpu> = optim::RMSprop::new(&model, RMSpropConfig {
 ///     lr: 1e-3,
 ///     alpha: 0.5,
 ///     eps: 1e-8,

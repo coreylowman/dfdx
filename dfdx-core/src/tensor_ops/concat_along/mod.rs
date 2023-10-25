@@ -12,7 +12,7 @@ mod cuda_kernel;
 ///
 /// Along Axis 0:
 /// ```ignore
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
@@ -21,7 +21,7 @@ mod cuda_kernel;
 ///
 /// Along Axis 1:
 /// ```ignore
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
@@ -31,7 +31,7 @@ mod cuda_kernel;
 /// # [usize] dims
 /// Along Axis 0:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
 /// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));
@@ -40,7 +40,7 @@ mod cuda_kernel;
 ///
 /// Along Axis 1:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<(Const<2>, usize), f32, _> = dev.zeros_like(&(Const, 2));
 /// let b: Tensor<(Const<2>, usize), f32, _> = dev.zeros_like(&(Const, 4));

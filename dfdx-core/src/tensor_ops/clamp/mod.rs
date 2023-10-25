@@ -17,7 +17,7 @@ pub struct ClampKernelOp<E> {
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, -0.5, 0.0, 0.5, 1.0]);
 /// let r = t.clamp(-0.5, 0.5);

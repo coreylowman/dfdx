@@ -20,7 +20,7 @@ pub struct ScalarMulKernelOp<E> {
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r = a * dev.ones();
@@ -29,7 +29,7 @@ pub struct ScalarMulKernelOp<E> {
 ///
 /// Scalar example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r = a * 2.0;

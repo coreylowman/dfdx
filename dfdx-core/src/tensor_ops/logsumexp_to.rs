@@ -11,7 +11,7 @@ pub trait LogSumExpTo: HasErr + HasShape {
     ///
     /// Example:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let t: Tensor<Rank3<2, 4, 6>, f32, _> = dev.zeros();
     /// let _ = t.logsumexp::<Rank2<2, 4>, _>(); // or `logsumexp::<_, Axis<2>>()`
@@ -19,7 +19,7 @@ pub trait LogSumExpTo: HasErr + HasShape {
     ///
     /// Multi axis logsumexp:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// # let t: Tensor<Rank3<2, 4, 6>, f32, _> = dev.zeros();
     /// let _ = t.logsumexp::<Rank1<4>, _>(); // or `logsumexp::<_, Axes2<0, 2>>()`

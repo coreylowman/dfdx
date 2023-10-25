@@ -20,7 +20,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = BatchNorm2DConstConfig<3>;
 /// let bn = dev.build_module::<f32>(Model::default());

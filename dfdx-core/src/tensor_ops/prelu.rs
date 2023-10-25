@@ -11,7 +11,7 @@ use super::{cmp::*, BroadcastTo, ChooseFrom, Device, TryMul};
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let a = dev.tensor([0.05,0.05,0.05,0.05]);
@@ -42,7 +42,7 @@ pub fn leakyrelu<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let a = dev.tensor([0.05,0.05,0.05,0.05]);

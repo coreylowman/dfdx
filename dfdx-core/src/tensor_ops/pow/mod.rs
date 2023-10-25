@@ -16,7 +16,7 @@ pub struct PowfKernelOp<E>(E);
 
 /// Raises to a float power; `t^i`.
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powf(-3.2);
@@ -42,7 +42,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<PowfKernelOp<E>, E>, T: Tape<E, D>> Tens
 
 /// Raises to an integer power; `t^i`.
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powi(3);

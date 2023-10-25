@@ -93,7 +93,7 @@ pub trait IteratorCollateExt: Iterator {
     ///
     /// Example implementations:
     /// ```rust
-    /// # use dfdx::data::IteratorCollateExt;
+    /// # use dfdx_core::data::IteratorCollateExt;
     /// let data = [[('a', 'b'); 10], [('c', 'd'); 10], [('e', 'f'); 10]];
     /// // we use collate to transform each batch:
     /// let mut iter = data.into_iter().collate();

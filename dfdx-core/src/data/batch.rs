@@ -80,14 +80,14 @@ pub trait IteratorBatchExt: Iterator {
     ///
     /// Const batches:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::IteratorBatchExt};
+    /// # use dfdx_core::{prelude::*, data::IteratorBatchExt};
     /// let items: Vec<[usize; 5]> = (0..12).batch_exact(Const::<5>).collect();
     /// assert_eq!(&items, &[[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]]);
     /// ```
     ///
     /// Runtime batches:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::IteratorBatchExt};
+    /// # use dfdx_core::{prelude::*, data::IteratorBatchExt};
     /// let items: Vec<Vec<usize>> = (0..12).batch_exact(5).collect();
     /// assert_eq!(&items, &[[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]]);
     /// ```
@@ -104,7 +104,7 @@ pub trait IteratorBatchExt: Iterator {
     ///
     /// Example:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::IteratorBatchExt};
+    /// # use dfdx_core::{prelude::*, data::IteratorBatchExt};
     /// let items: Vec<Vec<usize>> = (0..12).batch_with_last(5).collect();
     /// assert_eq!(&items, &[vec![0, 1, 2, 3, 4], vec![5, 6, 7, 8, 9], vec![10, 11]]);
     /// ```

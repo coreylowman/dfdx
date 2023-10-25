@@ -26,7 +26,7 @@ pub trait ReshapeKernel<E: Dtype>: Storage<E> {
 ///
 /// Compile time reshapes:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
 /// let t: Tensor<Rank1<8>, f32, _> = t.reshape();
@@ -34,7 +34,7 @@ pub trait ReshapeKernel<E: Dtype>: Storage<E> {
 ///
 /// Compile time failure:
 /// ```compile_fail
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
 /// let t: Tensor<Rank1<7>, f32, _> = t.reshape();
@@ -42,7 +42,7 @@ pub trait ReshapeKernel<E: Dtype>: Storage<E> {
 ///
 /// Runtime reshapes:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
 /// let t: Tensor<(usize, ), f32, _> = t.reshape_like(&(8, ));

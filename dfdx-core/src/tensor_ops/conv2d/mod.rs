@@ -57,7 +57,7 @@ pub(super) trait Conv2DKernel<E: Dtype>: Storage<E> {
 /// [Const] dims **require nightly**:
 /// ```ignore
 /// #![feature(generic_const_exprs)]
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let x: Tensor<Rank4<2, 3, 32, 32>, f32, _> = dev.sample_normal();
 /// let w: Tensor<Rank4<6, 3, 3, 3>, f32, _> = dev.sample_normal();
@@ -71,7 +71,7 @@ pub(super) trait Conv2DKernel<E: Dtype>: Storage<E> {
 ///
 /// [usize] dims can be used on stable:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let x: Tensor<_, f32, _> = dev.sample_normal_like(&(
 ///     2,  // batch size

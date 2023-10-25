@@ -133,7 +133,7 @@ boolean_op_impl!(BitXor, bitxor, xor, scalar_xor);
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([false, true, false]);
 ///
@@ -151,7 +151,7 @@ pub fn bool_not<S: Shape, E: Dtype, D: Device<E>>(inp: &Tensor<S, bool, D>) -> T
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([false, false, true, true]);
 /// let b = dev.tensor([false, true, false, true]);
@@ -165,7 +165,7 @@ pub fn bool_not<S: Shape, E: Dtype, D: Device<E>>(inp: &Tensor<S, bool, D>) -> T
 ///
 /// And-ing with a scalar:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([false, true, false]);
 ///
@@ -186,7 +186,7 @@ pub fn bool_and<S: Shape, E: Dtype, D: Device<E>>(
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([false, false, true, true]);
 /// let b = dev.tensor([false, true, false, true]);
@@ -200,7 +200,7 @@ pub fn bool_and<S: Shape, E: Dtype, D: Device<E>>(
 ///
 /// And-ing with a scalar:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([false, true, false]);
 ///
@@ -221,7 +221,7 @@ pub fn bool_or<S: Shape, E: Dtype, D: Device<E>>(
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([false, false, true, true]);
 /// let b = dev.tensor([false, true, false, true]);
@@ -235,7 +235,7 @@ pub fn bool_or<S: Shape, E: Dtype, D: Device<E>>(
 ///
 /// And-ing with a scalar:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([false, true, false]);
 ///

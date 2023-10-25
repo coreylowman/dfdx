@@ -16,7 +16,7 @@ pub trait OneHotEncode<E: Dtype>: Storage<E> + ZerosTensor<E> + TensorFromVec<E>
     ///
     /// Const class labels and const n:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::OneHotEncode};
+    /// # use dfdx_core::{prelude::*, data::OneHotEncode};
     /// # let dev: Cpu = Default::default();
     /// let class_labels = [0, 1, 2, 1, 1];
     /// let probs: Tensor<Rank2<5, 3>, f32, _> = dev.one_hot_encode(Const::<3>, class_labels);
@@ -31,7 +31,7 @@ pub trait OneHotEncode<E: Dtype>: Storage<E> + ZerosTensor<E> + TensorFromVec<E>
     ///
     /// Runtime class labels and const n:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::OneHotEncode};
+    /// # use dfdx_core::{prelude::*, data::OneHotEncode};
     /// # let dev: Cpu = Default::default();
     /// let class_labels = [0, 1, 2, 1, 1];
     /// let probs: Tensor<(Const<5>, usize), f32, _> = dev.one_hot_encode(3, class_labels);
@@ -46,7 +46,7 @@ pub trait OneHotEncode<E: Dtype>: Storage<E> + ZerosTensor<E> + TensorFromVec<E>
     ///
     /// Const class labels and runtime n:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::OneHotEncode};
+    /// # use dfdx_core::{prelude::*, data::OneHotEncode};
     /// # let dev: Cpu = Default::default();
     /// let class_labels = std::vec![0, 1, 2, 1, 1];
     /// let probs: Tensor<(usize, Const<3>), f32, _> = dev.one_hot_encode(Const, class_labels);
@@ -61,7 +61,7 @@ pub trait OneHotEncode<E: Dtype>: Storage<E> + ZerosTensor<E> + TensorFromVec<E>
     ///
     /// Runtime both:
     /// ```rust
-    /// # use dfdx::{prelude::*, data::OneHotEncode};
+    /// # use dfdx_core::{prelude::*, data::OneHotEncode};
     /// # let dev: Cpu = Default::default();
     /// let class_labels = std::vec![0, 1, 2, 1, 1];
     /// let probs: Tensor<(usize, usize), f32, _> = dev.one_hot_encode(3, class_labels);

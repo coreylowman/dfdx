@@ -15,13 +15,13 @@
 //! In order to do anything with tensors, you first need to construct the device that they will be stored on:
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! let dev: Cpu = Default::default();
 //! let dev: Cpu = Cpu::seed_from_u64(0);
 //! ```
 //!
 //! ```ignore
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! let dev: Cuda = Default::default();
 //! let dev: Cuda = Cuda::seed_from_u64(1234);
 //! let dev: Cuda = Cuda::try_build(0, 1234).unwrap();
@@ -34,7 +34,7 @@
 //! See [TensorFrom] & [TensorFromVec].
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let _ = dev.tensor([1.0, 2.0, 3.0]);
 //! let _ = dev.tensor_from_vec(vec![1.0, 2.0, 3.0], (3, ));
@@ -45,7 +45,7 @@
 //! See [ZerosTensor] and [OnesTensor].
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let _: Tensor<Rank1<5>,f32 , _> = dev.zeros();
 //! let _: Tensor<Rank2<3, 2>, f32, _> = dev.ones();
@@ -56,7 +56,7 @@
 //! See [SampleTensor]
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let _: Tensor<Rank1<5>, f32, _> = dev.sample_uniform();
 //! let _: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
@@ -70,7 +70,7 @@
 //! You can use [Tensor::copy_from] and [Tensor::copy_into] to copy data into a tensor:
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let mut a: Tensor<Rank1<1000>, f32, _> = dev.zeros();
 //! let buf: Vec<f32> = vec![1.0; 1000];
@@ -90,7 +90,7 @@
 //! with them directly.
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
 //! let t: [[f32; 3]; 2] = t.array();
@@ -105,7 +105,7 @@
 //! Note that these two methods are only present for tensors without a tape already.
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx_core::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank1<5>,f32, _> = dev.zeros();
 //! let mut grads = Gradients::leaky();

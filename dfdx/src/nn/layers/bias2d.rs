@@ -5,7 +5,7 @@ use crate::prelude::*;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// const NUM_CHANS: usize = 5;
 /// type Model = Bias2DConstConfig<NUM_CHANS>;

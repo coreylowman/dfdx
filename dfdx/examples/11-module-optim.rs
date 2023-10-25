@@ -1,4 +1,4 @@
-//! Intro to dfdx_nn::optim
+//! Intro to dfdx::optim
 
 use dfdx::prelude::*;
 

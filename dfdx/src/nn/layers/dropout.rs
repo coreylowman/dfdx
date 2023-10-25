@@ -8,7 +8,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
 /// let grads = dropout.alloc_grads();
@@ -49,7 +49,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Ten
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx_nn::*;
+/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout = Dropout { p: 0.5 };
 /// let grads = dropout.alloc_grads();

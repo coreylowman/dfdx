@@ -15,9 +15,8 @@
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! # use dfdx_nn::*;
 //! # let dev: Cpu = Default::default();
-//! use dfdx_nn::optim::*;
+//! use dfdx::nn::optim::*;
 //! type Model = LinearConstConfig<5, 2>;
 //! let mut model = dev.build_module::<f32>(Model::default());
 //! let mut grads = model.alloc_grads();

@@ -17,7 +17,7 @@ use std::sync::Arc;
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// // A 1d tensor with 1000 f32 elements, stored on the Cpu
 /// type A = Tensor<Rank1<1000>, f32, Cpu>;
@@ -116,7 +116,7 @@ impl<S: Shape, E, D: Storage<E>, T> Tensor<S, E, D, T> {
 pub trait PutTape<T> {
     type Output;
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _, NoneTape> = dev.zeros();
     /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<f32, Cpu>> = a.put_tape(Default::default());
@@ -146,7 +146,7 @@ pub trait SplitTape {
     type NoTape: Clone + PutTape<Self::Tape, Output = Self>;
     /// Splits tape off of self
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx_core::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// # let grads = Gradients::leaky();
     /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<f32, _>> = dev.zeros().traced(grads);

@@ -15,7 +15,7 @@ mod cuda_kernel;
 ///
 /// Stacking with an array:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
@@ -24,7 +24,7 @@ mod cuda_kernel;
 ///
 /// Stacking with a vec:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();

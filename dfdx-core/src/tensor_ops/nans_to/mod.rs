@@ -16,7 +16,7 @@ pub struct NansToKernelOp<E>(E);
 ///
 /// Example:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([1.0, f32::NAN, f32::NAN, 4.0]);
 /// let r = t.nans_to(0.0);
