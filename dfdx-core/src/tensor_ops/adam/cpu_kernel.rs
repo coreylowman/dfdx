@@ -1,7 +1,7 @@
 use super::{AdamConfig, AdamKernel, WeightDecay};
 use crate::{
     dtypes::{Dtype, NotMixedPrecision},
-    tensor::Cpu,
+    tensor::{Cpu, Error},
 };
 
 #[cfg(feature = "f16")]
@@ -14,7 +14,7 @@ impl AdamKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
         moment1: &mut Self::Vec,
         moment2: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let betas = cfg.betas.map(|x| x as f32);
         let eps = cfg.eps as f32;
         let lr = cfg.lr as f32;
@@ -60,7 +60,7 @@ impl<E: num_traits::Float + Dtype + NotMixedPrecision> AdamKernel<E> for Cpu {
         moment1: &mut Self::Vec,
         moment2: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let betas = cfg.betas.map(E::from_f64).map(Option::unwrap);
         let eps = E::from_f64(cfg.eps).unwrap();
         let lr = E::from_f64(cfg.lr).unwrap();

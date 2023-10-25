@@ -34,7 +34,7 @@ impl Cpu {
         filters: &[E],
         out: &mut [E],
         buf: &mut [E],
-    ) -> Result<(), CpuError>
+    ) -> Result<(), Error>
     where
         Self: MatMulImpl<E>,
     {
@@ -85,7 +85,7 @@ impl Cpu {
         grad_filters_tr: &mut [E],
         grad_out: &[E],
         buf: &mut [E],
-    ) -> Result<(), CpuError>
+    ) -> Result<(), Error>
     where
         Self: MatMulImpl<E>,
     {
@@ -150,7 +150,7 @@ impl<E: Dtype> Conv1DKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Error> {
         self.try_zeros_like(&s)
     }
 
@@ -160,7 +160,7 @@ where
         lhs: &Tensor<L, E, Self>,
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let patches = (op.chan_in, op.kernel, op.l_out);
         let mut patches = self.try_alloc_zeros::<E>(patches.num_elements())?;
         let [lstride, ostride] = match L::NUM_DIMS {
@@ -192,7 +192,7 @@ where
         grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let f_tr_shape = [
             op.groups,
             op.chan_in / op.groups,

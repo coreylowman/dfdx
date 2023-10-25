@@ -47,9 +47,9 @@ where
 }
 
 /// Fallible version of [std::ops::Sub]. See [sub]
-pub trait TrySub<Rhs = Self>: HasErr {
+pub trait TrySub<Rhs = Self> {
     type Output;
-    fn try_sub(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+    fn try_sub(self, rhs: Rhs) -> Result<Self::Output, Error>;
 }
 
 impl<S: Shape, E: Dtype, D: BinaryKernel<BinarySubKernelOp, E>, LTape: Tape<E, D>, R>
@@ -58,7 +58,7 @@ where
     LTape: Merge<R>,
 {
     type Output = Self;
-    fn try_sub(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
+    fn try_sub(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Error> {
         try_binary_op(BinarySubKernelOp, self, rhs)
     }
 }
@@ -68,7 +68,7 @@ where
     D: UnaryKernel<ScalarSubKernelOp<E>, E>,
 {
     type Output = Self;
-    fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err> {
+    fn try_sub(self, rhs: Rhs) -> Result<Self, Error> {
         let rhs: f64 = rhs.into();
         let scalar = E::from_f64(rhs).unwrap();
         try_unary_op(ScalarSubKernelOp { scalar }, self)

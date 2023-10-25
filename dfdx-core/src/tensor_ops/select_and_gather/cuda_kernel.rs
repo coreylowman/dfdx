@@ -16,7 +16,7 @@ macro_rules! impl_cuda_kernels {
                 &self,
                 inp: &Tensor<Src, $TypeName, Self>,
                 idx: &Tensor<Idx, usize, Self>,
-            ) -> Result<Tensor<Dst, $TypeName, Self>, Self::Err>
+            ) -> Result<Tensor<Dst, $TypeName, Self>, Error>
             where
                 Src: ReplaceDimTo<Dst, Idx>,
             {
@@ -65,7 +65,7 @@ macro_rules! impl_cuda_kernels {
                 idx: &Tensor<Idx, usize, Self>,
                 _: &Tensor<Dst, $TypeName, Self>,
                 grad_out: &<Self as Storage<$TypeName>>::Vec,
-            ) -> Result<(), Self::Err>
+            ) -> Result<(), Error>
             where
                 Src: ReplaceDimTo<Dst, Idx>,
             {
@@ -101,7 +101,7 @@ macro_rules! impl_cuda_kernels {
                 &self,
                 inp: &Tensor<Src, $TypeName, Self>,
                 idx: &Tensor<Idx, usize, Self>,
-            ) -> Result<Tensor<Dst, $TypeName, Self>, Self::Err>
+            ) -> Result<Tensor<Dst, $TypeName, Self>, Error>
             where
                 Src: RemoveDimTo<Dst, Idx>,
             {
@@ -153,7 +153,7 @@ macro_rules! impl_cuda_kernels {
                 idx: &Tensor<Idx, usize, Self>,
                 out: &Tensor<Dst, $TypeName, Self>,
                 grad_out: &<Self as Storage<$TypeName>>::Vec,
-            ) -> Result<(), Self::Err>
+            ) -> Result<(), Error>
             where
                 Src: RemoveDimTo<Dst, Idx>,
             {

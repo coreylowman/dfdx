@@ -7,7 +7,7 @@ pub(crate) use index::index_to_i;
 pub(crate) use iterate::{LendingIterator, NdIndex};
 
 pub(crate) use device::CachableVec;
-pub use device::{Cpu, CpuError};
+pub use device::Cpu;
 
 #[cfg(test)]
 mod tests {

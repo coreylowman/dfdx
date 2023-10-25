@@ -56,7 +56,7 @@ where
         &self,
         inp: &Tensor<Src, E, Self>,
         slice: &Slice,
-    ) -> Result<Tensor<Src::Sliced, E, Self>, Self::Err> {
+    ) -> Result<Tensor<Src::Sliced, E, Self>, Error> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
@@ -94,7 +94,7 @@ where
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
         slice: &Slice,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::MOD, Self::FNS[1]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }

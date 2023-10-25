@@ -48,7 +48,7 @@ where
         &self,
         op: super::DropoutKernelOp,
         inp: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let mask = {
             let mut rng = StdRng::seed_from_u64(op.seed);
             let dist = Bernoulli::new(op.prob).unwrap();
@@ -78,7 +78,7 @@ where
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mask = {
             let mut rng = StdRng::seed_from_u64(op.seed);
             let dist = Bernoulli::new(op.prob).unwrap();

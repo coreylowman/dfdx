@@ -15,7 +15,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         &self,
         dst: &Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err> {
+    ) -> Result<Tensor<Dst, E, Self>, Error> {
         let module = std::format!("reshape_fwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_fwd") {
             let src = FWD_KERNEL.replace("$T", E::NAME);
@@ -62,7 +62,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let module = std::format!("reshape_bwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_bwd") {
             let src = BWD_KERNEL.replace("$T", E::NAME);

@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<TanhKernelOp, E>, T: Tape<E, D>> Tensor<
         self.try_tanh().unwrap()
     }
     /// See [tanh]
-    pub fn try_tanh(self) -> Result<Self, D::Err> {
+    pub fn try_tanh(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(TanhKernelOp, self)
     }
 }

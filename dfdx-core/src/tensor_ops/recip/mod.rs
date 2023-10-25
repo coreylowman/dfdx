@@ -31,7 +31,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<RecipKernelOp, E>, T: Tape<E, D>> Tensor
         self.try_recip().unwrap()
     }
     /// See [recip]
-    pub fn try_recip(self) -> Result<Self, D::Err> {
+    pub fn try_recip(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(RecipKernelOp, self)
     }
 }

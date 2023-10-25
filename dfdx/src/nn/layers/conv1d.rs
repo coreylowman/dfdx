@@ -62,7 +62,7 @@ where
     <I as std::ops::Div<G>>::Output: Dim,
 {
     type Built = Conv1D<I, O, K, S, P, L, G, E, D>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         assert_eq!(self.in_chan.size() % self.groups.size(), 0);
         assert_eq!(self.out_chan.size() % self.groups.size(), 0);
         let i_over_g = self.in_chan / self.groups;
@@ -119,7 +119,7 @@ where
     E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,
     D: Device<E>,
 {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         let (_, i_over_g, k) = self.weight.shape();
         let scale = (1.0 / (k.size() * i_over_g.size()) as f64).sqrt();
         let b = E::from_f64(scale).unwrap();
@@ -143,14 +143,7 @@ where
         L,
         G,
     >>::Convolved;
-    type Error = <(Img, Tensor<(O, <I as std::ops::Div<G>>::Output, K), E, D>) as TryConv1D<
-        S,
-        P,
-        L,
-        G,
-    >>::Error;
-
-    fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Img) -> Result<Self::Output, Error> {
         (x, self.weight.clone()).try_conv1d(self.stride, self.padding, self.dilation, self.groups)
     }
 }

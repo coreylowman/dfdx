@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{Storage, Tensor},
+    tensor::{Error, Storage, Tensor},
 };
 
 use super::WeightDecay;
@@ -57,7 +57,7 @@ pub trait AdamKernel<E: Dtype>: Storage<E> {
         moment1: &mut Self::Vec,
         moment2: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl AdamConfig {
@@ -68,7 +68,7 @@ impl AdamConfig {
         moment1: &mut D::Vec,
         moment2: &mut D::Vec,
         grad: &D::Vec,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), crate::tensor::Error> {
         param.device.adam_kernel(
             t,
             self,

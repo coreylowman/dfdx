@@ -1,5 +1,5 @@
 use crate::shapes::*;
-use crate::tensor::{Cpu, Tensor};
+use crate::tensor::{Cpu, Error, Tensor};
 
 use std::sync::Arc;
 
@@ -23,7 +23,7 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign>
         op: super::Upscale2DOp,
         inp: &Tensor<I, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 
@@ -56,7 +56,7 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign>
         grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 
@@ -87,7 +87,7 @@ impl<E: Float + Dtype> super::Upscale2DKernel<E, Bilinear> for Cpu {
         op: super::Upscale2DOp,
         inp: &Tensor<I, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 
@@ -138,7 +138,7 @@ impl<E: Float + Dtype> super::Upscale2DKernel<E, Bilinear> for Cpu {
         grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 

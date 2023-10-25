@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<SqrtKernelOp, E>, T: Tape<E, D>> Tensor<
         self.try_sqrt().unwrap()
     }
     /// See [sqrt]
-    pub fn try_sqrt(self) -> Result<Self, D::Err> {
+    pub fn try_sqrt(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(SqrtKernelOp, self)
     }
 }

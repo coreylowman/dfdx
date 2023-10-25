@@ -47,7 +47,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<AccurateGeLUKernelOp, E>, T: Tape<E, D>>
         self.try_accurate_gelu().unwrap()
     }
     /// See [accurate_gelu]
-    pub fn try_accurate_gelu(self) -> Result<Self, D::Err> {
+    pub fn try_accurate_gelu(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(AccurateGeLUKernelOp, self)
     }
 }

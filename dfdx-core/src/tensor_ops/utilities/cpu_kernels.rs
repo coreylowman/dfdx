@@ -5,7 +5,7 @@ use crate::{
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{Cpu, LendingIterator, NdIndex},
-        unique_id, Tensor, Tensorlike, ZerosTensor,
+        unique_id, Error, Tensor, Tensorlike, ZerosTensor,
     },
 };
 
@@ -51,7 +51,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         &self,
         op: Op,
         inp: Cow<Tensor<S, E, Self>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let mut out = match inp {
             Cow::Borrowed(inp) => {
                 // allocate a new data buffer
@@ -84,7 +84,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         match (inp.data(), out.data()) {
             (None, None) => {
                 let df = op.const_df();
@@ -115,7 +115,7 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         op: Op,
         lhs: Cow<Tensor<S, E, Self>>,
         rhs: Cow<Tensor<S, E, Self>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         match (lhs, rhs) {
             (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let mut out = self.try_zeros_like(&lhs.shape)?;
@@ -169,7 +169,7 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         match (lhs.data(), rhs.data()) {
             (Some(lhs_buf), Some(rhs_buf)) => {
                 let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());

@@ -22,7 +22,7 @@ extern \"C\" __global__ void kernel(const size_t n, const $Src *inp, $Dst *out) 
 }";
 
 impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, E2> for Cuda {
-    fn forward<S: Shape>(inp: Tensor<S, E1, Self>) -> Result<Tensor<S, E2, Self>, Self::Err> {
+    fn forward<S: Shape>(inp: Tensor<S, E1, Self>) -> Result<Tensor<S, E2, Self>, Error> {
         let module = std::format!("convert_{}_to_{}", E1::NAME, E2::NAME);
         let cuda = &inp.device;
 

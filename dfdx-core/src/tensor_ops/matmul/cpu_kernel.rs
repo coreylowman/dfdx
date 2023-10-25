@@ -1,7 +1,7 @@
 #![allow(clippy::needless_return)]
 
 use crate::shapes::*;
-use crate::tensor::{Cpu, Tensor, ZerosTensor};
+use crate::tensor::{Cpu, Error, Tensor, ZerosTensor};
 
 use std::sync::Arc;
 
@@ -236,7 +236,7 @@ where
         &self,
         lhs: &Tensor<(M, K), E, Self>,
         rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(M, N), E, Self>, Error> {
         let (m, k) = lhs.shape;
         let n = rhs.shape.1;
         let mut out = self.try_zeros_like(&(m, n))?;
@@ -259,7 +259,7 @@ where
         rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (m, k) = lhs.shape;
         let n = rhs.shape.1;
         let strides = (m, n).strides();
@@ -295,7 +295,7 @@ where
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
         rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(B, M, N), E, Self>, Error> {
         let (batch, m, k) = lhs.shape;
         let n = rhs.shape.1;
         let mut out = self.try_zeros_like(&(batch, m, n))?;
@@ -321,7 +321,7 @@ where
         rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (batch, m, k) = lhs.shape;
         let n = rhs.shape.1;
         let strides = (batch, m, n).strides();
@@ -359,7 +359,7 @@ where
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
         rhs: &Tensor<(B, K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(B, M, N), E, Self>, Error> {
         let (b, m, k) = lhs.shape;
         let n = rhs.shape.2;
         let mut out = self.try_zeros_like(&(b, m, n))?;
@@ -387,7 +387,7 @@ where
         rhs: &Tensor<(B, K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (b, m, k) = lhs.shape;
         let n = rhs.shape.2;
         let strides = (b, m, n).strides();
@@ -425,7 +425,7 @@ where
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
         rhs: &Tensor<(B, S, K, N), E, Self>,
-    ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(B, S, M, N), E, Self>, Error> {
         let (b, s, m, k) = lhs.shape;
         let n = rhs.shape.3;
         let mut out = self.try_zeros_like(&(b, s, m, n))?;
@@ -453,7 +453,7 @@ where
         rhs: &Tensor<(B, S, K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (b, s, m, k) = lhs.shape;
         let n = rhs.shape.3;
         let strides = (b, s, m, n).strides();

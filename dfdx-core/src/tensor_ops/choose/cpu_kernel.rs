@@ -2,7 +2,7 @@ use crate::{
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{LendingIterator, NdIndex},
-        Cpu, Storage, Tensor, ZerosTensor,
+        Cpu, Error, Storage, Tensor, ZerosTensor,
     },
 };
 
@@ -12,7 +12,7 @@ impl<E: Dtype> super::ChooseKernel<E> for Cpu {
         cond: &Tensor<S, bool, Self>,
         lhs: &Tensor<S, E, Self>,
         rhs: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let mut out = self.try_zeros_like(&lhs.shape)?;
         let mut cond_iter = cond.iter();
         let mut lhs_iter = lhs.iter();
@@ -36,7 +36,7 @@ impl<E: Dtype> super::ChooseKernel<E> for Cpu {
         rhs: &Tensor<S, E, Self>,
         grad_rhs: &mut <Self as Storage<E>>::Vec,
         grad_out: &<Self as Storage<E>>::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
         let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
         let mut out_idx = NdIndex::new(lhs.shape, lhs.shape.strides());

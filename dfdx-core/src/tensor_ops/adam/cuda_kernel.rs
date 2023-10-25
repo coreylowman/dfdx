@@ -72,7 +72,7 @@ where
         moment1: &mut Self::Vec,
         moment2: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
         }

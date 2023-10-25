@@ -59,7 +59,7 @@ impl super::Pool2DKind {
 }
 
 impl<E: Float + Dtype> super::Pool2DKernel<E> for Cpu {
-    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Error> {
         self.try_zeros_like(&s)
     }
     fn forward<I: Shape, O: Shape>(
@@ -67,7 +67,7 @@ impl<E: Float + Dtype> super::Pool2DKernel<E> for Cpu {
         op: super::Pool2DOp,
         inp: &Tensor<I, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 
@@ -106,7 +106,7 @@ impl<E: Float + Dtype> super::Pool2DKernel<E> for Cpu {
         grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 

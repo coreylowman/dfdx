@@ -2,7 +2,7 @@ use crate::{
     shapes::{Shape, Unit},
     tensor::{
         cpu::{Cpu, LendingIterator},
-        Tensor, ZerosTensor,
+        Error, Tensor, ZerosTensor,
     },
 };
 
@@ -20,7 +20,7 @@ impl<Op: CmpOpCpuKernel<E>, E: Unit> CmpKernel<Op, E> for Cpu {
         &self,
         lhs: &Tensor<S, E, Self, T>,
         rhs: &Tensor<S, E, Self, T>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         let mut out: Tensor<S, bool, Self> = self.try_zeros_like(&lhs.shape)?;
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
@@ -37,7 +37,7 @@ impl<Op: CmpOpCpuKernel<E>, E: Unit> ScalarCmpKernel<Op, E> for Cpu {
         &self,
         lhs: &Tensor<S, E, Self, T>,
         scalar: E,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         let mut out: Tensor<S, bool, Self> = self.try_zeros_like(&lhs.shape)?;
         let mut lhs_iter = lhs.iter();
         let mut out_iter = out.iter_mut();

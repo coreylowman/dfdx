@@ -29,7 +29,7 @@ impl<E: Dtype + CudnnDataType> super::Conv2DKernel<E> for Cuda
 where
     Self: HasCudnnKernel<E>,
 {
-    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Error> {
         let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         Ok(self.build_tensor(shape, shape.strides(), data))
     }
@@ -39,7 +39,7 @@ where
         lhs: &Tensor<L, E, Self>,
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut conv = self.cudnn.create_conv2d::<E>(
             [op.padding as i32, op.padding as i32],
             [op.stride as i32, op.stride as i32],
@@ -97,7 +97,7 @@ where
         grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut conv = self.cudnn.create_conv2d::<E>(
             [op.padding as i32, op.padding as i32],
             [op.stride as i32, op.stride as i32],

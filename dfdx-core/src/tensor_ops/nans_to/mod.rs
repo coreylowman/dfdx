@@ -35,7 +35,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<E, D>> Te
         self.try_nans_to(value).unwrap()
     }
     /// See [nans_to]
-    pub fn try_nans_to(self, value: impl Into<f64>) -> Result<Self, D::Err> {
+    pub fn try_nans_to(self, value: impl Into<f64>) -> Result<Self, crate::tensor::Error> {
         let value = E::from_f64(value.into()).unwrap();
         try_unary_op(NansToKernelOp(value), self)
     }

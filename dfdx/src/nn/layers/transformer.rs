@@ -100,17 +100,15 @@ impl<Model: Dim, NumHeads: Dim, F: Dim> DecoderBlockConfig<Model, NumHeads, F> {
 impl<M: Dim, H: Dim, F: Dim, E: Dtype, D: Device<E>, Tgt, Mem> Module<(Tgt, Mem)>
     for DecoderBlock<M, H, F, E, D>
 where
-    Tgt: WithEmptyTape + SplitTape + TryAdd<Tgt::NoTape, Output = Tgt> + HasErr<Err = D::Err>,
+    Tgt: WithEmptyTape + SplitTape + TryAdd<Tgt::NoTape, Output = Tgt>,
     Mem: Clone,
-    ResidualAdd<MultiHeadAttention<M, H, M, M, E, D>>: Module<Tgt, Output = Tgt, Error = D::Err>,
-    MultiHeadAttention<M, H, M, M, E, D>: Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,
-    LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
-    ResidualAdd<FeedForward<M, F, E, D>>: Module<Tgt, Output = Tgt, Error = D::Err>,
+    ResidualAdd<MultiHeadAttention<M, H, M, M, E, D>>: Module<Tgt, Output = Tgt>,
+    MultiHeadAttention<M, H, M, M, E, D>: Module<(Tgt, Mem, Mem), Output = Tgt>,
+    LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt>,
+    ResidualAdd<FeedForward<M, F, E, D>>: Module<Tgt, Output = Tgt>,
 {
     type Output = Tgt;
-    type Error = D::Err;
-
-    fn try_forward(&self, (tgt, mem): (Tgt, Mem)) -> Result<Self::Output, D::Err> {
+    fn try_forward(&self, (tgt, mem): (Tgt, Mem)) -> Result<Self::Output, crate::tensor::Error> {
         let x = self.self_attn.try_forward(tgt)?;
         let x = self.norm1.try_forward(x)?;
 
@@ -179,17 +177,14 @@ impl<Model: Dim, NumHeads: Dim, F: Dim> TransformerConfig<Model, NumHeads, F> {
 impl<M: Dim, H: Dim, F: Dim, E: Dtype, D: Device<E>, Src: SplitTape, Tgt: PutTape<Src::Tape>>
     Module<(Src, Tgt)> for Transformer<M, H, F, E, D>
 where
-    Vec<EncoderBlock<M, H, F, E, D>>: Module<Src, Output = Src, Error = D::Err>,
+    Vec<EncoderBlock<M, H, F, E, D>>: Module<Src, Output = Src>,
     DecoderBlock<M, H, F, E, D>: Module<
         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
         Output = <Tgt as PutTape<Src::Tape>>::Output,
-        Error = D::Err,
     >,
 {
     type Output = <Tgt as PutTape<Src::Tape>>::Output;
-    type Error = D::Err;
-
-    fn try_forward(&self, (src, tgt): (Src, Tgt)) -> Result<Self::Output, D::Err> {
+    fn try_forward(&self, (src, tgt): (Src, Tgt)) -> Result<Self::Output, crate::tensor::Error> {
         let (mem, tape) = self.encoder.try_forward(src)?.split_tape();
         let mut tgt = tgt.put_tape(tape);
         for block in self.decoder.iter() {

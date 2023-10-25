@@ -1,7 +1,7 @@
 use crate::shapes::{Dtype, Shape};
 use crate::tensor::{
     cpu::{LendingIterator, NdIndex},
-    Cpu, Tensor, ZerosTensor,
+    Cpu, Error, Tensor, ZerosTensor,
 };
 
 impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
@@ -9,7 +9,7 @@ impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
         &self,
         dst: &Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err> {
+    ) -> Result<Tensor<Dst, E, Self>, Error> {
         let mut out = self.try_zeros_like(dst)?;
         let mut inp_iter = inp.iter();
         let mut out_iter = out.iter_mut();
@@ -24,7 +24,7 @@ impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut inp_idx = NdIndex::new(inp.shape, inp.strides);
         let mut out_idx = NdIndex::new(*dst, dst.strides());
         while let Some((i, o)) = inp_idx.next().zip(out_idx.next()) {

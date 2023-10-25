@@ -37,7 +37,11 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<E, D>> Ten
         self.try_clamp(min, max).unwrap()
     }
     /// See [clamp]
-    pub fn try_clamp(self, min: impl Into<f64>, max: impl Into<f64>) -> Result<Self, D::Err> {
+    pub fn try_clamp(
+        self,
+        min: impl Into<f64>,
+        max: impl Into<f64>,
+    ) -> Result<Self, crate::tensor::Error> {
         try_unary_op(
             ClampKernelOp {
                 min: E::from_f64(min.into()).unwrap(),

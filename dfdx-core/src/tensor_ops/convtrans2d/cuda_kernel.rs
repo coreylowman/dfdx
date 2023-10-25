@@ -69,7 +69,7 @@ where
     Self: HasCudaKernel<E>,
     CudaBlas: Gemm<E>,
 {
-    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Error> {
         let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         Ok(self.build_tensor(shape, shape.strides(), data))
     }
@@ -80,7 +80,7 @@ where
         lhs: &Tensor<L, E, Self>,
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
@@ -160,7 +160,7 @@ where
         grad_rhs: &mut Self::Vec,
         _: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;

@@ -54,7 +54,7 @@ where
             Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
             Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
         ),
-        Self::Err,
+        Error,
     > {
         if !self.dev.has_func(Self::FN, Self::FN) {
             self.dev.load_ptx(PTX.into(), Self::FN, &[Self::FN])?;

@@ -2,7 +2,7 @@ use super::*;
 use crate::{shapes::*, tensor::*};
 
 /// Reduction along multiple axes using standard deviation.
-pub trait StddevTo<E: Dtype>: HasErr + HasShape {
+pub trait StddevTo<E: Dtype>: Sized + HasShape {
     /// Standard deviation reduction.
     ///
     /// **Pytorch equivalent**: `t.std(Axes, unbiased=False)`
@@ -25,7 +25,7 @@ pub trait StddevTo<E: Dtype>: HasErr + HasShape {
     fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
         epsilon: impl Into<f64>,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
@@ -34,7 +34,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> StddevTo<E> for Tensor<S, 
     fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
         epsilon: impl Into<f64>,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {

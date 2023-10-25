@@ -1,5 +1,5 @@
 use crate::shapes::{Shape, Unit};
-use crate::tensor::{cache::TensorCache, cpu::LendingIterator, storage_traits::*, Tensor};
+use crate::tensor::{cache::TensorCache, cpu::LendingIterator, storage_traits::*, Error, Tensor};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{sync::Arc, vec::Vec};
 
@@ -45,30 +45,6 @@ impl Cpu {
             cache: Arc::new(Default::default()),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum CpuError {
-    /// Device is out of memory
-    OutOfMemory,
-    /// Not enough elements were provided when creating a tensor
-    WrongNumElements,
-}
-
-impl std::fmt::Display for CpuError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::OutOfMemory => f.write_str("CpuError::OutOfMemory"),
-            Self::WrongNumElements => f.write_str("CpuError::WrongNumElements"),
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for CpuError {}
-
-impl HasErr for Cpu {
-    type Err = CpuError;
 }
 
 /// A [Vec] that can be cloned without allocating new memory.
@@ -154,7 +130,7 @@ impl RandomU64 for Cpu {
 impl<E: Unit> Storage<E> for Cpu {
     type Vec = CachableVec<E>;
 
-    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Self::Err> {
+    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error> {
         self.try_alloc_zeros(len)
     }
 
@@ -173,23 +149,23 @@ impl<E: Unit> Storage<E> for Cpu {
 }
 
 impl Synchronize for Cpu {
-    fn try_synchronize(&self) -> Result<(), Self::Err> {
+    fn try_synchronize(&self) -> Result<(), Error> {
         Ok(())
     }
 }
 
 impl Cache for Cpu {
-    fn try_enable_cache(&self) -> Result<(), Self::Err> {
+    fn try_enable_cache(&self) -> Result<(), Error> {
         self.cache.enable();
         Ok(())
     }
 
-    fn try_disable_cache(&self) -> Result<(), Self::Err> {
+    fn try_disable_cache(&self) -> Result<(), Error> {
         self.cache.disable();
         self.try_empty_cache()
     }
 
-    fn try_empty_cache(&self) -> Result<(), Self::Err> {
+    fn try_empty_cache(&self) -> Result<(), Error> {
         #[cfg(not(feature = "no-std"))]
         let mut cache = self.cache.allocations.write().unwrap();
         #[cfg(feature = "no-std")]

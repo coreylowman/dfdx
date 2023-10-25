@@ -32,14 +32,13 @@ mod cuda_kernel;
 /// ```
 pub trait TryStack: Sized {
     type Stacked;
-    type Err: std::fmt::Debug;
 
     /// Stack an array or vec of tensors together along a new dimension.
     fn stack(self) -> Self::Stacked {
         self.try_stack().unwrap()
     }
     /// Fallible version of [TryStack::stack]
-    fn try_stack(self) -> Result<Self::Stacked, Self::Err>;
+    fn try_stack(self) -> Result<Self::Stacked, Error>;
 }
 
 impl<S: Shape, E: Dtype, D: StackKernel<E>, T, const N: usize> TryStack for [Tensor<S, E, D, T>; N]
@@ -48,8 +47,7 @@ where
     T: Tape<E, D>,
 {
     type Stacked = Tensor<S::Larger, E, D, T>;
-    type Err = D::Err;
-    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+    fn try_stack(self) -> Result<Self::Stacked, Error> {
         try_stack(self)
     }
 }
@@ -60,16 +58,14 @@ where
     T: Tape<E, D>,
 {
     type Stacked = Tensor<S::Larger, E, D, T>;
-    type Err = D::Err;
-    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+    fn try_stack(self) -> Result<Self::Stacked, Error> {
         try_stack(self)
     }
 }
 
-impl<A: TryStack, B: TryStack<Err = A::Err>> TryStack for (A, B) {
+impl<A: TryStack, B: TryStack> TryStack for (A, B) {
     type Stacked = (A::Stacked, B::Stacked);
-    type Err = A::Err;
-    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+    fn try_stack(self) -> Result<Self::Stacked, Error> {
         Ok((self.0.try_stack()?, self.1.try_stack()?))
     }
 }
@@ -115,19 +111,15 @@ pub trait StackKernel<E: Dtype>: Storage<E> {
         &self,
         num: Num,
         inp: &[Tensor<S, E, Self>],
-    ) -> Result<Tensor<S::Larger, E, Self>, Self::Err>
+    ) -> Result<Tensor<S::Larger, E, Self>, Error>
     where
         S: AddDim<Num>;
-    fn backward(
-        &self,
-        grad_inp: Vec<&mut Self::Vec>,
-        grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    fn backward(&self, grad_inp: Vec<&mut Self::Vec>, grad_out: &Self::Vec) -> Result<(), Error>;
 }
 
 fn try_stack<S: Shape, E: Dtype, D: StackKernel<E>, T, Items>(
     items: Items,
-) -> Result<Tensor<S::Larger, E, D, T>, D::Err>
+) -> Result<Tensor<S::Larger, E, D, T>, crate::tensor::Error>
 where
     Items: Array<Tensor<S, E, D, T>>,
     S: AddDim<Items::Dim>,

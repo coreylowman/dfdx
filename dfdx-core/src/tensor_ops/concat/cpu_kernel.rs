@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{unique_id, Cpu, Tensor},
+    tensor::{unique_id, Cpu, Error, Tensor},
 };
 
 impl<E: Dtype> super::ConcatKernel<E> for Cpu {
@@ -8,7 +8,7 @@ impl<E: Dtype> super::ConcatKernel<E> for Cpu {
         &self,
         a: &Tensor<A, E, Self>,
         b: &Tensor<B, E, Self>,
-    ) -> Result<Tensor<A::Catted, E, Self>, Self::Err>
+    ) -> Result<Tensor<A::Catted, E, Self>, Error>
     where
         A: super::ConcatShape<B>,
     {
@@ -45,7 +45,7 @@ impl<E: Dtype> super::ConcatKernel<E> for Cpu {
         grad_a: &mut Self::Vec,
         grad_b: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut offset = 0;
         for ga in grad_a.iter_mut() {
             *ga += grad_out[offset];

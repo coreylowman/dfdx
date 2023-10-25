@@ -9,7 +9,7 @@ pub trait SliceKernel<E: Unit>: Storage<E> {
         &self,
         inp: &Tensor<Src, E, Self>,
         slice: &Slice,
-    ) -> Result<Tensor<Src::Sliced, E, Self>, Self::Err>;
+    ) -> Result<Tensor<Src::Sliced, E, Self>, Error>;
 
     fn backward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
@@ -17,7 +17,7 @@ pub trait SliceKernel<E: Unit>: Storage<E> {
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
         slice: &Slice,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 /// Slices all dimensions of a tensor, with the starting and ending indices of each dimension
@@ -53,7 +53,10 @@ pub fn slice<S: SliceShape<Slice>, E: Unit, D: SliceKernel<E>, T: Tape<E, D>, Sl
 
 impl<S: Shape, E: Unit, D: SliceKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// Fallible version of [Tensor::slice]
-    pub fn try_slice<Slice>(self, slice: Slice) -> Result<Tensor<S::Sliced, E, D, T>, D::Err>
+    pub fn try_slice<Slice>(
+        self,
+        slice: Slice,
+    ) -> Result<Tensor<S::Sliced, E, D, T>, crate::tensor::Error>
     where
         S: SliceShape<Slice>,
         Slice: 'static,

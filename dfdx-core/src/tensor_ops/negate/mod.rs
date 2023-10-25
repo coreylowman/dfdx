@@ -30,7 +30,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<E, D>> Tenso
     pub fn negate(self) -> Self {
         self.try_negate().unwrap()
     }
-    pub fn try_negate(self) -> Result<Self, D::Err> {
+    pub fn try_negate(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(NegateKernelOp, self)
     }
 }

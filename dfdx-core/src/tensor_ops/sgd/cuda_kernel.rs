@@ -71,7 +71,7 @@ where
         param: &mut Self::Vec,
         velocity: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
         }

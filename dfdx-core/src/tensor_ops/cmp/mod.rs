@@ -1,6 +1,6 @@
 use crate::{
     shapes::{HasShape, Shape},
-    tensor::{HasErr, NoneTape, Storage, Tape, Tensor},
+    tensor::{Error, NoneTape, Storage, Tape, Tensor},
 };
 
 mod cpu_kernels;
@@ -12,13 +12,13 @@ pub trait CmpKernel<Op, E>: Storage<E> + Storage<bool> {
         &self,
         lhs: &Tensor<S, E, Self, T>,
         rhs: &Tensor<S, E, Self, T>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
+    ) -> Result<Tensor<S, bool, Self>, Error>;
 }
 
 fn try_cmp_op<Op, S: Shape, E, D: CmpKernel<Op, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
-) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+) -> Result<Tensor<S, bool, D, NoneTape>, crate::tensor::Error> {
     assert_eq!(lhs.shape(), rhs.shape());
     lhs.device.forward(lhs, rhs)
 }
@@ -28,13 +28,13 @@ pub trait ScalarCmpKernel<Op, E>: Storage<E> + Storage<bool> {
         &self,
         tensor: &Tensor<S, E, Self, T>,
         scalar: E,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
+    ) -> Result<Tensor<S, bool, Self>, Error>;
 }
 
 fn try_scalar_cmp_op<Op, S: Shape, E, D: ScalarCmpKernel<Op, E>, T: Tape<E, D>>(
     tensor: &Tensor<S, E, D, T>,
     scalar: E,
-) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+) -> Result<Tensor<S, bool, D, NoneTape>, crate::tensor::Error> {
     tensor.device.forward(tensor, scalar)
 }
 
@@ -198,14 +198,14 @@ pub fn le<S: Shape, E, D: CmpKernel<LeKernelOp, E>, T: Tape<E, D>>(
 // Macro to reduce boilerplate of implementing comparison methods on Tensor.
 macro_rules! impl_cmp_kernel_op {
     ($TraitName:tt, $FnName:tt, $TryFnName:tt, $KernelOp:tt, $doc:expr, $ScalarFnName:tt, $TryScalarFnName:tt) => {
-        pub trait $TraitName<Rhs>: HasErr {
+        pub trait $TraitName<Rhs> {
             type Output;
             #[doc = $doc]
             fn $FnName(&self, rhs: Rhs) -> Self::Output {
                 self.$TryFnName(rhs).unwrap()
             }
             #[doc = $doc]
-            fn $TryFnName(&self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+            fn $TryFnName(&self, rhs: Rhs) -> Result<Self::Output, Error>;
         }
 
         impl<S: Shape, E, D: CmpKernel<$KernelOp, E>, T: Tape<E, D>> $TraitName<&Self>
@@ -213,7 +213,7 @@ macro_rules! impl_cmp_kernel_op {
         {
             type Output = Tensor<S, bool, D, NoneTape>;
             #[doc = $doc]
-            fn $TryFnName(&self, other: &Self) -> Result<Self::Output, D::Err> {
+            fn $TryFnName(&self, other: &Self) -> Result<Self::Output, crate::tensor::Error> {
                 try_cmp_op(self, other)
             }
         }
@@ -223,7 +223,7 @@ macro_rules! impl_cmp_kernel_op {
         {
             type Output = Tensor<S, bool, D, NoneTape>;
             #[doc = $doc]
-            fn $TryFnName(&self, other: E) -> Result<Self::Output, D::Err> {
+            fn $TryFnName(&self, other: E) -> Result<Self::Output, crate::tensor::Error> {
                 try_scalar_cmp_op(self, other)
             }
         }
@@ -234,7 +234,7 @@ macro_rules! impl_cmp_kernel_op {
         {
             type Output = Tensor<S, bool, D, NoneTape>;
             #[doc = $doc]
-            fn $TryFnName(&self, other: f32) -> Result<Self::Output, D::Err> {
+            fn $TryFnName(&self, other: f32) -> Result<Self::Output, crate::tensor::Error> {
                 try_scalar_cmp_op(self, half::f16::from_f32(other))
             }
         }
@@ -248,7 +248,7 @@ macro_rules! impl_cmp_kernel_op {
         {
             type Output = Tensor<S, bool, D, NoneTape>;
             #[doc = $doc]
-            fn $TryFnName(&self, other: f32) -> Result<Self::Output, D::Err> {
+            fn $TryFnName(&self, other: f32) -> Result<Self::Output, crate::tensor::Error> {
                 try_scalar_cmp_op(self, crate::dtypes::AMP(half::f16::from_f32(other)))
             }
         }
@@ -265,7 +265,7 @@ macro_rules! impl_cmp_kernel_op {
             pub fn $TryScalarFnName(
                 &self,
                 other: E,
-            ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+            ) -> Result<Tensor<S, bool, D, NoneTape>, crate::tensor::Error> {
                 try_scalar_cmp_op(self, other)
             }
         }

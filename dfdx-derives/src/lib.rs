@@ -31,8 +31,7 @@ macro_rules! has_attr {
 /// pub struct Abs;
 /// impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Abs {
 ///     type Output = Tensor<S, E, D, T>;
-///     type Error = D::Err;
-///     fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+///     fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
 ///         x.try_abs()
 ///     }
 /// }
@@ -50,8 +49,7 @@ macro_rules! has_attr {
 ///     for Reshape<Dst>
 /// {
 ///     type Output = Tensor<Dst, E, D, T>;
-///     type Error = D::Err;
-///     fn try_forward(&self, x: Tensor<Src, E, D, T>) -> Result<Self::Output, Self::Error> {
+///     fn try_forward(&self, x: Tensor<Src, E, D, T>) -> Result<Self::Output, Error> {
 ///         x.try_reshape_like(&self.0)
 ///     }
 /// }
@@ -77,8 +75,7 @@ macro_rules! has_attr {
 ///     X: TryAdd<X, Output = X>,
 /// {
 ///     type Output = X;
-///     type Error = D::Err;
-///     fn try_forward(&self, x: X) -> Result<Self::Output, Self::Error> {
+///     fn try_forward(&self, x: X) -> Result<Self::Output, Error> {
 ///         self.matmul.try_forward(x.with_empty_tape())?.try_add(x)
 ///     }
 /// }
@@ -206,7 +203,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                 }
 
                 impl #build_impl dfdx_core::nn_traits::ResetParams<Elem, Dev> for #builder_name #built_ty #built_where {
-                    fn try_reset_params(&mut self) -> Result<(), Dev::Err> {
+                    fn try_reset_params(&mut self) -> Result<(), dfdx_core::tensor::Error> {
                         Ok(())
                     }
                 }
@@ -217,13 +214,13 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                         optimizer: &mut Optim,
                         gradients: &dfdx_core::tensor::Gradients<Elem, Dev>,
                         missing_tensors: &mut Vec<dfdx_core::tensor::UniqueId>,
-                    ) -> Result<(), Dev::Err> {
+                    ) -> Result<(), dfdx_core::tensor::Error> {
                         Ok(())
                     }
                 }
 
                 impl #build_impl dfdx_core::nn_traits::ZeroGrads<Elem, Dev> for #builder_name #built_ty #built_where {
-                    fn try_zero_grads(&self, grads: &mut dfdx_core::tensor::Gradients<Elem, Dev>) -> Result<(), Dev::Err> {
+                    fn try_zero_grads(&self, grads: &mut dfdx_core::tensor::Gradients<Elem, Dev>) -> Result<(), dfdx_core::tensor::Error> {
                         Ok(())
                     }
                 }
@@ -261,7 +258,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     quote! {
                         impl #build_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, Dev::Err> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
                                 let built = #built_name { #(#recurse)* };
                                 Ok(built)
                             }
@@ -280,7 +277,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     quote! {
                         impl #build_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, Dev::Err> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
                                 let built = #built_name(#(#recurse)*);
                                 Ok(built)
                             }
@@ -291,7 +288,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     quote! {
                         impl #build_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, Dev::Err> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
                                 Ok(#built_name)
                             }
                         }
@@ -422,7 +419,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     quote! {
                         impl #built_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, Dev::Err> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
                                 let built = #built_name {
                                     #(#recurse)*
                                 };
@@ -439,7 +436,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     quote! {
                         impl #built_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, Dev::Err> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
                                 #built_name(
                                     #(#recurse)*
                                 )
@@ -455,12 +452,8 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     // Get's the output type of the sequential. Also adds Module bounds to the where clause.
     let mut last_ty = quote!(Input);
-    let err = quote!(<Input as dfdx_core::prelude::HasErr>::Err);
     let output_ty = {
         let where_clause = module_generics.make_where_clause();
-        where_clause
-            .predicates
-            .push(parse_quote!(Input: dfdx_core::prelude::HasErr));
         match &input.data {
             Data::Struct(ref obj) => match obj.fields {
                 Fields::Named(ref fields) => {
@@ -471,7 +464,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
                         where_clause
                             .predicates
-                            .push(parse_quote!(<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built: dfdx_core::nn_traits::Module<#last_ty, Error = #err>));
+                            .push(parse_quote!(<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built: dfdx_core::nn_traits::Module<#last_ty>));
                         last_ty = parse_quote!(<<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built as dfdx_core::nn_traits::Module<#last_ty>>::Output);
                     });
                 }
@@ -483,7 +476,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
                         where_clause
                             .predicates
-                            .push(parse_quote!(<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built: dfdx_core::nn_traits::Module<#last_ty, Error = #err>));
+                            .push(parse_quote!(<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built: dfdx_core::nn_traits::Module<#last_ty>));
                         last_ty = parse_quote!(<<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built as dfdx_core::nn_traits::Module<#last_ty>>::Output);
                     });
                 }
@@ -523,8 +516,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         quote! {
             impl #module_impl dfdx_core::nn_traits::Module<Input> for #built_name #built_ty #module_where {
                 type Output = #output_ty;
-                type Error = #err;
-                fn try_forward(&self, x: Input) -> Result<Self::Output, Self::Error> {
+                fn try_forward(&self, x: Input) -> Result<Self::Output, Error> {
                     #src
                     Ok(x)
                 }
@@ -606,7 +598,7 @@ pub fn reset_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     proc_macro::TokenStream::from(quote! {
         impl #impl_generics dfdx_core::nn_traits::ResetParams<Elem, Dev> for #name #ty_generics #where_clause {
-            fn try_reset_params(&mut self) -> Result<(), Dev::Err> {
+            fn try_reset_params(&mut self) -> Result<(), dfdx_core::tensor::Error> {
                 #resets
                 Ok(())
             }
@@ -690,7 +682,7 @@ pub fn update_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                 optimizer: &mut Optim,
                 gradients: &dfdx_core::tensor::Gradients<Elem, Dev>,
                 missing_tensors: &mut Vec<dfdx_core::tensor::UniqueId>,
-            ) -> Result<(), Dev::Err> {
+            ) -> Result<(), dfdx_core::tensor::Error> {
                 #updates
                 Ok(())
             }
@@ -773,7 +765,7 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     proc_macro::TokenStream::from(quote! {
         impl #impl_generics dfdx_core::nn_traits::ZeroGrads<Elem, Dev> for #name #ty_generics #where_clause {
-            fn try_zero_grads(&self, grads: &mut dfdx_core::prelude::Gradients<Elem, Dev>) -> Result<(), Dev::Err> {
+            fn try_zero_grads(&self, grads: &mut dfdx_core::prelude::Gradients<Elem, Dev>) -> Result<(), dfdx_core::tensor::Error> {
                 #zero_grads
                 Ok(())
             }

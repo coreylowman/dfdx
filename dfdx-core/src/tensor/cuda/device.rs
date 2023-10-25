@@ -246,17 +246,17 @@ impl RandomU64 for Cuda {
 }
 
 impl Cache for Cuda {
-    fn try_enable_cache(&self) -> Result<(), Self::Err> {
+    fn try_enable_cache(&self) -> Result<(), Error> {
         self.cache.enable();
         Ok(())
     }
 
-    fn try_disable_cache(&self) -> Result<(), Self::Err> {
+    fn try_disable_cache(&self) -> Result<(), Error> {
         self.cache.disable();
         self.try_empty_cache()
     }
 
-    fn try_empty_cache(&self) -> Result<(), Self::Err> {
+    fn try_empty_cache(&self) -> Result<(), Error> {
         #[cfg(not(feature = "no-std"))]
         let mut cache = self.cache.allocations.write().unwrap();
         #[cfg(feature = "no-std")]
@@ -281,7 +281,7 @@ impl Synchronize for Cuda {
 impl<E: Unit> Storage<E> for Cuda {
     type Vec = CachableCudaSlice<E>;
 
-    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Self::Err> {
+    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error> {
         let mut data = unsafe { self.alloc_empty(len) }?;
         self.dev.memset_zeros(&mut data)?;
         Ok(CachableCudaSlice {

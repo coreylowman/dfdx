@@ -13,7 +13,7 @@ use crate::{shapes::*, tensor::*};
 ///     Err(old) => println!("Shape could not be realized, returned the original tensor"),
 /// }
 /// ```
-pub trait RealizeTo: HasErr + HasShape {
+pub trait RealizeTo: Sized + HasShape {
     /// Realizes the concrete shape of the tensor as another compatable shape,
     /// or returns the original tensor if the new shape's dimensions are incompatable.
     fn realize<Dst: Shape<Concrete = <<Self as HasShape>::Shape as Shape>::Concrete>>(

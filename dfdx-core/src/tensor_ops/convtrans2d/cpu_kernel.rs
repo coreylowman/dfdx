@@ -1,6 +1,6 @@
 use crate::prelude::Tensorlike;
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{cpu::*, Tensor, ZerosTensor};
+use crate::tensor::{cpu::*, Error, Tensor, ZerosTensor};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use std::sync::Arc;
@@ -27,7 +27,7 @@ impl Cpu {
         filters_tr: &[E],
         out: &mut [E],
         buf: &mut [E],
-    ) -> Result<(), CpuError>
+    ) -> Result<(), Error>
     where
         Self: MatMulImpl<E>,
     {
@@ -107,7 +107,7 @@ impl Cpu {
         grad_filters: &mut [E],
         grad_out: &[E],
         buf: &mut [E],
-    ) -> Result<(), CpuError>
+    ) -> Result<(), Error>
     where
         Self: MatMulImpl<E>,
     {
@@ -179,7 +179,7 @@ impl<E: Dtype> ConvTrans2DKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Error> {
         self.try_zeros_like(&s)
     }
 
@@ -189,7 +189,7 @@ where
         lhs: &Tensor<L, E, Self>,
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let patches = (op.chan_in, op.kernel, op.kernel, op.h_out, op.w_out);
         let mut patches = self.try_alloc_zeros::<E>(patches.num_elements())?;
         let f_tr_shape = [
@@ -242,7 +242,7 @@ where
         grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let patches_shape = [op.chan_out, op.kernel, op.kernel, op.h_in, op.w_in];
         let mut patches = self.try_alloc_zeros::<E>(patches_shape.num_elements())?;
 

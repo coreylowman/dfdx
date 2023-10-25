@@ -1,4 +1,8 @@
-use crate::{dtypes::Dtype, tensor::UniqueId, tensor_ops::Device};
+use crate::{
+    dtypes::Dtype,
+    tensor::{Error, UniqueId},
+    tensor_ops::Device,
+};
 
 use std::vec::Vec;
 
@@ -6,7 +10,7 @@ impl<E: Dtype, D: Device<E>, T: crate::nn_traits::BuildOnDevice<E, D>>
     crate::nn_traits::BuildOnDevice<E, D> for Vec<T>
 {
     type Built = Vec<T::Built>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         self.iter()
             .map(|m_i| m_i.try_build_on_device(device))
             .collect()
@@ -16,7 +20,7 @@ impl<E: Dtype, D: Device<E>, T: crate::nn_traits::BuildOnDevice<E, D>>
 impl<E: Dtype, D: Device<E>, T: crate::nn_traits::ResetParams<E, D>>
     crate::nn_traits::ResetParams<E, D> for Vec<T>
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         for m_i in self.iter_mut() {
             m_i.try_reset_params()?;
         }
@@ -32,7 +36,7 @@ impl<E: Dtype, D: Device<E>, T: crate::nn_traits::UpdateParams<E, D>>
         optimizer: &mut Optim,
         gradients: &crate::tensor::Gradients<E, D>,
         missing_tensors: &mut Vec<UniqueId>,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), crate::tensor::Error> {
         for m_i in self.iter_mut() {
             m_i.try_update_params(optimizer, gradients, missing_tensors)?;
         }
@@ -43,7 +47,10 @@ impl<E: Dtype, D: Device<E>, T: crate::nn_traits::UpdateParams<E, D>>
 impl<E: Dtype, D: Device<E>, T: crate::nn_traits::ZeroGrads<E, D>> crate::nn_traits::ZeroGrads<E, D>
     for Vec<T>
 {
-    fn try_zero_grads(&self, grads: &mut crate::tensor::Gradients<E, D>) -> Result<(), <D>::Err> {
+    fn try_zero_grads(
+        &self,
+        grads: &mut crate::tensor::Gradients<E, D>,
+    ) -> Result<(), crate::tensor::Error> {
         for m_i in self.iter() {
             m_i.try_zero_grads(grads)?;
         }
@@ -82,15 +89,14 @@ impl<Input, T: crate::nn_traits::Module<Input, Output = Input>> crate::nn_traits
     for Vec<T>
 {
     type Output = T::Output;
-    type Error = T::Error;
 
-    fn try_forward(&self, mut x: Input) -> Result<Self::Output, T::Error> {
+    fn try_forward(&self, mut x: Input) -> Result<Self::Output, Error> {
         for m_i in self.iter() {
             x = m_i.try_forward(x)?;
         }
         Ok(x)
     }
-    fn try_forward_mut(&mut self, mut x: Input) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, mut x: Input) -> Result<Self::Output, Error> {
         for m_i in self.iter_mut() {
             x = m_i.try_forward_mut(x)?;
         }

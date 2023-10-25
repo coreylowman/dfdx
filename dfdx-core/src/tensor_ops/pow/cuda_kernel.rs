@@ -41,7 +41,7 @@ where
         &self,
         op: super::PowiKernelOp,
         inp: Cow<Tensor<S, E, Self>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         self.forward(super::PowfKernelOp(E::from_i32(op.0).unwrap()), inp)
     }
 
@@ -52,7 +52,7 @@ where
         grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         self.backward(
             super::PowfKernelOp(E::from_i32(op.0).unwrap()),
             inp,

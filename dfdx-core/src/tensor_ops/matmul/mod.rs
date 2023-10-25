@@ -7,7 +7,7 @@ pub(super) mod cuda_kernel;
 
 use crate::{
     shapes::{Const, Dim, Dtype, Shape},
-    tensor::{HasErr, Merge, PutTape, SplitTape, Storage, Tape, Tensor},
+    tensor::{Error, Merge, PutTape, SplitTape, Storage, Tape, Tensor},
 };
 
 use super::reshape_to::{ReshapeKernel, ReshapeTo};
@@ -68,12 +68,12 @@ where
 }
 
 /// Fallible matrix multiplication. See [matmul] for examples.
-pub trait TryMatMul<Rhs>: HasErr {
+pub trait TryMatMul<Rhs>: Sized {
     type Output;
     fn matmul(self, rhs: Rhs) -> Self::Output {
         self.try_matmul(rhs).unwrap()
     }
-    fn try_matmul(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+    fn try_matmul(self, rhs: Rhs) -> Result<Self::Output, Error>;
 }
 
 #[rustfmt::skip]
@@ -85,14 +85,14 @@ fn try_binary_op<
     D: Storage<E>,
     RhsTape: Tape<E, D>,
     LhsTape: Tape<E, D> + Merge<RhsTape>,
-    Fwd: 'static + FnMut(&D, &Tensor<Lhs, E, D>, &Tensor<Rhs, E, D>) -> Result<Tensor<Out, E,D>, D::Err>,
-    Bwd: 'static + FnMut(&D, &Tensor<Lhs, E, D>, &mut D::Vec, &Tensor<Rhs, E,D>, &mut D::Vec, &D::Vec) -> Result<(), D::Err>,
+    Fwd: 'static + FnMut(&D, &Tensor<Lhs, E, D>, &Tensor<Rhs, E, D>) -> Result<Tensor<Out, E,D>, crate::tensor::Error>,
+    Bwd: 'static + FnMut(&D, &Tensor<Lhs, E, D>, &mut D::Vec, &Tensor<Rhs, E,D>, &mut D::Vec, &D::Vec) -> Result<(), crate::tensor::Error>,
 >(
     lhs: Tensor<Lhs, E, D, LhsTape>,
     rhs: Tensor<Rhs, E, D, RhsTape>,
     mut fwd: Fwd,
     mut bwd: Bwd,
-) -> Result<Tensor<Out, E, D, LhsTape>, D::Err> {
+) -> Result<Tensor<Out, E, D, LhsTape>, crate::tensor::Error> {
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);
@@ -115,7 +115,7 @@ pub trait MatMatKernel<E: Dtype>: Storage<E> {
         &self,
         lhs: &Tensor<(M, K), E, Self>,
         rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(M, N), E, Self>, Self::Err>;
+    ) -> Result<Tensor<(M, N), E, Self>, Error>;
 
     fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
@@ -124,7 +124,7 @@ pub trait MatMatKernel<E: Dtype>: Storage<E> {
         rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl<M: Dim, N: Dim, E: Dtype, D, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
@@ -133,7 +133,7 @@ where
     D: MatMatKernel<E> + ReshapeKernel<E>,
 {
     type Output = Tensor<(M, N), E, D, T>;
-    fn try_matmul(self, rhs: Tensor<(N,), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(N,), E, D, R>) -> Result<Self::Output, Error> {
         let m = self.shape.0;
         let n = rhs.shape.0;
         let lhs = self.try_reshape_like(&(m, Const::<1>))?;
@@ -147,7 +147,7 @@ where
     D: MatMatKernel<E> + ReshapeKernel<E>,
 {
     type Output = Tensor<(N,), E, D, T>;
-    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Error> {
         let k1 = self.shape.0;
         let (k2, n) = rhs.shape;
         assert_eq!(k1, k2);
@@ -162,7 +162,7 @@ where
     D: MatMatKernel<E> + ReshapeKernel<E>,
 {
     type Output = Tensor<(M,), E, D, T>;
-    fn try_matmul(self, rhs: Tensor<(K,), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(K,), E, D, R>) -> Result<Self::Output, Error> {
         let (m, k1) = self.shape;
         let k2 = rhs.shape.0;
         assert_eq!(k1, k2);
@@ -185,7 +185,7 @@ where
     /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank2<3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Error> {
         assert_eq!(self.shape.1, rhs.shape.0);
         try_binary_op(self, rhs, D::forward, D::backward)
     }
@@ -196,7 +196,7 @@ pub trait MatMatBrKernel<E: Dtype>: Storage<E> {
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
         rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>;
+    ) -> Result<Tensor<(B, M, N), E, Self>, Error>;
 
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
@@ -205,7 +205,7 @@ pub trait MatMatBrKernel<E: Dtype>: Storage<E> {
         rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl<B: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D: MatMatBrKernel<E>, T, R>
@@ -222,7 +222,7 @@ where
     /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Error> {
         assert_eq!(self.shape.2, rhs.shape.0);
         try_binary_op(self, rhs, D::forward, D::backward)
     }
@@ -233,7 +233,7 @@ pub trait MatMatBatch3Kernel<E: Dtype>: Storage<E> {
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
         rhs: &Tensor<(B, K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>;
+    ) -> Result<Tensor<(B, M, N), E, Self>, Error>;
 
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
@@ -242,7 +242,7 @@ pub trait MatMatBatch3Kernel<E: Dtype>: Storage<E> {
         rhs: &Tensor<(B, K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl<B: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R> TryMatMul<Tensor<(B, K, N), E, D, R>>
@@ -260,7 +260,7 @@ where
     /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(B, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(B, K, N), E, D, R>) -> Result<Self::Output, Error> {
         assert_eq!(self.shape.0, rhs.shape.0);
         assert_eq!(self.shape.2, rhs.shape.1);
         try_binary_op(self, rhs, D::forward, D::backward)
@@ -272,7 +272,7 @@ pub trait MatMatBatch4Kernel<E: Dtype>: Storage<E> {
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
         rhs: &Tensor<(B, S, K, N), E, Self>,
-    ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err>;
+    ) -> Result<Tensor<(B, S, M, N), E, Self>, Error>;
 
     fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
@@ -281,7 +281,7 @@ pub trait MatMatBatch4Kernel<E: Dtype>: Storage<E> {
         rhs: &Tensor<(B, S, K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R>
@@ -299,7 +299,7 @@ where
     /// let y: Tensor<Rank4<1, 5, 3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 5, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(B, S, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(B, S, K, N), E, D, R>) -> Result<Self::Output, Error> {
         assert_eq!(self.shape.0, rhs.shape.0);
         assert_eq!(self.shape.1, rhs.shape.1);
         assert_eq!(self.shape.3, rhs.shape.2);

@@ -12,7 +12,7 @@ pub trait ReplaceDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
         &self,
         inp: &Tensor<Src, E, Self>,
         idx: &Tensor<Idx, usize, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReplaceDimTo<Dst, Idx>;
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
@@ -22,7 +22,7 @@ pub trait ReplaceDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
         grad_out: &<Self as Storage<E>>::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReplaceDimTo<Dst, Idx>;
 }
@@ -32,7 +32,7 @@ pub trait RemoveDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
         &self,
         inp: &Tensor<Src, E, Self>,
         idx: &Tensor<Idx, usize, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: RemoveDimTo<Dst, Idx>;
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
@@ -42,7 +42,7 @@ pub trait RemoveDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
         grad_out: &<Self as Storage<E>>::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: RemoveDimTo<Dst, Idx>;
 }
@@ -73,7 +73,7 @@ pub trait RemoveDimKernel<E: Dtype>: Storage<E> + Storage<usize> {
 /// let idx: Tensor<Rank1<3>, usize, _> = dev.tensor([0, 2, 4]);
 /// let _: Tensor<Rank1<3>, f32, _> = a.select(idx);
 ///```
-pub trait SelectTo<E, D: Storage<E> + Storage<usize>>: HasErr + HasShape {
+pub trait SelectTo<E, D: Storage<E> + Storage<usize>>: Sized + HasShape {
     /// Select values given indices.
     fn select<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where
@@ -86,7 +86,7 @@ pub trait SelectTo<E, D: Storage<E> + Storage<usize>>: HasErr + HasShape {
     fn try_select<Dst: Shape, Idx: Shape>(
         self,
         idx: Tensor<Idx, usize, D>,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: RemoveDimTo<Dst, Idx>;
 }
@@ -97,7 +97,7 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<E, D>
     fn try_select<Dst: Shape, Idx: Shape>(
         self,
         idx: Tensor<Idx, usize, D>,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: RemoveDimTo<Dst, Idx>,
     {
@@ -146,7 +146,7 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<E, D>
 /// let idx: Tensor<Rank2<3, 2>, usize, _> = dev.tensor([[0, 1], [2, 3], [4, 4]]);
 /// let _: Tensor<Rank2<3, 2>, f32, _> = a.gather(idx);
 ///```
-pub trait GatherTo<E, D: Storage<E> + Storage<usize>>: HasErr + HasShape {
+pub trait GatherTo<E, D: Storage<E> + Storage<usize>>: Sized + HasShape {
     /// Gather values given indices.
     fn gather<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where
@@ -158,7 +158,7 @@ pub trait GatherTo<E, D: Storage<E> + Storage<usize>>: HasErr + HasShape {
     fn try_gather<Dst: Shape, Idx: Shape>(
         self,
         idx: Tensor<Idx, usize, D>,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReplaceDimTo<Dst, Idx>;
 }
@@ -169,7 +169,7 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<E, D>
     fn try_gather<Dst: Shape, Idx: Shape>(
         self,
         idx: Tensor<Idx, usize, D>,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReplaceDimTo<Dst, Idx>,
     {

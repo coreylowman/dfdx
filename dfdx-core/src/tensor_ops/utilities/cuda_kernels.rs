@@ -67,7 +67,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         &self,
         op: K,
         inp: Cow<Tensor<S, E, Self>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
@@ -103,7 +103,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         match (inp.data(), out.data()) {
             (None, None) => {
@@ -219,7 +219,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         op: K,
         lhs: Cow<Tensor<S, E, Self>>,
         rhs: Cow<Tensor<S, E, Self>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
@@ -326,7 +326,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let bwd_lhs_fn = self
             .dev
             .get_func(K::MODULE_NAME, K::BWD_LHS_FN_NAME)

@@ -21,7 +21,7 @@ use crate::{shapes::*, tensor::*};
 /// let b: Tensor<Rank2<3, 2>, f32, _> = a.permute::<_, Axes2<1, 0>>();
 /// assert_eq!(b.array(), [[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]]);
 /// ```
-pub trait PermuteTo: HasErr + HasShape {
+pub trait PermuteTo: Sized + HasShape {
     /// Permutes the tensor.
     fn permute<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
@@ -30,13 +30,13 @@ pub trait PermuteTo: HasErr + HasShape {
         self.try_permute().unwrap()
     }
     /// Fallible version of [PermuteTo::permute]
-    fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>;
 }
 
 impl<S: Shape, E, D: Storage<E>, T: Tape<E, D>> PermuteTo for Tensor<S, E, D, T> {
-    fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>,
     {

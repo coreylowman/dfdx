@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{Storage, Tensor},
+    tensor::{Error, Storage, Tensor},
 };
 
 mod cpu_kernel;
@@ -36,7 +36,7 @@ impl<S: Shape, E: Dtype, D: AxpyKernel<E>> Tensor<S, E, D> {
         alpha: impl Into<f64>,
         b: &Tensor<S, E, D, T>,
         beta: impl Into<f64>,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), crate::tensor::Error> {
         assert_eq!(self.shape, b.shape);
         assert_eq!(self.strides, b.strides, "Strides must be equal for axpy");
         self.device.clone().forward(
@@ -49,8 +49,7 @@ impl<S: Shape, E: Dtype, D: AxpyKernel<E>> Tensor<S, E, D> {
 }
 
 pub trait AxpyKernel<E: Dtype>: Storage<E> {
-    fn forward(&self, a: &mut Self::Vec, alpha: E, b: &Self::Vec, beta: E)
-        -> Result<(), Self::Err>;
+    fn forward(&self, a: &mut Self::Vec, alpha: E, b: &Self::Vec, beta: E) -> Result<(), Error>;
 }
 
 #[cfg(test)]

@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ExpKernelOp, E>, T: Tape<E, D>> Tensor<S
         self.try_exp().unwrap()
     }
     /// See [exp]
-    pub fn try_exp(self) -> Result<Self, D::Err> {
+    pub fn try_exp(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(ExpKernelOp, self)
     }
 }

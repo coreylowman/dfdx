@@ -38,7 +38,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
         self.try_log_softmax::<Ax>().unwrap()
     }
     /// See [log_softmax()]
-    pub fn try_log_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
+    pub fn try_log_softmax<Ax: Axes>(self) -> Result<Self, crate::tensor::Error>
     where
         S: ReduceShape<Ax>,
     {

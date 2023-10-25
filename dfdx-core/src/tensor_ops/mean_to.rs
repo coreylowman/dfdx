@@ -2,7 +2,7 @@ use super::*;
 use crate::{shapes::*, tensor::*};
 
 /// Reduction along multiple axes using `mean`.
-pub trait MeanTo: HasErr + HasShape {
+pub trait MeanTo: Sized + HasShape {
     /// Mean reduction. **Pytorch equivalent**: `t.mean(Axes)`
     ///
     /// Example:
@@ -29,13 +29,13 @@ pub trait MeanTo: HasErr + HasShape {
         self.try_mean().unwrap()
     }
     /// Fallible version of [MeanTo::mean]
-    fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> MeanTo for Tensor<S, E, D, T> {
-    fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {

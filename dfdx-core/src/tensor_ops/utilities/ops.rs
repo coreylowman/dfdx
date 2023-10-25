@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{Merge, PutTape, SplitTape, Storage, Tape, Tensor, Tensorlike},
+    tensor::*,
 };
 use std::borrow::Cow;
 
@@ -11,7 +11,7 @@ pub trait UnaryKernel<Op, E: Dtype>: Storage<E> {
         &self,
         op: Op,
         inp: Cow<Tensor<S, E, Self>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S, E, Self>, Error>;
     fn backward<S: Shape>(
         &self,
         op: Op,
@@ -19,7 +19,7 @@ pub trait UnaryKernel<Op, E: Dtype>: Storage<E> {
         grad_inp: &mut Self::Vec,
         out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 pub trait BinaryKernel<Op, E: Dtype>: Storage<E> {
@@ -29,7 +29,7 @@ pub trait BinaryKernel<Op, E: Dtype>: Storage<E> {
         op: Op,
         lhs: Cow<Tensor<S, E, Self>>,
         rhs: Cow<Tensor<S, E, Self>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S, E, Self>, Error>;
     fn backward<S: Shape>(
         &self,
         op: Op,
@@ -38,7 +38,7 @@ pub trait BinaryKernel<Op, E: Dtype>: Storage<E> {
         rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 pub(crate) fn try_unary_op<
@@ -50,7 +50,7 @@ pub(crate) fn try_unary_op<
 >(
     op: Op,
     inp: Tensor<S, E, D, T>,
-) -> Result<Tensor<S, E, D, T>, D::Err> {
+) -> Result<Tensor<S, E, D, T>, crate::tensor::Error> {
     let (inp, mut tape) = inp.split_tape();
     let inp_ghost = inp.ghost();
     let dev = inp.device.clone();
@@ -99,7 +99,7 @@ pub(crate) fn try_binary_op<
     op: Op,
     lhs: Tensor<S, E, D, LhsTape>,
     rhs: Tensor<S, E, D, RhsTape>,
-) -> Result<Tensor<S, E, D, LhsTape>, D::Err> {
+) -> Result<Tensor<S, E, D, LhsTape>, crate::tensor::Error> {
     assert_eq!(lhs.shape(), rhs.shape());
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();

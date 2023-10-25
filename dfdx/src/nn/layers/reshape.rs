@@ -18,8 +18,7 @@ impl<Src: Shape, Dst: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tenso
     for Reshape<Dst>
 {
     type Output = Tensor<Dst, E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<Src, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<Src, E, D, T>) -> Result<Self::Output, Error> {
         x.try_reshape_like(&self.0)
     }
 }

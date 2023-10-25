@@ -1,5 +1,5 @@
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{HasErr, Tape, Tensor, TriangleTensor};
+use crate::tensor::{Error, Tape, Tensor, TriangleTensor};
 
 use super::TryMul;
 
@@ -11,7 +11,7 @@ pub fn lower_tri<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>>(
     diagonal: impl Into<Option<isize>>,
 ) -> Tensor<S, E, D, T>
 where
-    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>, Output = Tensor<S, E, D, T>> + HasErr<Err = D::Err>,
+    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>, Output = Tensor<S, E, D, T>>,
 {
     t.lower_tri(diagonal)
 }
@@ -24,20 +24,17 @@ pub fn upper_tri<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>>(
     diagonal: impl Into<Option<isize>>,
 ) -> Tensor<S, E, D, T>
 where
-    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>, Output = Tensor<S, E, D, T>> + HasErr<Err = D::Err>,
+    Tensor<S, E, D, T>: TryMul<Tensor<S, E, D>, Output = Tensor<S, E, D, T>>,
 {
     t.upper_tri(diagonal)
 }
 
 impl<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>> Tensor<S, E, D, T>
 where
-    Self: TryMul<Tensor<S, E, D>, Output = Self> + HasErr<Err = D::Err>,
+    Self: TryMul<Tensor<S, E, D>, Output = Self>,
 {
     /// See [lower_tri]
-    pub fn try_lower_tri(
-        self,
-        diagonal: impl Into<Option<isize>>,
-    ) -> Result<Self, <Self as HasErr>::Err> {
+    pub fn try_lower_tri(self, diagonal: impl Into<Option<isize>>) -> Result<Self, Error> {
         let out = self
             .device
             .try_lower_tri_like(&self.shape, E::ONE, diagonal)?;
@@ -50,10 +47,7 @@ where
     }
 
     /// See [upper_tri]
-    pub fn try_upper_tri(
-        self,
-        diagonal: impl Into<Option<isize>>,
-    ) -> Result<Self, <Self as HasErr>::Err> {
+    pub fn try_upper_tri(self, diagonal: impl Into<Option<isize>>) -> Result<Self, Error> {
         let out = self
             .device
             .try_upper_tri_like(&self.shape, E::ONE, diagonal)?;

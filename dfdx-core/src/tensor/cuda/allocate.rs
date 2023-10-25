@@ -44,7 +44,7 @@ impl Cuda {
 }
 
 impl<E: Unit> ZerosTensor<E> for Cuda {
-    fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
         let mut data = unsafe { self.alloc_empty(shape.num_elements()) }?;
@@ -54,7 +54,7 @@ impl<E: Unit> ZerosTensor<E> for Cuda {
 }
 
 impl<E: Unit> ZeroFillStorage<E> for Cuda {
-    fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Self::Err> {
+    fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         self.dev.memset_zeros(&mut storage.data)?;
         Ok(())
     }
@@ -64,7 +64,7 @@ impl<E: Unit> OnesTensor<E> for Cuda
 where
     Cpu: OnesTensor<E>,
 {
-    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let buf = std::vec![E::ONE; shape.num_elements()];
         self.tensor_from_host_buf(shape, buf)
@@ -80,7 +80,7 @@ where
         src: &S,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let mut data = std::vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
@@ -93,7 +93,7 @@ where
         src: &S,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let mut data = std::vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
@@ -103,7 +103,7 @@ where
 }
 
 impl<E: Unit> OneFillStorage<E> for Cuda {
-    fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Self::Err> {
+    fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         self.dev
             .htod_copy_into(std::vec![E::ONE; storage.len()], &mut storage.data)?;
         Ok(())
@@ -118,7 +118,7 @@ where
         &self,
         src: &S,
         distr: D,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let mut buf = Vec::with_capacity(shape.num_elements());
         {
@@ -134,7 +134,7 @@ where
         &self,
         storage: &mut Self::Vec,
         distr: D,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut buf = Vec::with_capacity(storage.len());
         {
             #[cfg(not(feature = "no-std"))]
@@ -180,7 +180,7 @@ impl<E: Unit> TensorFromVec<E> for Cuda {
         &self,
         src: Vec<E>,
         shape: S,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let num_elements = shape.num_elements();
 
         if src.len() != num_elements {

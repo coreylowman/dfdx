@@ -10,7 +10,7 @@ pub trait SumKernel<E: Dtype>: Storage<E> {
         &self,
         dst: Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
@@ -19,13 +19,13 @@ pub trait SumKernel<E: Dtype>: Storage<E> {
         inp: &impl Tensorlike<Src, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReduceShapeTo<Dst, Ax>;
 }
 
 /// Reduction along multiple axes using `sum`.
-pub trait SumTo: HasErr + HasShape {
+pub trait SumTo: Sized + HasShape {
     /// Sum reduction. **Pytorch equivalent**: `t.sum(Ax)`
     ///
     /// Example reducing a single axis:
@@ -52,13 +52,13 @@ pub trait SumTo: HasErr + HasShape {
         self.try_sum().unwrap()
     }
     /// Fallible version of [SumTo::sum]
-    fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
 impl<S: Shape, E: Dtype, D: SumKernel<E>, T: Tape<E, D>> SumTo for Tensor<S, E, D, T> {
-    fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {

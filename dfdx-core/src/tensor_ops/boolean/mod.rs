@@ -6,7 +6,7 @@ mod cuda_kernels;
 use crate::{
     prelude::{OnesTensor, Tensor, ZerosTensor},
     shapes::*,
-    tensor::Storage,
+    tensor::{Error, Storage},
 };
 
 use std::ops::{BitAnd, BitOr, BitXor, Not};
@@ -14,34 +14,31 @@ use std::ops::{BitAnd, BitOr, BitXor, Not};
 use super::Device;
 
 pub trait BooleanKernel: Storage<bool> + OnesTensor<bool> + ZerosTensor<bool> {
-    fn not<S: Shape>(
-        &self,
-        inp: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
+    fn not<S: Shape>(&self, inp: &Tensor<S, bool, Self>) -> Result<Tensor<S, bool, Self>, Error>;
 
     fn and<S: Shape>(
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
+    ) -> Result<Tensor<S, bool, Self>, Error>;
 
     fn or<S: Shape>(
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
+    ) -> Result<Tensor<S, bool, Self>, Error>;
 
     fn xor<S: Shape>(
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
+    ) -> Result<Tensor<S, bool, Self>, Error>;
 }
 
 fn scalar_and<D: BooleanKernel, S: Shape>(
     lhs: &Tensor<S, bool, D>,
     rhs: bool,
-) -> Result<Tensor<S, bool, D>, D::Err> {
+) -> Result<Tensor<S, bool, D>, crate::tensor::Error> {
     if rhs {
         Ok(lhs.clone())
     } else {
@@ -52,7 +49,7 @@ fn scalar_and<D: BooleanKernel, S: Shape>(
 fn scalar_or<D: BooleanKernel, S: Shape>(
     lhs: &Tensor<S, bool, D>,
     rhs: bool,
-) -> Result<Tensor<S, bool, D>, D::Err> {
+) -> Result<Tensor<S, bool, D>, crate::tensor::Error> {
     if rhs {
         lhs.device.try_ones_like(lhs)
     } else {
@@ -63,7 +60,7 @@ fn scalar_or<D: BooleanKernel, S: Shape>(
 fn scalar_xor<D: BooleanKernel, S: Shape>(
     lhs: &Tensor<S, bool, D>,
     rhs: bool,
-) -> Result<Tensor<S, bool, D>, D::Err> {
+) -> Result<Tensor<S, bool, D>, crate::tensor::Error> {
     if rhs {
         Ok(lhs.device.not(lhs)?)
     } else {

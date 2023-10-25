@@ -48,7 +48,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>> Ten
         self.try_fast_gelu().unwrap()
     }
     /// See [fast_gelu]
-    pub fn try_fast_gelu(self) -> Result<Self, D::Err> {
+    pub fn try_fast_gelu(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(FastGeLUKernelOp, self)
     }
 
@@ -60,7 +60,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<FastGeLUKernelOp, E>, T: Tape<E, D>> Ten
 
     /// Use [Tensor::try_fast_gelu] instead
     #[deprecated(since = "0.12.0", note = "Use `Tensor::try_fast_gelu` instead")]
-    pub fn try_gelu(self) -> Result<Self, D::Err> {
+    pub fn try_gelu(self) -> Result<Self, crate::tensor::Error> {
         self.try_fast_gelu()
     }
 }

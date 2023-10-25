@@ -57,7 +57,7 @@ pub trait TryAttentionReshape<E: Dtype>: Storage<E> {
         qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), E, Self>,
         past_key: &Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
         past_value: &Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
-    ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Self::Err>;
+    ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Error>;
 }
 
 pub trait AttentionReshapeKernel<E: Dtype>: Storage<E> {
@@ -66,7 +66,7 @@ pub trait AttentionReshapeKernel<E: Dtype>: Storage<E> {
         qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), E, Self>,
         past_key: &Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
         past_value: &Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
-    ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Self::Err>;
+    ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Error>;
 }
 
 impl<E: Dtype, D: AttentionReshapeKernel<E>> TryAttentionReshape<E> for D {
@@ -80,7 +80,7 @@ impl<E: Dtype, D: AttentionReshapeKernel<E>> TryAttentionReshape<E> for D {
         qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), E, Self>,
         past_key: &Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
         past_value: &Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
-    ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Self::Err> {
+    ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Error> {
         let device = qkv.device.clone();
         device.forward(qkv, past_key, past_value)
     }

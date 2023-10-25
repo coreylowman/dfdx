@@ -14,7 +14,7 @@ impl<E: Dtype + CudaTypeName> super::StackKernel<E> for Cuda {
         &self,
         num: Num,
         inps: &[Tensor<S, E, Self>],
-    ) -> Result<Tensor<S::Larger, E, Self>, Self::Err>
+    ) -> Result<Tensor<S::Larger, E, Self>, Error>
     where
         S: super::AddDim<Num>,
     {
@@ -54,7 +54,7 @@ impl<E: Dtype + CudaTypeName> super::StackKernel<E> for Cuda {
         &self,
         mut grad_inp: Vec<&mut Self::Vec>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let module_name = std::format!("stack_bwd_{}", E::NAME);
         if !self.dev.has_func(&module_name, "stack_bwd") {
             let src = BWD_KERNEL.replace("$Ty", E::NAME);

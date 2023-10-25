@@ -34,27 +34,25 @@ impl<E: Dtype, D: Device<E>, T: BuildOnDevice<E, D>, U: BuildOnDevice<E, D>> Bui
     for GeneralizedAdd<T, U>
 {
     type Built = GeneralizedAdd<T::Built, U::Built>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         let t = self.t.try_build_on_device(device)?;
         let u = self.u.try_build_on_device(device)?;
         Ok(GeneralizedAdd { t, u })
     }
 }
 
-impl<X: WithEmptyTape, T: Module<X>, U: Module<X, Error = T::Error>> Module<X>
-    for GeneralizedAdd<T, U>
+impl<X: WithEmptyTape, T: Module<X>, U: Module<X>> Module<X> for GeneralizedAdd<T, U>
 where
-    T::Output: TryAdd<U::Output, Err = T::Error>,
+    T::Output: TryAdd<U::Output>,
 {
     type Output = <T::Output as TryAdd<U::Output>>::Output;
-    type Error = T::Error;
-    fn try_forward(&self, x: X) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: X) -> Result<Self::Output, Error> {
         let t = self.t.try_forward(x.with_empty_tape())?;
         let u = self.u.try_forward(x)?;
         t.try_add(u)
     }
 
-    fn try_forward_mut(&mut self, x: X) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: X) -> Result<Self::Output, Error> {
         let t = self.t.try_forward_mut(x.with_empty_tape())?;
         let u = self.u.try_forward_mut(x)?;
         t.try_add(u)

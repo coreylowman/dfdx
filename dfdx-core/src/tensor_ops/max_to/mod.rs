@@ -10,7 +10,7 @@ pub trait MaxReduceKernel<E: Dtype>: Storage<E> {
         &self,
         dst: Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
@@ -19,13 +19,13 @@ pub trait MaxReduceKernel<E: Dtype>: Storage<E> {
         grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReduceShapeTo<Dst, Ax>;
 }
 
 /// Reduction along multiple axes using `max`.
-pub trait MaxTo: HasErr + HasShape {
+pub trait MaxTo: Sized + HasShape {
     /// Max reduction. **Pytorch equivalent**: `t.amax(Ax)`
     ///
     /// **NOTE** This evenly distributes gradients between all equal maximum values, instead
@@ -55,13 +55,13 @@ pub trait MaxTo: HasErr + HasShape {
         self.try_max().unwrap()
     }
     /// Fallible version of [MaxTo::max]
-    fn try_max<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_max<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
 impl<S: Shape, E: Dtype, D: MaxReduceKernel<E>, T: Tape<E, D>> MaxTo for Tensor<S, E, D, T> {
-    fn try_max<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_max<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {

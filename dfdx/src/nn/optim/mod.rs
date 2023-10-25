@@ -39,5 +39,5 @@ pub use adam::Adam;
 pub use rmsprop::RMSprop;
 pub use sgd::Sgd;
 // re-exports
-pub use super::{Optimizer, OptimizerUpdateError};
+pub use super::Optimizer;
 pub use crate::tensor_ops::{AdamConfig, Momentum, RMSpropConfig, SgdConfig, WeightDecay};

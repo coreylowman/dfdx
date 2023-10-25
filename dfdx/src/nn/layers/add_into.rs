@@ -31,7 +31,7 @@ pub struct AddInto<T>(
 
 impl<E: Dtype, D: Device<E>, T: BuildOnDevice<E, D>> BuildOnDevice<E, D> for AddInto<T> {
     type Built = AddInto<T::Built>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         let t = self.0.try_build_on_device(device)?;
         Ok(AddInto(t))
     }
@@ -45,17 +45,16 @@ macro_rules! sum {
 macro_rules! add_into_impls {
     ($([$Mod:tt $ModVar:tt $Inp:tt $InpVar:tt]),+) => {
         impl<
-            Out: TryAdd<Out, Output = Out, Err = A::Error>,
+            Out: TryAdd<Out, Output = Out>,
             Ai, $($Inp, )+
             A: Module<Ai, Output = Out>,
-            $($Mod: Module<$Inp, Output = Out, Error = A::Error>, )+
+            $($Mod: Module<$Inp, Output = Out>, )+
         > Module<(Ai, $($Inp, )+)> for AddInto<(A, $($Mod, )+)>
         {
             type Output = Out;
-            type Error = A::Error;
 
             #[allow(clippy::needless_question_mark)]
-            fn try_forward(&self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Self::Error> {
+            fn try_forward(&self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Error> {
                 let (a, $($ModVar, )+) = &self.0;
                 let (a_i, $($InpVar, )+) = x;
                 let a_i = a.try_forward(a_i)?;
@@ -63,7 +62,7 @@ macro_rules! add_into_impls {
                 Ok(sum!(a_i, $($InpVar),*))
             }
             #[allow(clippy::needless_question_mark)]
-            fn try_forward_mut(&mut self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Self::Error> {
+            fn try_forward_mut(&mut self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Error> {
                 let (a, $($ModVar, )+) = &mut self.0;
                 let (a_i, $($InpVar, )+) = x;
                 let a_i = a.try_forward_mut(a_i)?;

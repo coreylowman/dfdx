@@ -51,7 +51,7 @@ impl<M, E: Dtype, D: Device<E>> crate::nn::Optimizer<M, E, D> for Sgd<M, E, D> {
         t: &mut Tensor<S, E, D>,
         gradients: &Gradients<E, D>,
         missing_params: &mut Vec<UniqueId>,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), crate::tensor::Error> {
         let g = gradients.get_ref_checked(t);
         match g {
             None => missing_params.push(t.id()),

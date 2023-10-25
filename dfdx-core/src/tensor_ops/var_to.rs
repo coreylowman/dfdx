@@ -2,7 +2,7 @@ use super::*;
 use crate::{shapes::*, tensor::*};
 
 /// Reduction alogn multiple axes using variance
-pub trait VarTo: HasErr + HasShape {
+pub trait VarTo: Sized + HasShape {
     /// Result [Tensor] has smaller number of dimensions.
     ///
     /// **Pytorch equivalent**: `t.var(Axes, unbiased=False)`
@@ -22,13 +22,13 @@ pub trait VarTo: HasErr + HasShape {
         self.try_var().unwrap()
     }
     /// Fallible version of [VarTo::var]
-    fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> VarTo for Tensor<S, E, D, T> {
-    fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {

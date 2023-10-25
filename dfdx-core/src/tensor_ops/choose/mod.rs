@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{HasErr, Merge, PutTape, SplitTape, Storage, Tape, Tensor},
+    tensor::{Error, Merge, PutTape, SplitTape, Storage, Tape, Tensor},
 };
 
 pub trait ChooseKernel<E: Dtype>: Storage<E> + Storage<bool> {
@@ -14,7 +14,7 @@ pub trait ChooseKernel<E: Dtype>: Storage<E> + Storage<bool> {
         cond: &Tensor<S, bool, Self>,
         lhs: &Tensor<S, E, Self>,
         rhs: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S, E, Self>, Error>;
 
     fn backward<S: Shape>(
         &self,
@@ -24,7 +24,7 @@ pub trait ChooseKernel<E: Dtype>: Storage<E> + Storage<bool> {
         rhs: &Tensor<S, E, Self>,
         grad_rhs: &mut <Self as Storage<E>>::Vec,
         grad_out: &<Self as Storage<E>>::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 /// Choose values from two tensors using a boolean mask. Equivalent to `torch.where` from pytorch.
@@ -38,7 +38,7 @@ pub trait ChooseKernel<E: Dtype>: Storage<E> + Storage<bool> {
 /// let c = cond.choose(a, b);
 /// assert_eq!(c.array(), [1.0, -2.0, 3.0]);
 /// ```
-pub trait ChooseFrom<Lhs, Rhs>: HasErr {
+pub trait ChooseFrom<Lhs, Rhs>: Sized {
     type Output;
 
     /// Construct a new tensor, where the output tensor contains the elements of lhs where self is
@@ -48,7 +48,7 @@ pub trait ChooseFrom<Lhs, Rhs>: HasErr {
     }
 
     /// Fallible version of choose
-    fn try_choose(self, lhs: Lhs, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+    fn try_choose(self, lhs: Lhs, rhs: Rhs) -> Result<Self::Output, Error>;
 }
 
 impl<
@@ -65,7 +65,7 @@ impl<
         self,
         lhs: Tensor<S, E, D, LhsTape>,
         rhs: Tensor<S, E, D, RhsTape>,
-    ) -> Result<Self::Output, Self::Err> {
+    ) -> Result<Self::Output, Error> {
         assert_eq!(self.shape(), lhs.shape());
         assert_eq!(lhs.shape(), rhs.shape());
 

@@ -3,17 +3,16 @@ mod vecs;
 
 use std::vec::Vec;
 
-use crate::prelude::{Device, Dtype, Gradients, Shape, Tensor, UniqueId};
+use crate::prelude::{Device, Dtype, Error, Gradients, Shape, Tensor, UniqueId};
 
 /// Mutable & Immutable forward of `Input` that produces [Module::Output].
 pub trait Module<X> {
     /// The type that this unit produces given `Input`.
     type Output;
-    type Error: std::fmt::Debug;
 
-    fn try_forward(&self, x: X) -> Result<Self::Output, Self::Error>;
+    fn try_forward(&self, x: X) -> Result<Self::Output, Error>;
 
-    fn try_forward_mut(&mut self, x: X) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: X) -> Result<Self::Output, Error> {
         self.try_forward(x)
     }
 
@@ -26,27 +25,6 @@ pub trait Module<X> {
     }
 }
 
-/// An error indicating that a parameter was not used in gradient
-/// computation, and was therefore not present in [Gradients]
-/// during an update.
-#[derive(Debug)]
-pub enum OptimizerUpdateError<Err> {
-    UnusedTensors(Vec<UniqueId>),
-    DeviceError(Err),
-}
-
-impl<Err: std::fmt::Display> std::fmt::Display for OptimizerUpdateError<Err> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnusedTensors(unused) => write!(f, "Unused tensors: {unused:?}"),
-            Self::DeviceError(err) => write!(f, "{err}"),
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl<Err: std::fmt::Debug + std::fmt::Display> std::error::Error for OptimizerUpdateError<Err> {}
-
 /// Something that can update both tensors and a [UpdateParams]. At minimum [Optimizer::update_tensor()] must be implemented.
 pub trait Optimizer<M, E: Dtype, D: Device<E>>: Sized {
     fn update_tensor<S: Shape>(
@@ -54,24 +32,18 @@ pub trait Optimizer<M, E: Dtype, D: Device<E>>: Sized {
         t: &mut Tensor<S, E, D>,
         gradients: &Gradients<E, D>,
         missing_tensors: &mut Vec<UniqueId>,
-    ) -> Result<(), D::Err>;
+    ) -> Result<(), Error>;
 
-    fn update(
-        &mut self,
-        module: &mut M,
-        gradients: &Gradients<E, D>,
-    ) -> Result<(), OptimizerUpdateError<D::Err>>
+    fn update(&mut self, module: &mut M, gradients: &Gradients<E, D>) -> Result<(), Error>
     where
         M: UpdateParams<E, D>,
     {
         let mut missing_tensors = Vec::new();
-        module
-            .try_update_params(self, gradients, &mut missing_tensors)
-            .map_err(OptimizerUpdateError::DeviceError)?;
+        module.try_update_params(self, gradients, &mut missing_tensors)?;
         if missing_tensors.is_empty() {
             Ok(())
         } else {
-            Err(OptimizerUpdateError::UnusedTensors(missing_tensors))
+            Err(Error::UnusedTensors(missing_tensors))
         }
     }
 }
@@ -82,7 +54,7 @@ pub trait BuildOnDevice<E: Dtype, D: Device<E>>: Clone {
     fn build_on_device(&self, device: &D) -> Self::Built {
         self.try_build_on_device(device).unwrap()
     }
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err>;
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error>;
 }
 
 /// Something that can have all of its parameters reset to a specific state (may be random or not random).
@@ -90,7 +62,7 @@ pub trait ResetParams<E: Dtype, D: Device<E>> {
     fn reset_params(&mut self) {
         self.try_reset_params().unwrap()
     }
-    fn try_reset_params(&mut self) -> Result<(), D::Err>;
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error>;
 }
 
 /// Something that can have it's params updated with an [Optimizer] and a set of [Gradients].
@@ -109,7 +81,7 @@ pub trait UpdateParams<E: Dtype, D: Device<E>> {
         optimizer: &mut Optim,
         gradients: &Gradients<E, D>,
         missing_tensors: &mut Vec<UniqueId>,
-    ) -> Result<(), D::Err>;
+    ) -> Result<(), crate::tensor::Error>;
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>> UpdateParams<E, D> for Tensor<S, E, D> {
@@ -118,7 +90,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> UpdateParams<E, D> for Tensor<S, E, D> {
         optimizer: &mut Optim,
         gradients: &Gradients<E, D>,
         missing_tensors: &mut Vec<UniqueId>,
-    ) -> Result<(), <D>::Err> {
+    ) -> Result<(), crate::tensor::Error> {
         optimizer.update_tensor(self, gradients, missing_tensors)
     }
 }
@@ -128,12 +100,12 @@ pub trait ZeroGrads<E: Dtype, D: Device<E>> {
     fn zero_grads(&self, grads: &mut Gradients<E, D>) {
         self.try_zero_grads(grads).unwrap()
     }
-    fn try_zero_grads(&self, grads: &mut Gradients<E, D>) -> Result<(), D::Err>;
+    fn try_zero_grads(&self, grads: &mut Gradients<E, D>) -> Result<(), crate::tensor::Error>;
 
     fn alloc_grads(&self) -> Gradients<E, D> {
         self.try_alloc_grads().unwrap()
     }
-    fn try_alloc_grads(&self) -> Result<Gradients<E, D>, D::Err> {
+    fn try_alloc_grads(&self) -> Result<Gradients<E, D>, crate::tensor::Error> {
         let mut grads = Gradients::leaky();
         self.try_zero_grads(&mut grads)?;
         grads.retain_current_grads_as_leafs();
@@ -275,7 +247,7 @@ pub trait BuildModuleExt<M>: Sized {
         self.try_build_module(m).unwrap()
     }
 
-    fn try_build_module<E: Dtype>(&self, m: M) -> Result<M::Built, Self::Err>
+    fn try_build_module<E: Dtype>(&self, m: M) -> Result<M::Built, Error>
     where
         M: BuildOnDevice<E, Self>,
         M::Built: ResetParams<E, Self>,

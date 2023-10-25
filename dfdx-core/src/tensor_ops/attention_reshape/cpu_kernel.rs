@@ -13,7 +13,7 @@ impl<E: Dtype> super::AttentionReshapeKernel<E> for Cpu {
             Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
             Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
         ),
-        Self::Err,
+        Error,
     > {
         let sequence_length = qkv.shape().0;
         let past_sequence_length = past_key.shape().2;

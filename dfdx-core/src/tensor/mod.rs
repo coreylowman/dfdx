@@ -147,6 +147,7 @@ mod masks;
 pub(crate) mod numpy;
 #[cfg(feature = "numpy")]
 pub use numpy::NumpyDtype;
+mod error;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
 mod tensorlike;
@@ -155,11 +156,12 @@ mod unique_id;
 pub(crate) mod storage_traits;
 mod tensor_impls;
 
+pub use error::Error;
 pub(crate) use ghost::GhostTensor;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 pub use tensorlike::Tensorlike;
 
-pub use cpu::{Cpu, CpuError};
+pub use cpu::Cpu;
 #[cfg(not(feature = "cuda"))]
 pub type AutoDevice = Cpu;
 
@@ -171,7 +173,7 @@ pub use cuda::{Cuda, CudaError};
 pub type AutoDevice = Cuda;
 
 pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec, TensorToArray};
-pub use storage_traits::{Cache, HasErr, RandomU64, Storage, Synchronize};
+pub use storage_traits::{Cache, RandomU64, Storage, Synchronize};
 pub use storage_traits::{OnesTensor, SampleTensor, TriangleTensor, ZerosTensor};
 
 pub use tensor_impls::{PutTape, SplitTape, Tensor, Trace, WithEmptyTape};

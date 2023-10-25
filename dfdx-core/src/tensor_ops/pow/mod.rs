@@ -34,7 +34,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<PowfKernelOp<E>, E>, T: Tape<E, D>> Tens
         self.try_powf(exponent).unwrap()
     }
     /// See [powf]
-    pub fn try_powf(self, exponent: impl Into<f64>) -> Result<Self, D::Err> {
+    pub fn try_powf(self, exponent: impl Into<f64>) -> Result<Self, crate::tensor::Error> {
         let exponent = E::from_f64(exponent.into()).unwrap();
         try_unary_op(PowfKernelOp(exponent), self)
     }
@@ -60,7 +60,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<PowiKernelOp, E>, T: Tape<E, D>> Tensor<
         self.try_powi(exponent).unwrap()
     }
     /// See [powi]
-    pub fn try_powi(self, exponent: i32) -> Result<Self, D::Err> {
+    pub fn try_powi(self, exponent: i32) -> Result<Self, crate::tensor::Error> {
         try_unary_op(PowiKernelOp(exponent), self)
     }
 }

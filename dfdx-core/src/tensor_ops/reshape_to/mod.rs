@@ -10,14 +10,14 @@ pub trait ReshapeKernel<E: Dtype>: Storage<E> {
         &self,
         dst: &Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>;
+    ) -> Result<Tensor<Dst, E, Self>, Error>;
     fn backward<Src: Shape, Dst: Shape>(
         &self,
         dst: &Dst,
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 /// Changes the shape of a tensor without re-ordering axes. If the tensor is contiguous
@@ -47,7 +47,7 @@ pub trait ReshapeKernel<E: Dtype>: Storage<E> {
 /// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
 /// let t: Tensor<(usize, ), f32, _> = t.reshape_like(&(8, ));
 /// ```
-pub trait ReshapeTo: HasErr + HasShape {
+pub trait ReshapeTo: Sized + HasShape {
     /// Reshapes a tensor to a different compile time shape.
     fn reshape<Dst: ConstShape>(self) -> Self::WithShape<Dst>
     where
@@ -57,7 +57,7 @@ pub trait ReshapeTo: HasErr + HasShape {
         self.try_reshape().unwrap()
     }
     /// Reshapes a tensor to a different compile time shape.
-    fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ConstShape,
     {
@@ -75,16 +75,16 @@ pub trait ReshapeTo: HasErr + HasShape {
         self.try_contiguous().unwrap()
     }
     /// See [`ReshapeTo::contiguous`]
-    fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Self::Err> {
+    fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Error> {
         let shape = *self.shape();
         self.try_reshape_like(&shape)
     }
     /// Reshapes a tensor to a different runtime shape.
-    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err>;
+    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Error>;
 }
 
 impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<E, D>> ReshapeTo for Tensor<S, E, D, T> {
-    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err> {
+    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Error> {
         assert_eq!(self.shape().num_elements(), dst.num_elements());
         if self.shape.strides() == self.strides {
             Ok(Tensor {

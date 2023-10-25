@@ -32,14 +32,14 @@ pub struct Pool2DOp {
 }
 
 pub(super) trait Pool2DKernel<E: Dtype>: Storage<E> {
-    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Error>;
 
     fn forward<I: Shape, O: Shape>(
         &self,
         op: Pool2DOp,
         inp: &Tensor<I, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 
     #[allow(clippy::too_many_arguments)]
     fn backward<I: Shape, O: Shape>(
@@ -49,12 +49,11 @@ pub(super) trait Pool2DKernel<E: Dtype>: Storage<E> {
         grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 pub trait TryPool2D<Kernel, Stride, Padding, Dilation>: Sized {
     type Pooled;
-    type Error: std::fmt::Debug;
 
     fn pool2d(
         self,
@@ -75,7 +74,7 @@ pub trait TryPool2D<Kernel, Stride, Padding, Dilation>: Sized {
         stride: Stride,
         padding: Padding,
         dilation: Dilation,
-    ) -> Result<Self::Pooled, Self::Error>;
+    ) -> Result<Self::Pooled, Error>;
 }
 
 impl<
@@ -89,7 +88,6 @@ where
     Const<{ (DIM + 2 * PADDING - DILATION * (KERNEL - 1) - 1) / STRIDE + 1 }>: Sized,
 {
     type Pooled = Const<{ (DIM + 2 * PADDING - DILATION * (KERNEL - 1) - 1) / STRIDE + 1 }>;
-    type Error = std::convert::Infallible;
     fn try_pool2d(
         self,
         _: Pool2DKind,
@@ -97,7 +95,7 @@ where
         _: Const<STRIDE>,
         _: Const<PADDING>,
         _: Const<DILATION>,
-    ) -> Result<Self::Pooled, Self::Error> {
+    ) -> Result<Self::Pooled, Error> {
         Ok(Const)
     }
 }
@@ -106,7 +104,6 @@ impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim>
     TryPool2D<Kernel, Stride, Padding, Dilation> for usize
 {
     type Pooled = usize;
-    type Error = std::convert::Infallible;
     fn try_pool2d(
         self,
         _: Pool2DKind,
@@ -114,7 +111,7 @@ impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim>
         stride: Stride,
         padding: Padding,
         dilation: Dilation,
-    ) -> Result<Self::Pooled, Self::Error> {
+    ) -> Result<Self::Pooled, Error> {
         Ok((self + 2 * padding.size() - 1)
             .checked_sub(dilation.size() * (kernel.size() - 1))
             .unwrap()
@@ -140,7 +137,6 @@ where
     T: Tape<E, D>,
 {
     type Pooled = Tensor<(Chan, H::Pooled, W::Pooled), E, D, T>;
-    type Error = D::Err;
 
     fn try_pool2d(
         self,
@@ -149,7 +145,7 @@ where
         stride: Stride,
         padding: Padding,
         dilation: Dilation,
-    ) -> Result<Self::Pooled, Self::Error> {
+    ) -> Result<Self::Pooled, Error> {
         let (chan, h, w) = self.shape;
         let img = self.try_reshape_like(&(Const::<1>, chan, h, w))?;
         let out = img.try_pool2d(kind, kernel, stride, padding, dilation)?;
@@ -176,7 +172,6 @@ where
     T: Tape<E, D>,
 {
     type Pooled = Tensor<(Batch, Chan, H::Pooled, W::Pooled), E, D, T>;
-    type Error = D::Err;
 
     fn try_pool2d(
         self,
@@ -185,7 +180,7 @@ where
         stride: Stride,
         padding: Padding,
         dilation: Dilation,
-    ) -> Result<Self::Pooled, Self::Error> {
+    ) -> Result<Self::Pooled, Error> {
         let (batch, chan, h, w) = self.shape;
         if self.strides != self.shape.strides() {
             panic!("Image input to pool2d must be contiguous");
