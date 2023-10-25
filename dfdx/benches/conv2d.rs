@@ -2,7 +2,6 @@ fn main() {
     use std::time::Instant;
 
     use dfdx::prelude::*;
-    use dfdx_nn::*;
 
     #[cfg(feature = "cuda")]
     type Dev = Cuda;

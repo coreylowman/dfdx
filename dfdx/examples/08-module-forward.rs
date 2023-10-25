@@ -11,9 +11,7 @@ fn main() {
     let unbatched_x: Tensor<Rank1<2>, f32, _> = dev.sample_uniform();
     let batched_x: Tensor<Rank2<10, 2>, f32, _> = dev.sample_uniform();
 
-    // The Module trait lets us call either forward or forward_mut on a module.
-    use dfdx_nn::Module;
-
+    // The dfdx::nn::Module trait lets us call either forward or forward_mut on a module.
     // Here we call forward on the unbatched tensor.
     let unbatched_y = model.forward(unbatched_x);
     assert_eq!(unbatched_y.shape(), &(Const::<5>,));

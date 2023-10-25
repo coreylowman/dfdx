@@ -1,7 +1,7 @@
 //! Demonstrates broadcasting tensors to different sizes, and axis reductions
 //! with BroadcastTo and ReduceTo
 
-use dfdx_core::{
+use dfdx::{
     shapes::{Axis, Rank2, Rank4},
     tensor::{AsArray, AutoDevice, TensorFrom},
     tensor_ops::{BroadcastTo, MeanTo},

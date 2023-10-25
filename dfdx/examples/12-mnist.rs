@@ -23,10 +23,7 @@ use indicatif::ProgressIterator;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
 
-use dfdx_nn::{
-    dfdx::{data::*, prelude::*, tensor::AutoDevice},
-    *,
-};
+use dfdx::{data::*, prelude::*};
 
 struct MnistTrainSet(Mnist);
 
@@ -81,7 +78,7 @@ fn main() {
     // initialize model, gradients, and optimizer
     let mut model = dev.build_module::<f32>(Mlp::default());
     let mut grads = model.alloc_grads();
-    let mut opt = dfdx_nn::optim::Adam::new(&model, Default::default());
+    let mut opt = dfdx::nn::optim::Adam::new(&model, Default::default());
 
     // initialize dataset
     let dataset = MnistTrainSet::new(&mnist_path);
@@ -128,6 +125,7 @@ fn main() {
         );
     }
 
+    #[cfg(feature = "safetensors")]
     model
         .save_safetensors("06-mnist.npz")
         .expect("failed to save model");

@@ -1,6 +1,6 @@
 //! Demonstrates how to select or gather sub tensors (index) from tensors
 
-use dfdx_core::{
+use dfdx::{
     shapes::Rank3,
     tensor::{AsArray, AutoDevice, Tensor, TensorFrom},
     tensor_ops::{GatherTo, SelectTo},

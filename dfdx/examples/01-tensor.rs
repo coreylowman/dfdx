@@ -1,16 +1,16 @@
 //! Intro to dfdx::arrays and dfdx::tensor
 
-use dfdx_core::{
+use dfdx::{
     shapes::{Const, Rank1, Rank2, Rank3},
     tensor::{AsArray, OnesTensor, SampleTensor, Tensor, TensorFrom, ZerosTensor},
     tensor_ops::RealizeTo,
 };
 
 #[cfg(not(feature = "cuda"))]
-type Device = dfdx_core::tensor::Cpu;
+type Device = dfdx::tensor::Cpu;
 
 #[cfg(feature = "cuda")]
-type Device = dfdx_core::tensor::Cuda;
+type Device = dfdx::tensor::Cuda;
 
 fn main() {
     // a device is required to create & modify tensors.

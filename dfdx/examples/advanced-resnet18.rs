@@ -9,7 +9,7 @@ fn main() {
 fn main() {
     use std::time::Instant;
 
-    use dfdx_nn::*;
+    use dfdx::prelude::*;
 
     #[derive(Default, Clone, Sequential)]
     pub struct BasicBlockInternal<const C: usize> {

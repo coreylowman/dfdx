@@ -2,10 +2,7 @@
 
 use std::time::Instant;
 
-use dfdx_nn::{
-    dfdx::{losses::huber_loss, prelude::*},
-    *,
-};
+use dfdx::prelude::*;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
@@ -26,7 +23,7 @@ fn main() {
 
     let mut grads = q_net.alloc_grads();
 
-    let mut sgd = dfdx_nn::optim::Sgd::new(
+    let mut sgd = dfdx::nn::optim::Sgd::new(
         &q_net,
         SgdConfig {
             lr: 1e-1,

@@ -1,6 +1,6 @@
 //! Intro to Gradients and Tapes
 
-use dfdx_core::{
+use dfdx::{
     shapes::{Rank0, Rank2},
     tensor::{AsArray, AutoDevice, Gradients, NoneTape, OwnedTape, SampleTensor, Tensor, Trace},
     tensor_ops::{Backward, MeanTo, TryMatMul},

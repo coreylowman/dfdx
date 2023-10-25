@@ -1,8 +1,6 @@
 //! Intro to dfdx_nn::optim
 
-use dfdx_nn::{
-    dfdx::prelude::*, BuildModuleExt, LinearConstConfig, Module, ReLU, Sequential, Tanh, ZeroGrads,
-};
+use dfdx::prelude::*;
 
 // first let's declare our neural network to optimze
 #[derive(Default, Clone, Sequential)]
@@ -27,7 +25,6 @@ fn main() {
 
     // To optimize a network we need an optimizer object. There are a few options,
     // here we will use Sgd.
-    use dfdx_nn::optim::Sgd;
     let mut sgd = Sgd::new(
         &mlp,
         SgdConfig {
@@ -45,7 +42,6 @@ fn main() {
         grads = loss.backward();
 
         // the difference is we now call Optimizer::update with the gradients.
-        use dfdx_nn::Optimizer;
         sgd.update(&mut mlp, &grads)
             .expect("Oops, there were some unused params");
         // and we also need to zero the gradients using `ZeroGrads::zero_grads`

@@ -1,4 +1,4 @@
-use dfdx_nn::{dfdx::prelude::*, *};
+use dfdx::prelude::*;
 
 fn main() {
     let dev = AutoDevice::default();

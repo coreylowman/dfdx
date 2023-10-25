@@ -1,6 +1,6 @@
 //! Demonstrates how to re-order (permute/transpose) the axes of a tensor
 
-use dfdx_core::{
+use dfdx::{
     shapes::{Axes3, Rank3},
     tensor::{AutoDevice, Tensor, ZerosTensor},
     tensor_ops::PermuteTo,

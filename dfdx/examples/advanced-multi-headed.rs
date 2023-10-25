@@ -1,7 +1,7 @@
 //! Demonstrates how to build a neural network that has multiple
 //! outputs using `SplitInto`.
 
-use dfdx_nn::{dfdx::prelude::*, BuildModuleExt, LinearConstConfig, Module, SplitInto};
+use dfdx::prelude::*;
 
 fn main() {
     let dev = AutoDevice::default();

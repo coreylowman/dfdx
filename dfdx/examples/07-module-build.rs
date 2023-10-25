@@ -1,3 +1,5 @@
+//! Intro to dfdx::nn and how to construct neural networks
+
 use dfdx::prelude::*;
 
 fn main() {
@@ -8,7 +10,7 @@ fn main() {
     let arch: dfdx::nn::LinearConstConfig<2, 5> = Default::default();
 
     // The second part is to use the BuildModuleExt trait on device to actually allocate the module.
-    // NOTE: the type of module is `dfdx::Linear<Const<2>, Const<5>, f32, AutoDevice>`
+    // NOTE: the type of module is `dfdx::nn::Linear<Const<2>, Const<5>, f32, AutoDevice>`
     let dev = AutoDevice::default();
     let _module = dev.build_module::<f32>(arch);
 

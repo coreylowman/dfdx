@@ -1,6 +1,6 @@
 //! Intro to dfdx::tensor_ops
 
-use dfdx_core::{
+use dfdx::{
     shapes::{Const, Rank0, Rank1, Rank2},
     tensor::{AsArray, AutoDevice, SampleTensor, Tensor},
     tensor_ops::{MeanTo, RealizeTo, TryMatMul},

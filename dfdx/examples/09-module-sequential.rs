@@ -1,9 +1,9 @@
-// So far we have only used single layers in the examples.
-// But real world models have many layers and sub models.
-// In this example we can see a simple way to compose many layers together
-// sequentially.
+//! So far we have only used single layers in the examples.
+//! But real world models have many layers and sub models.
+//! In this example we can see a simple way to compose many layers together
+//! sequentially.
 
-use dfdx_nn::{dfdx::prelude::*, BuildModuleExt, LinearConfig, Module, ReLU, Sequential, Tanh};
+use dfdx::prelude::*;
 
 /// Here we define a simple feedforward network with 3 layers.
 /// the `#[derive(Sequential)]` means the built module will execute
