@@ -158,9 +158,6 @@
 pub mod nn;
 
 pub use dfdx_core::*;
-pub use dfdx_derives::*;
-
-pub use dfdx_core::*;
 
 pub mod prelude {
     pub use crate::nn::*;
@@ -169,7 +166,7 @@ pub mod prelude {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    pub use num_traits::{Float, FromPrimitive, NumCast, Zero};
+    pub use num_traits::{Float, NumCast, Zero};
 
     #[cfg(not(feature = "cuda"))]
     pub type TestDevice = super::tensor::Cpu;

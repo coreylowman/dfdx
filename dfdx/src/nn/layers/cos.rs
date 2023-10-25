@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 /// Calls [dfdx::tensor_ops::cos()].
-#[derive(Default, Debug, Clone, Copy, crate::CustomModule)]
+#[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Cos;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Cos {
     type Output = Tensor<S, E, D, T>;

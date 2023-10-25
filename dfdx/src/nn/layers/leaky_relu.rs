@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 /// ReLU but maintains a small gradient if the input values are negative.
-#[derive(Debug, Clone, Copy, crate::CustomModule)]
+#[derive(Debug, Clone, Copy, CustomModule)]
 pub struct LeakyReLU(pub f64);
 
 impl Default for LeakyReLU {
