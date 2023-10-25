@@ -1,8 +1,4 @@
-use crate::{
-    prelude::{HasErr, HasShape},
-    shapes::Shape,
-    tensor::Storage,
-};
+use crate::{prelude::HasShape, shapes::Shape, tensor::Storage};
 
 use super::{storage_traits::AllocGrad, GhostTensor, Tensor, UniqueId};
 
@@ -12,7 +8,7 @@ use super::{storage_traits::AllocGrad, GhostTensor, Tensor, UniqueId};
 /// *If it looks like a tensor and barks like a tensor, then pet it like a tensor.*
 #[allow(clippy::len_without_is_empty)]
 pub trait Tensorlike<S: Shape, E, D: Storage<E>>:
-    AllocGrad<Gradient = D::Vec> + HasErr<Err = D::Err> + HasShape<Shape = S>
+    AllocGrad<Gradient = D::Vec> + HasShape<Shape = S>
 {
     fn id(&self) -> UniqueId;
     fn len(&self) -> usize;

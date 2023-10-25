@@ -1,6 +1,6 @@
 use crate::{
     dtypes::{Dtype, NotMixedPrecision},
-    tensor::cpu::*,
+    tensor::{cpu::*, Error},
 };
 
 use super::{Momentum, SgdConfig, SgdKernel, WeightDecay};
@@ -13,7 +13,7 @@ impl SgdKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
         param: &mut Self::Vec,
         velocity: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let lr = cfg.lr as f32;
 
         for ((p, g), v) in param
@@ -62,7 +62,7 @@ impl<E: Dtype + NotMixedPrecision> SgdKernel<E> for Cpu {
         param: &mut Self::Vec,
         velocity: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let lr = E::from_f64(cfg.lr).unwrap();
 
         for ((p, mut g), v) in param

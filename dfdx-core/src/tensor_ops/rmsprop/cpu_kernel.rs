@@ -1,6 +1,6 @@
 use crate::{
     dtypes::{Dtype, NotMixedPrecision},
-    tensor::cpu::Cpu,
+    tensor::{cpu::Cpu, Error},
 };
 
 use super::{RMSpropConfig, RMSpropKernel, WeightDecay};
@@ -15,7 +15,7 @@ impl RMSpropKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
         square_avg: &mut Self::Vec,
         grad_avg: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let alpha = cfg.alpha as f32;
         let eps = cfg.eps as f32;
         let lr = cfg.lr as f32;
@@ -80,7 +80,7 @@ impl<E: num_traits::Float + Dtype + NotMixedPrecision> RMSpropKernel<E> for Cpu 
         square_avg: &mut Self::Vec,
         grad_avg: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let alpha = E::from_f64(cfg.alpha).unwrap();
         let eps = E::from_f64(cfg.eps).unwrap();
         let lr = E::from_f64(cfg.lr).unwrap();

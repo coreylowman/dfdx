@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::*,
-    tensor::{HasErr, PutTape, SplitTape, Storage, Tape, Tensor, ZerosTensor},
+    tensor::{Error, PutTape, SplitTape, Storage, Tape, Tensor, ZerosTensor},
 };
 
 #[repr(C)]
@@ -65,7 +65,7 @@ pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: Storage<E> {
         op: Upscale2DOp,
         inp: &Tensor<I, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 
     fn backward<I: Shape, O: Shape>(
         &self,
@@ -74,17 +74,17 @@ pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: Storage<E> {
         grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
-pub trait GenericUpscale2D<M: UpscaleMethod>: HasErr {
+pub trait GenericUpscale2D<M: UpscaleMethod> {
     type Output<OH: Dim, OW: Dim>;
     fn generic_upscale2d_like<OH: Dim, OW: Dim>(
         self,
         method: M,
         height: OH,
         width: OW,
-    ) -> Result<Self::Output<OH, OW>, Self::Err>;
+    ) -> Result<Self::Output<OH, OW>, Error>;
 }
 
 /// Upscales an image to a new shape. Valid methods of upscaling are:
@@ -107,7 +107,7 @@ pub trait GenericUpscale2D<M: UpscaleMethod>: HasErr {
 /// let t: Tensor<Rank3<3, 32, 32>, f32, _> = dev.zeros();
 /// let y: Tensor<(Const<3>, usize, usize), f32, _> = t.upscale2d_like(NearestNeighbor, 64, 64);
 /// ```
-pub trait TryUpscale2D {
+pub trait TryUpscale2D: Sized {
     /// Upscale to compile time known dimensions.
     fn upscale2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
@@ -122,7 +122,7 @@ pub trait TryUpscale2D {
     fn try_upscale2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
         method: M,
-    ) -> Result<<Self as GenericUpscale2D<M>>::Output<Const<OH>, Const<OW>>, Self::Err>
+    ) -> Result<<Self as GenericUpscale2D<M>>::Output<Const<OH>, Const<OW>>, Error>
     where
         Self: GenericUpscale2D<M>,
     {
@@ -146,7 +146,7 @@ pub trait TryUpscale2D {
         method: M,
         height: OH,
         width: OW,
-    ) -> Result<<Self as GenericUpscale2D<M>>::Output<OH, OW>, Self::Err>
+    ) -> Result<<Self as GenericUpscale2D<M>>::Output<OH, OW>, Error>
     where
         Self: GenericUpscale2D<M>,
     {
@@ -172,7 +172,7 @@ impl<
         _method: M,
         out_height: OH,
         out_width: OW,
-    ) -> Result<Self::Output<OH, OW>, Self::Err> {
+    ) -> Result<Self::Output<OH, OW>, Error> {
         let in_height = self.shape.1;
         let in_width = self.shape.2;
 
@@ -216,7 +216,7 @@ impl<
         _method: M,
         out_height: OH,
         out_width: OW,
-    ) -> Result<Self::Output<OH, OW>, Self::Err> {
+    ) -> Result<Self::Output<OH, OW>, Error> {
         let in_height = self.shape.2;
         let in_width = self.shape.3;
 

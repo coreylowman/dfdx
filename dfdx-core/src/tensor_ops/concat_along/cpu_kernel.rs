@@ -10,7 +10,7 @@ impl<E: Dtype> super::ConcatAlongKernel<E> for Cpu {
         a: &Tensor<A, E, Self>,
         b: &Tensor<B, E, Self>,
         c: &mut Tensor<C, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut a_idx = NdIndex::new(a.shape, a.strides);
         let mut b_idx = NdIndex::new(b.shape, b.strides);
 
@@ -44,7 +44,7 @@ impl<E: Dtype> super::ConcatAlongKernel<E> for Cpu {
         b: &GhostTensor<B, E, Self>,
         grad_b: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut a_idx = NdIndex::new(a.shape, a.strides);
         let mut b_idx = NdIndex::new(b.shape, b.strides);
 

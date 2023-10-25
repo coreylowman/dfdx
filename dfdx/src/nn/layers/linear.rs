@@ -38,7 +38,7 @@ pub type LinearConstConfig<const I: usize, const O: usize> = LinearConfig<Const<
 
 impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LinearConfig<I, O> {
     type Built = Linear<I, O, E, D>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         Ok(Linear {
             weight: device.try_zeros_like(&(self.out, self.inp))?,
             bias: device.try_zeros_like(&(self.out,))?,
@@ -61,7 +61,7 @@ impl<I: Dim, O: Dim, E, D: Device<E>> ResetParams<E, D> for Linear<I, O, E, D>
 where
     E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,
 {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         let (_o, i) = self.weight.shape();
         let b = E::from_f64(1.0 / (i.size() as f64).sqrt()).unwrap();
         self.weight.try_fill_with_distr(Uniform::new(-b, b))?;
@@ -72,15 +72,13 @@ where
 impl<S: Shape, I: Dim, O: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
     for Linear<I, O, E, D>
 where
-    Tensor<S, E, D, T>: TryMatMul<Tensor<(I, O), E, D, T>, Err = D::Err>,
-    Bias1D<O, E, D>:
-        Module<<Tensor<S, E, D, T> as TryMatMul<Tensor<(I, O), E, D, T>>>::Output, Error = D::Err>,
+    Tensor<S, E, D, T>: TryMatMul<Tensor<(I, O), E, D, T>>,
+    Bias1D<O, E, D>: Module<<Tensor<S, E, D, T> as TryMatMul<Tensor<(I, O), E, D, T>>>::Output>,
 {
     type Output = <Bias1D<O, E, D> as Module<
         <Tensor<S, E, D, T> as TryMatMul<Tensor<(I, O), E, D, T>>>::Output,
     >>::Output;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
         let weight = self.weight.retaped::<T>().try_permute()?;
         let bias = Bias1D {
             bias: self.bias.clone(),

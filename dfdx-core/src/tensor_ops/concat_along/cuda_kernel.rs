@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, GhostTensor, Tensor},
+    tensor::{launch_cfg, Cuda, Error, GhostTensor, Tensor},
 };
 use cudarc::{
     driver::{DeviceSlice, LaunchAsync},
@@ -15,7 +15,7 @@ impl<E: Dtype + CudaTypeName> super::ConcatAlongKernel<E> for Cuda {
         a: &Tensor<A, E, Self>,
         b: &Tensor<B, E, Self>,
         c: &mut Tensor<C, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let module_name = std::format!("concat_{}", E::NAME);
         if !self.dev.has_func(&module_name, "fwd") {
             let src = KERNEL.replace("$Ty", E::NAME);
@@ -67,7 +67,7 @@ impl<E: Dtype + CudaTypeName> super::ConcatAlongKernel<E> for Cuda {
         b: &GhostTensor<B, E, Self>,
         grad_b: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let module_name = std::format!("concat_{}", E::NAME);
         let bwd = self.dev.get_func(&module_name, "bwd").unwrap();
         let cfg = launch_cfg::<128>(grad_out.data.len() as u32);

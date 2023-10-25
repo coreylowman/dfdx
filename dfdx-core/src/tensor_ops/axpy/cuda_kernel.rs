@@ -1,6 +1,6 @@
 use crate::{
     dtypes::*,
-    tensor::{launch_cfg, Cuda},
+    tensor::{launch_cfg, Cuda, Error},
 };
 
 use cudarc::driver::{DeviceSlice, LaunchAsync};
@@ -29,13 +29,7 @@ impl<E: Dtype> super::AxpyKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn forward(
-        &self,
-        a: &mut Self::Vec,
-        alpha: E,
-        b: &Self::Vec,
-        beta: E,
-    ) -> Result<(), Self::Err> {
+    fn forward(&self, a: &mut Self::Vec, alpha: E, b: &Self::Vec, beta: E) -> Result<(), Error> {
         if !self.dev.has_func(Self::FN, Self::FN) {
             self.dev.load_ptx(PTX_SRC.into(), Self::FN, &[Self::FN])?;
         }

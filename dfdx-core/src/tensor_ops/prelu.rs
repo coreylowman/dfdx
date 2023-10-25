@@ -49,12 +49,12 @@ pub fn leakyrelu<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 /// let r = prelu(t, a);
 /// assert_eq!(r.array(), [-0.05, 0.0, 1.0, 2.0]);
 /// ```
-pub trait TryPReLU<T = Self>: HasErr {
+pub trait TryPReLU<T = Self>: Sized {
     fn prelu(self, rhs: T) -> Self {
         self.try_prelu(rhs).unwrap()
     }
 
-    fn try_prelu(self, rhs: T) -> Result<Self, Self::Err>;
+    fn try_prelu(self, rhs: T) -> Result<Self, Error>;
 }
 
 impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, R> TryPReLU<Tensor<S, E, D, R>>
@@ -64,7 +64,7 @@ where
     LhsTape: Merge<R>,
 {
     /// See [prelu]
-    fn try_prelu(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
+    fn try_prelu(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Error> {
         let scaled = self.with_empty_tape().try_mul(rhs)?;
         self.try_lt(E::default())?.try_choose(scaled, self)
     }
@@ -72,7 +72,7 @@ where
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TryPReLU<E> for Tensor<S, E, D, T> {
     /// See [prelu]
-    fn try_prelu(self, rhs: E) -> Result<Self, Self::Err> {
+    fn try_prelu(self, rhs: E) -> Result<Self, Error> {
         let dev = self.device.clone();
         let scale = dev.tensor(rhs).retaped::<T>().broadcast_like(self.shape());
         let scaled = self.with_empty_tape().try_mul(scale)?;

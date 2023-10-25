@@ -45,7 +45,10 @@ impl<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<E, D>>
         self.try_bce_with_logits(prob).unwrap()
     }
     /// See [bce_with_logits]
-    pub fn try_bce_with_logits<RTape>(self, prob: Tensor<S, E, D, RTape>) -> Result<Self, D::Err>
+    pub fn try_bce_with_logits<RTape>(
+        self,
+        prob: Tensor<S, E, D, RTape>,
+    ) -> Result<Self, crate::tensor::Error>
     where
         RTape: Tape<E, D>,
         LTape: Merge<RTape>,

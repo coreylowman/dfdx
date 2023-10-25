@@ -42,10 +42,6 @@ impl<S: Shape, E, D: Storage<E>> Clone for GhostTensor<S, E, D> {
     }
 }
 
-impl<S: Shape, E, D: Storage<E>> super::storage_traits::HasErr for GhostTensor<S, E, D> {
-    type Err = D::Err;
-}
-
 impl<S: Shape, E, D: Storage<E>> HasShape for GhostTensor<S, E, D> {
     type WithShape<New: Shape> = GhostTensor<New, E, D>;
     type Shape = S;
@@ -56,7 +52,7 @@ impl<S: Shape, E, D: Storage<E>> HasShape for GhostTensor<S, E, D> {
 
 impl<S: Shape, E, D: Storage<E>> super::storage_traits::AllocGrad for GhostTensor<S, E, D> {
     type Gradient = D::Vec;
-    fn try_alloc_grad(&self) -> Result<Self::Gradient, D::Err> {
+    fn try_alloc_grad(&self) -> Result<Self::Gradient, Error> {
         self.dev.try_alloc_len(self.len)
     }
 }

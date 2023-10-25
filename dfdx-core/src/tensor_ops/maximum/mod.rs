@@ -39,7 +39,10 @@ impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>> Tensor<S, E, D, LTape>
     }
 
     /// See [maximum]
-    pub fn try_maximum<R: Default>(self, rhs: Tensor<S, E, D, R>) -> Result<Self, D::Err>
+    pub fn try_maximum<R: Default>(
+        self,
+        rhs: Tensor<S, E, D, R>,
+    ) -> Result<Self, crate::tensor::Error>
     where
         LTape: Merge<R>,
     {

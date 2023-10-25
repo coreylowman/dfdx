@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{Storage, Tensor},
+    tensor::{Error, Storage, Tensor},
 };
 
 use super::optim::{Momentum, WeightDecay};
@@ -90,7 +90,7 @@ pub trait SgdKernel<E: Dtype>: Storage<E> {
         param: &mut Self::Vec,
         velocity: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl SgdConfig {
@@ -100,7 +100,7 @@ impl SgdConfig {
         param: &mut Tensor<S, E, D>,
         velocity: &mut D::Vec,
         grad: &D::Vec,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), crate::tensor::Error> {
         param.device.sgd_kernel(
             self,
             std::sync::Arc::make_mut(&mut param.data),

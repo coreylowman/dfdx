@@ -47,9 +47,9 @@ where
 }
 
 /// Fallible version of [std::ops::Div]. See [div]
-pub trait TryDiv<Rhs = Self>: HasErr {
+pub trait TryDiv<Rhs = Self> {
     type Output;
-    fn try_div(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+    fn try_div(self, rhs: Rhs) -> Result<Self::Output, Error>;
 }
 
 impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, R> TryDiv<Tensor<S, E, D, R>>
@@ -60,7 +60,7 @@ where
 {
     type Output = Self;
     /// See [div]
-    fn try_div(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
+    fn try_div(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Error> {
         try_binary_op(BinaryDivKernelOp, self, rhs)
     }
 }
@@ -71,7 +71,7 @@ where
 {
     type Output = Self;
     /// See [div]
-    fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err> {
+    fn try_div(self, rhs: Rhs) -> Result<Self, Error> {
         let rhs: f64 = rhs.into();
         let scalar = E::from_f64(rhs).unwrap();
         try_unary_op(ScalarDivKernelOp { scalar }, self)

@@ -19,14 +19,14 @@ pub trait RollKernel<E: Dtype>: Storage<E> {
         &self,
         op: RollOp,
         inp: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S, E, Self>, Error>;
     fn backward<S: Shape>(
         &self,
         op: RollOp,
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 /// Shifts data along an axis by a specified amount.
@@ -47,7 +47,7 @@ pub trait RollKernel<E: Dtype>: Storage<E> {
 /// let r = t.roll::<Axis<3>>(1);
 /// assert_eq!(r.array(), [4.0, 1.0, 2.0, 3.0]);
 /// ```
-pub trait Roll: HasShape + HasErr {
+pub trait Roll: Sized + HasShape {
     /// Shifts data along an axis by a specified amount.
     fn roll<Ax: Axes<Array = [isize; 1]>>(self, amount: usize) -> Self
     where
@@ -57,13 +57,16 @@ pub trait Roll: HasShape + HasErr {
     }
 
     /// Shifts data along an axis by a specified amount.
-    fn try_roll<Ax: Axes<Array = [isize; 1]>>(self, amount: usize) -> Result<Self, Self::Err>
+    fn try_roll<Ax: Axes<Array = [isize; 1]>>(self, amount: usize) -> Result<Self, Error>
     where
         Self::Shape: HasAxes<Ax>;
 }
 
 impl<S: Shape, E: Dtype, D: RollKernel<E>, T: Tape<E, D>> Roll for Tensor<S, E, D, T> {
-    fn try_roll<Ax: Axes<Array = [isize; 1]>>(self, amount: usize) -> Result<Self, D::Err>
+    fn try_roll<Ax: Axes<Array = [isize; 1]>>(
+        self,
+        amount: usize,
+    ) -> Result<Self, crate::tensor::Error>
     where
         S: HasAxes<Ax>,
     {

@@ -1,7 +1,7 @@
 use super::RMSpropConfig;
 use crate::{
     dtypes::*,
-    tensor::{launch_cfg, Cuda},
+    tensor::{launch_cfg, Cuda, Error},
     tensor_ops::optim::*,
 };
 
@@ -82,7 +82,7 @@ where
         square_avg: &mut Self::Vec,
         grad_avg: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
         }

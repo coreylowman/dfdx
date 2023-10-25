@@ -27,10 +27,9 @@ pub struct ResidualAdd<T>(
     pub T,
 );
 
-// TODO derive this
 impl<E: Dtype, D: Device<E>, T: BuildOnDevice<E, D>> BuildOnDevice<E, D> for ResidualAdd<T> {
     type Built = ResidualAdd<T::Built>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         let t = self.0.try_build_on_device(device)?;
         Ok(ResidualAdd(t))
     }
@@ -38,15 +37,14 @@ impl<E: Dtype, D: Device<E>, T: BuildOnDevice<E, D>> BuildOnDevice<E, D> for Res
 
 impl<X: WithEmptyTape, T: Module<X>> Module<X> for ResidualAdd<T>
 where
-    T::Output: TryAdd<X, Err = T::Error>,
+    T::Output: TryAdd<X>,
 {
     type Output = <T::Output as TryAdd<X>>::Output;
-    type Error = T::Error;
-    fn try_forward(&self, x: X) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: X) -> Result<Self::Output, Error> {
         let t = self.0.try_forward(x.with_empty_tape())?;
         t.try_add(x)
     }
-    fn try_forward_mut(&mut self, x: X) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: X) -> Result<Self::Output, Error> {
         let t = self.0.try_forward_mut(x.with_empty_tape())?;
         t.try_add(x)
     }

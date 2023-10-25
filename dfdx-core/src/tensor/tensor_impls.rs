@@ -54,10 +54,6 @@ impl<S: Shape, E: Dtype, D: Storage<E>, T> HasDtype for Tensor<S, E, D, T> {
     type Dtype = E;
 }
 
-impl<S: Shape, E, D: Storage<E>, T> HasErr for Tensor<S, E, D, T> {
-    type Err = D::Err;
-}
-
 /// Something that can trace gradients
 pub trait Trace<E, D: Storage<E>>: Clone {
     type Traced;
@@ -198,7 +194,7 @@ impl<S: Shape, E: Dtype, D: ZeroFillStorage<E>, T> Tensor<S, E, D, T> {
         self.try_fill_with_zeros().unwrap()
     }
     /// Fallible version of [Tensor::fill_with_zeros]
-    pub fn try_fill_with_zeros(&mut self) -> Result<(), D::Err> {
+    pub fn try_fill_with_zeros(&mut self) -> Result<(), Error> {
         self.device
             .try_fill_with_zeros(Arc::make_mut(&mut self.data))
     }
@@ -210,7 +206,7 @@ impl<S: Shape, E: Dtype, D: OneFillStorage<E>, T> Tensor<S, E, D, T> {
         self.try_fill_with_ones().unwrap()
     }
     /// Fallible version of [Tensor::fill_with_ones]
-    pub fn try_fill_with_ones(&mut self) -> Result<(), D::Err> {
+    pub fn try_fill_with_ones(&mut self) -> Result<(), Error> {
         self.device
             .try_fill_with_ones(Arc::make_mut(&mut self.data))
     }
@@ -226,7 +222,7 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     pub fn try_fill_with_distr<Distr: Distribution<E>>(
         &mut self,
         distr: Distr,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), Error> {
         self.device
             .try_fill_with_distr(Arc::make_mut(&mut self.data), distr)
     }

@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<E, D>> Tenso
         self.try_square().unwrap()
     }
     /// See [square]
-    pub fn try_square(self) -> Result<Self, D::Err> {
+    pub fn try_square(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(SquareKernelOp, self)
     }
 }

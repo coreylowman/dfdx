@@ -2,7 +2,7 @@ use super::*;
 use crate::{shapes::*, tensor::*};
 
 /// Reduction along multiple axes using [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp).
-pub trait LogSumExpTo: HasErr + HasShape {
+pub trait LogSumExpTo: Sized + HasShape {
     /// [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) reduction.
     ///
     /// **Pytorch equivalent**: `t.exp().sum(Axes).log()`
@@ -31,13 +31,13 @@ pub trait LogSumExpTo: HasErr + HasShape {
         self.try_logsumexp().unwrap()
     }
     /// Fallible version of [LogSumExpTo::logsumexp]
-    fn try_logsumexp<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_logsumexp<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> LogSumExpTo for Tensor<S, E, D, T> {
-    fn try_logsumexp<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_logsumexp<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {

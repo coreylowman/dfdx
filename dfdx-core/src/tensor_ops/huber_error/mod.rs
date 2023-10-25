@@ -50,7 +50,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
         self,
         rhs: Tensor<S, E, D, R>,
         delta: impl Into<f64>,
-    ) -> Result<Self, D::Err>
+    ) -> Result<Self, crate::tensor::Error>
     where
         T: Merge<R>,
     {

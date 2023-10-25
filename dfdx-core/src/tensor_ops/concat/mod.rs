@@ -27,7 +27,7 @@ mod cuda_kernel;
 /// assert_eq!(c.shape().0, 6);
 /// ```
 #[deprecated = "Use TryConcatAlong instead"]
-pub trait TryConcat<Rhs>: HasErr {
+pub trait TryConcat<Rhs>: Sized {
     type Output;
 
     /// Concatenate two tensors along the first dimension.
@@ -41,7 +41,7 @@ pub trait TryConcat<Rhs>: HasErr {
     /// Fallible version of [TryConcat::concat].
     #[deprecated = "Use TryConcatAlong::try_concat_along instead"]
     #[allow(deprecated)]
-    fn try_concat(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+    fn try_concat(self, rhs: Rhs) -> Result<Self::Output, Error>;
 }
 
 #[allow(deprecated)]
@@ -54,7 +54,7 @@ where
 {
     type Output = Tensor<A::Catted, E, D, T>;
     #[allow(deprecated)]
-    fn try_concat(self, rhs: Tensor<B, E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_concat(self, rhs: Tensor<B, E, D, R>) -> Result<Self::Output, Error> {
         assert_eq!(
             self.strides,
             self.shape.strides(),
@@ -89,7 +89,7 @@ pub trait ConcatKernel<E: Dtype>: Storage<E> {
         &self,
         a: &Tensor<A, E, Self>,
         b: &Tensor<B, E, Self>,
-    ) -> Result<Tensor<A::Catted, E, Self>, Self::Err>
+    ) -> Result<Tensor<A::Catted, E, Self>, Error>
     where
         A: ConcatShape<B>;
     fn backward(
@@ -97,7 +97,7 @@ pub trait ConcatKernel<E: Dtype>: Storage<E> {
         grad_a: &mut Self::Vec,
         grad_b: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 pub trait ConcatShape<Rhs: Shape>: Shape {

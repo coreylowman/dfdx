@@ -28,7 +28,7 @@ pub(super) struct ConvTrans2DOp {
 }
 
 pub(super) trait ConvTrans2DKernel<E: Dtype>: Storage<E> {
-    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Error>;
 
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
@@ -36,7 +36,7 @@ pub(super) trait ConvTrans2DKernel<E: Dtype>: Storage<E> {
         lhs: &Tensor<L, E, Self>,
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 
     #[allow(clippy::too_many_arguments)]
     fn backward<L: Shape, R: Shape, O: Shape>(
@@ -48,12 +48,11 @@ pub(super) trait ConvTrans2DKernel<E: Dtype>: Storage<E> {
         grad_rhs: &mut Self::Vec,
         out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 pub trait TryConvTrans2D<Stride, Padding, Dilation, Groups>: Sized {
     type Convolved;
-    type Error: std::fmt::Debug;
 
     /// Applies a 2D convolution to the input tensor.
     fn convtrans2d(
@@ -74,7 +73,7 @@ pub trait TryConvTrans2D<Stride, Padding, Dilation, Groups>: Sized {
         padding: Padding,
         dilation: Dilation,
         groups: Groups,
-    ) -> Result<Self::Convolved, Self::Error>;
+    ) -> Result<Self::Convolved, Error>;
 }
 
 impl<
@@ -90,7 +89,6 @@ where
     Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 }>: Sized,
 {
     type Convolved = Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 }>;
-    type Error = std::convert::Infallible;
 
     fn try_convtrans2d(
         self,
@@ -98,7 +96,7 @@ where
         _: Const<PADDING>,
         _: Const<DILATION>,
         _: Groups,
-    ) -> Result<Self::Convolved, Self::Error> {
+    ) -> Result<Self::Convolved, Error> {
         Ok(Const)
     }
 }
@@ -107,7 +105,6 @@ impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
     TryConvTrans2D<Stride, Padding, Dilation, Groups> for (usize, Kernel)
 {
     type Convolved = usize;
-    type Error = std::convert::Infallible;
 
     fn try_convtrans2d(
         self,
@@ -115,7 +112,7 @@ impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
         padding: Padding,
         dilation: Dilation,
         _: Groups,
-    ) -> Result<Self::Convolved, Self::Error> {
+    ) -> Result<Self::Convolved, Error> {
         let (dim, kernel) = self;
         Ok(
             ((dim - 1) * stride.size() + dilation.size() * (kernel.size() - 1) + 1)
@@ -161,7 +158,6 @@ where
         D,
         T,
     >;
-    type Error = D::Err;
 
     fn try_convtrans2d(
         self,
@@ -169,7 +165,7 @@ where
         padding: Padding,
         dilation: Dilation,
         groups: Groups,
-    ) -> Result<Self::Convolved, Self::Error> {
+    ) -> Result<Self::Convolved, Error> {
         let (img, filters) = self;
         let (inp_chan, h, w) = img.shape;
         let img = img.try_reshape_like(&(Const::<1>, inp_chan, h, w))?;
@@ -229,7 +225,6 @@ where
         D,
         T,
     >;
-    type Error = D::Err;
 
     fn try_convtrans2d(
         self,
@@ -237,7 +232,7 @@ where
         padding: Padding,
         dilation: Dilation,
         groups: Groups,
-    ) -> Result<Self::Convolved, Self::Error> {
+    ) -> Result<Self::Convolved, Error> {
         let (img, filters) = self;
         assert_eq!(img.shape.1, filters.shape.0);
         assert_eq!(filters.shape.2, filters.shape.3);

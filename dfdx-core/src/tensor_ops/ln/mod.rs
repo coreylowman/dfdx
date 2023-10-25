@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<E, D>> Tensor<S,
         self.try_ln().unwrap()
     }
     /// See [ln]
-    pub fn try_ln(self) -> Result<Self, D::Err> {
+    pub fn try_ln(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(LnKernelOp, self)
     }
 }

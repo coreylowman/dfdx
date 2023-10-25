@@ -3,7 +3,7 @@
 use crate::shapes::{Axes, Dtype, RemoveDimTo, ReplaceDimTo, Shape};
 use crate::tensor::{
     cpu::{index_to_i, LendingIterator, NdIndex},
-    Cpu, Storage, Tensor, ZerosTensor,
+    Cpu, Error, Storage, Tensor, ZerosTensor,
 };
 
 impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
@@ -11,7 +11,7 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
         &self,
         inp: &Tensor<Src, E, Self>,
         idx: &Tensor<Idx, usize, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReplaceDimTo<Dst, Idx>,
     {
@@ -53,7 +53,7 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
         grad_out: &<Self as Storage<E>>::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReplaceDimTo<Dst, Idx>,
     {
@@ -87,7 +87,7 @@ impl<E: Dtype> super::RemoveDimKernel<E> for Cpu {
         &self,
         inp: &Tensor<Src, E, Self>,
         idx: &Tensor<Idx, usize, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: RemoveDimTo<Dst, Idx>,
     {
@@ -126,7 +126,7 @@ impl<E: Dtype> super::RemoveDimKernel<E> for Cpu {
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
         grad_out: &<Self as Storage<E>>::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: RemoveDimTo<Dst, Idx>,
     {

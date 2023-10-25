@@ -7,7 +7,7 @@ impl<E: Unit> SliceKernel<E> for Cpu {
         &self,
         inp: &Tensor<Src, E, Self>,
         slice: &Slice,
-    ) -> Result<Tensor<Src::Sliced, E, Self>, Self::Err> {
+    ) -> Result<Tensor<Src::Sliced, E, Self>, Error> {
         let dst = inp.shape.slice(slice).unwrap();
         let mut out = self.try_zeros_like(&dst)?;
 
@@ -31,7 +31,7 @@ impl<E: Unit> SliceKernel<E> for Cpu {
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
         slice: &Slice,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let dst = inp.shape.slice(slice).unwrap();
 
         let mut inp_idx = NdIndex::new(dst, inp.strides);

@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<CosKernelOp, E>, T: Tape<E, D>> Tensor<S
         self.try_cos().unwrap()
     }
     /// See [cos]
-    pub fn try_cos(self) -> Result<Self, D::Err> {
+    pub fn try_cos(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(CosKernelOp, self)
     }
 }

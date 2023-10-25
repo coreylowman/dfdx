@@ -10,7 +10,7 @@ impl<E: Dtype> super::RollKernel<E> for Cpu {
         &self,
         op: super::RollOp,
         inp: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let dims = inp.shape.concrete();
         let strides = inp.shape.strides();
         let mut data = self.try_alloc_zeros::<E>(inp.shape.num_elements())?;
@@ -39,7 +39,7 @@ impl<E: Dtype> super::RollKernel<E> for Cpu {
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let dims = inp.shape.concrete();
         let strides = inp.shape.strides();
         let mut idx = NdIndex::new(inp.shape, inp.strides);

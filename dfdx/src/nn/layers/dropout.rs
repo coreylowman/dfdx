@@ -23,10 +23,9 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Ten
     for DropoutOneIn<N>
 {
     type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
 
     /// Does nothing
-    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, crate::tensor::Error> {
         assert!(
             !T::OWNS_TAPE,
             "DropoutOneIn::try_forward input must not be traced."
@@ -35,7 +34,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Ten
     }
 
     /// Applies dropout to the input tensor.
-    fn try_forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
         assert!(
             T::OWNS_TAPE,
             "DropoutOneIn::try_forward_mut input must be traced."
@@ -70,10 +69,9 @@ impl Default for Dropout {
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Dropout {
     type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
 
     /// Does nothing
-    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, crate::tensor::Error> {
         assert!(
             !T::OWNS_TAPE,
             "Dropout::try_forward input must not be traced."
@@ -82,7 +80,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
     }
 
     /// Applies dropout to the input tensor.
-    fn try_forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
         assert!(
             T::OWNS_TAPE,
             "Dropout::try_forward_mut input must be traced."

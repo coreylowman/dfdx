@@ -5,8 +5,7 @@ use crate::prelude::*;
 pub struct FastGeLU;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for FastGeLU {
     type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
         x.try_fast_gelu()
     }
 }
@@ -16,8 +15,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
 pub struct AccurateGeLU;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for AccurateGeLU {
     type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
         x.try_accurate_gelu()
     }
 }

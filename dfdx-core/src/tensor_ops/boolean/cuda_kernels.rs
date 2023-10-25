@@ -1,7 +1,7 @@
 use super::BooleanKernel;
 use crate::{
     shapes::Shape,
-    tensor::{launch_cfg, Cuda, CudaError, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
 };
 use cudarc::driver::*;
 
@@ -15,7 +15,7 @@ impl Cuda {
         fn_name: &str,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, CudaError> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         if !self.dev.has_func(MODULE_NAME, fn_name) {
             self.dev
                 .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
@@ -49,10 +49,7 @@ impl Cuda {
 }
 
 impl BooleanKernel for Cuda {
-    fn not<S: Shape>(
-        &self,
-        inp: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    fn not<S: Shape>(&self, inp: &Tensor<S, bool, Self>) -> Result<Tensor<S, bool, Self>, Error> {
         if !self.dev.has_func(MODULE_NAME, "boolean_not") {
             self.dev
                 .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
@@ -77,7 +74,7 @@ impl BooleanKernel for Cuda {
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         self.call_binary("boolean_and", lhs, rhs)
     }
 
@@ -85,7 +82,7 @@ impl BooleanKernel for Cuda {
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         self.call_binary("boolean_or", lhs, rhs)
     }
 
@@ -93,7 +90,7 @@ impl BooleanKernel for Cuda {
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         self.call_binary("boolean_xor", lhs, rhs)
     }
 }

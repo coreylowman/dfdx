@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{launch_cfg, Cuda, Storage, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Storage, Tensor},
 };
 use cudarc::driver::{CudaSlice, LaunchAsync};
 
@@ -43,7 +43,7 @@ where
         cond: &Tensor<S, bool, Self>,
         lhs: &Tensor<S, E, Self>,
         rhs: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
@@ -85,7 +85,7 @@ where
         rhs: &Tensor<S, E, Self>,
         grad_rhs: &mut <Self as Storage<E>>::Vec,
         grad_out: &<Self as Storage<E>>::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = cond.shape.num_elements();
 

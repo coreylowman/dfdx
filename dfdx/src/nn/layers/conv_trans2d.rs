@@ -60,7 +60,7 @@ where
     <O as std::ops::Div<G>>::Output: Dim,
 {
     type Built = ConvTrans2D<I, O, K, S, P, L, G, E, D>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         assert_eq!(self.in_chan.size() % self.groups.size(), 0);
         assert_eq!(self.out_chan.size() % self.groups.size(), 0);
         let o_over_g = self.out_chan / self.groups;
@@ -119,7 +119,7 @@ where
     E: Dtype + num_traits::Float + rand_distr::uniform::SampleUniform,
     D: Device<E>,
 {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         let (_, o_over_g, k, _) = self.weight.shape();
         let b = (1.0 / (k.size() * k.size() * o_over_g.size()) as f64).sqrt();
         let b = E::from_f64(b).unwrap();
@@ -144,12 +144,7 @@ where
         Img,
         Tensor<(I, <O as std::ops::Div<G>>::Output, K, K), E, D>,
     ) as TryConvTrans2D<S, P, L, G>>::Convolved;
-    type Error = <(
-        Img,
-        Tensor<(I, <O as std::ops::Div<G>>::Output, K, K), E, D>,
-    ) as TryConvTrans2D<S, P, L, G>>::Error;
-
-    fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Img) -> Result<Self::Output, Error> {
         (x, self.weight.clone()).try_convtrans2d(
             self.stride,
             self.padding,

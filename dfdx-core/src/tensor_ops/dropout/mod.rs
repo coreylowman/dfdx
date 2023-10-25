@@ -3,10 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use crate::{
-    shapes::*,
-    tensor::{PutTape, RandomU64, SplitTape, Storage, Tape, Tensor},
-};
+use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -20,14 +17,14 @@ pub trait DropoutKernel<E: Dtype>: Storage<E> + RandomU64 {
         &self,
         op: DropoutKernelOp,
         inp: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S, E, Self>, Error>;
     fn backward<S: Shape>(
         &self,
         op: DropoutKernelOp,
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 /// Zeros elements with probability `p` and scales all elements by `1 / (1 - p)`.
@@ -62,7 +59,7 @@ impl<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> 
         self.try_dropout(prob).unwrap()
     }
     /// See [dropout]
-    pub fn try_dropout(self, prob: impl Into<f64>) -> Result<Self, D::Err> {
+    pub fn try_dropout(self, prob: impl Into<f64>) -> Result<Self, crate::tensor::Error> {
         let seed = self.device.random_u64();
         let prob = prob.into();
         let op = DropoutKernelOp { seed, prob };

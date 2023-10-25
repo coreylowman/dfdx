@@ -23,7 +23,7 @@ use crate::{shapes::*, tensor::*};
 /// // It's ambiguous what axes to broadcast here - explicitly say axes 0 and 2
 /// let _: Tensor<Rank3<1, 1, 1>, _, _> = a.clone().broadcast::<_, Axes2<0, 2>>();
 /// ```
-pub trait BroadcastTo: HasErr + HasShape {
+pub trait BroadcastTo: Sized + HasShape {
     /// Broadcast into shape `Dst` along axes `Ax`.
     fn broadcast<Dst: ConstShape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
@@ -33,7 +33,7 @@ pub trait BroadcastTo: HasErr + HasShape {
             .unwrap()
     }
     /// Fallible version of [BroadcastTo::broadcast]
-    fn try_broadcast<Dst: ConstShape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_broadcast<Dst: ConstShape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
@@ -50,7 +50,7 @@ pub trait BroadcastTo: HasErr + HasShape {
     fn try_broadcast_like<Dst: HasShape, Ax: Axes>(
         self,
         dst: &Dst,
-    ) -> Result<Self::WithShape<Dst::Shape>, Self::Err>
+    ) -> Result<Self::WithShape<Dst::Shape>, Error>
     where
         Self::Shape: BroadcastShapeTo<Dst::Shape, Ax>;
 }
@@ -59,7 +59,7 @@ impl<S: Shape, E, D: Storage<E>, T: Tape<E, D>> BroadcastTo for Tensor<S, E, D, 
     fn try_broadcast_like<Dst: HasShape, Ax: Axes>(
         self,
         dst: &Dst,
-    ) -> Result<Self::WithShape<Dst::Shape>, Self::Err>
+    ) -> Result<Self::WithShape<Dst::Shape>, Error>
     where
         Self::Shape: BroadcastShapeTo<Dst::Shape, Ax>,
     {

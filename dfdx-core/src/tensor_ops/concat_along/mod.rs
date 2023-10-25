@@ -48,13 +48,13 @@ mod cuda_kernel;
 /// ```
 pub trait TryConcatAlong<Ax>: Sized {
     type Output;
-    type Error: std::fmt::Debug;
+
     /// Concatenates self along the given axis.
     fn concat_along(self, ax: Ax) -> Self::Output {
         self.try_concat_along(ax).unwrap()
     }
     /// Fallibly concatenates self along the given axis.
-    fn try_concat_along(self, ax: Ax) -> Result<Self::Output, Self::Error>;
+    fn try_concat_along(self, ax: Ax) -> Result<Self::Output, Error>;
 }
 
 pub trait ConcatAlongKernel<E: Dtype>: Storage<E> {
@@ -64,7 +64,7 @@ pub trait ConcatAlongKernel<E: Dtype>: Storage<E> {
         a: &Tensor<A, E, Self>,
         b: &Tensor<B, E, Self>,
         c: &mut Tensor<C, E, Self>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 
     fn backward<A: Shape, B: Shape>(
         &self,
@@ -74,7 +74,7 @@ pub trait ConcatAlongKernel<E: Dtype>: Storage<E> {
         b: &GhostTensor<B, E, Self>,
         grad_b: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl<A, B, Ax, E: Dtype, D, T: Tape<E, D>, R: Tape<E, D>> TryConcatAlong<Ax>
@@ -89,8 +89,8 @@ where
     T: Merge<R>,
 {
     type Output = Tensor<<(A, B) as TryConcatAlong<Ax>>::Output, E, D, T>;
-    type Error = D::Err;
-    fn try_concat_along(self, ax: Ax) -> Result<Self::Output, Self::Error> {
+
+    fn try_concat_along(self, ax: Ax) -> Result<Self::Output, Error> {
         let (lhs, rhs) = self;
 
         let out_shape = (*lhs.shape(), *rhs.shape()).concat_along(ax);
@@ -135,8 +135,8 @@ macro_rules! impl_concat {
                     <A as std::ops::Add<B>>::Output,
                     $($Tail, )*
                 );
-                type Error = std::convert::Infallible;
-                fn try_concat_along(self, _: Axis<$Ax>) -> Result<Self::Output, Self::Error> {
+
+                fn try_concat_along(self, _: Axis<$Ax>) -> Result<Self::Output, Error> {
                     let (lhs, rhs) = self;
                     let lhs_dims = lhs.concrete();
                     let rhs_dims = rhs.concrete();

@@ -34,7 +34,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<AbsKernelOp, E>, T: Tape<E, D>> Tensor<S
         self.try_abs().unwrap()
     }
     /// See [abs]
-    pub fn try_abs(self) -> Result<Self, D::Err> {
+    pub fn try_abs(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(AbsKernelOp, self)
     }
 }

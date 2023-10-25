@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Axes, Dtype, ReduceShape, Shape},
-    tensor::{HasErr, Tape, Tensor},
+    tensor::{Error, Tape, Tensor},
 };
 
 use super::{BroadcastTo, Device, MeanTo, TryAdd, TryDiv, TrySub};
@@ -32,10 +32,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     }
 
     /// See [normalize]
-    pub fn try_normalize<Ax: Axes>(
-        self,
-        epsilon: impl Into<f64>,
-    ) -> Result<Self, <Self as HasErr>::Err>
+    pub fn try_normalize<Ax: Axes>(self, epsilon: impl Into<f64>) -> Result<Self, Error>
     where
         S: ReduceShape<Ax>,
     {

@@ -43,7 +43,7 @@ pub type EmbeddingConstConfig<const VOCAB: usize, const MODEL: usize> =
 
 impl<V: Dim, M: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for EmbeddingConfig<V, M> {
     type Built = Embedding<V, M, E, D>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         Ok(Embedding {
             weight: device.try_zeros_like(&(self.vocab, self.model))?,
         })
@@ -62,7 +62,7 @@ impl<V: Dim, M: Dim, E: Dtype, D: Device<E>> ResetParams<E, D> for Embedding<V, 
 where
     rand_distr::StandardNormal: rand_distr::Distribution<E>,
 {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         self.weight.try_fill_with_distr(rand_distr::StandardNormal)
     }
 }
@@ -71,9 +71,11 @@ impl<V: Dim, M: Dim, Seq: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(Seq,), usize, D, T>> for Embedding<V, M, E, D>
 {
     type Output = Tensor<(Seq, M), E, D, T>;
-    type Error = D::Err;
 
-    fn try_forward(&self, input: Tensor<(Seq,), usize, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(
+        &self,
+        input: Tensor<(Seq,), usize, D, T>,
+    ) -> Result<Self::Output, crate::tensor::Error> {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).try_gather(input)
     }
@@ -83,12 +85,11 @@ impl<Batch: Dim, Seq: Dim, V: Dim, M: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>
     Module<Tensor<(Batch, Seq), usize, D, T>> for Embedding<V, M, E, D>
 {
     type Output = Tensor<(Batch, Seq, M), E, D, T>;
-    type Error = D::Err;
 
     fn try_forward(
         &self,
         input: Tensor<(Batch, Seq), usize, D, T>,
-    ) -> Result<Self::Output, D::Err> {
+    ) -> Result<Self::Output, crate::tensor::Error> {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).try_gather(input)
     }

@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{unique_id, Cpu, Tensor},
+    tensor::{unique_id, Cpu, Error, Tensor},
 };
 
 use num_traits::Float;
@@ -12,7 +12,7 @@ impl<E: Float + Dtype> super::DropoutKernel<E> for Cpu {
         &self,
         op: super::DropoutKernelOp,
         inp: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let mut rng = StdRng::seed_from_u64(op.seed);
         let dist = Bernoulli::new(op.prob).unwrap();
         let mut out = Tensor {
@@ -39,7 +39,7 @@ impl<E: Float + Dtype> super::DropoutKernel<E> for Cpu {
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut rng = StdRng::seed_from_u64(op.seed);
         let dist = Bernoulli::new(op.prob).unwrap();
         debug_assert_eq!(grad_inp.len(), grad_out.len());

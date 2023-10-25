@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
     tensor_ops::reduction_utils::*,
 };
 
@@ -51,7 +51,7 @@ where
         &self,
         dst: Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
@@ -103,7 +103,7 @@ where
         grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {

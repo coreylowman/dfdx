@@ -7,8 +7,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::nn::Module<Tensor<S
     for Abs
 {
     type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
         x.try_abs()
     }
 }

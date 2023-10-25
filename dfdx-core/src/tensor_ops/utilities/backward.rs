@@ -4,19 +4,19 @@ use crate::tensor::*;
 /// Runs backprop algorithm with all operations contained in the tape that `t` has.
 ///
 /// This function takes ownership of `self` and returns [Gradients].
-pub trait Backward<E, D: Storage<E>>: HasErr {
+pub trait Backward<E, D: Storage<E>>: Sized {
     /// Runs backprop
     fn backward(self) -> Gradients<E, D> {
         self.try_backward().unwrap()
     }
     /// Fallible version of [Backward::backward]
-    fn try_backward(self) -> Result<Gradients<E, D>, Self::Err>;
+    fn try_backward(self) -> Result<Gradients<E, D>, Error>;
 }
 
 impl<E: 'static + Clone, D: OneFillStorage<E>> Backward<E, D>
     for Tensor<Rank0, E, D, OwnedTape<E, D>>
 {
-    fn try_backward(self) -> Result<Gradients<E, D>, Self::Err> {
+    fn try_backward(self) -> Result<Gradients<E, D>, Error> {
         let (t, mut tape) = self.split_tape();
         let t_ghost = t.ghost();
         tape.add_backward_op(move |grads| {
@@ -33,7 +33,7 @@ impl<E: 'static + Clone, D: OneFillStorage<E>> Backward<E, D>
 impl<E: 'static + Clone, D: OneFillStorage<E>> Backward<E, D>
     for Tensor<Rank0, E, D, std::sync::Arc<std::sync::Mutex<OwnedTape<E, D>>>>
 {
-    fn try_backward(self) -> Result<Gradients<E, D>, Self::Err> {
+    fn try_backward(self) -> Result<Gradients<E, D>, Error> {
         let (t, tape) = self.split_tape();
         let t_ghost = t.ghost();
         let mut tape = tape.lock().unwrap();

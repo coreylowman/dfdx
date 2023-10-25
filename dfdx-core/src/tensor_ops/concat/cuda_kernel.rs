@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
 };
 use cudarc::{
     driver::{DeviceSlice, LaunchAsync},
@@ -13,7 +13,7 @@ impl<E: Dtype + CudaTypeName> super::ConcatKernel<E> for Cuda {
         &self,
         a: &Tensor<A, E, Self>,
         b: &Tensor<B, E, Self>,
-    ) -> Result<Tensor<A::Catted, E, Self>, Self::Err>
+    ) -> Result<Tensor<A::Catted, E, Self>, Error>
     where
         A: super::ConcatShape<B>,
     {
@@ -33,7 +33,7 @@ impl<E: Dtype + CudaTypeName> super::ConcatKernel<E> for Cuda {
         grad_a: &mut Self::Vec,
         grad_b: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let module_name = std::format!("concat_bwd_{}", E::NAME);
         if !self.dev.has_func(&module_name, "concat_bwd") {
             let src = BWD_KERNEL.replace("$Ty", E::NAME);

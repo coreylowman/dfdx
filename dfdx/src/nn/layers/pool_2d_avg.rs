@@ -32,9 +32,8 @@ impl<K: Dim, S: Dim, P: Dim, L: Dim, Img: TryPool2D<K, S, P, L>> Module<Img>
     for AvgPool2D<K, S, P, L>
 {
     type Output = Img::Pooled;
-    type Error = Img::Error;
 
-    fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Img) -> Result<Self::Output, Error> {
         x.try_pool2d(
             crate::tensor_ops::Pool2DKind::Avg,
             self.kernel_size,

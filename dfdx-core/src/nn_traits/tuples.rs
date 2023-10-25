@@ -1,4 +1,8 @@
-use crate::{dtypes::Dtype, tensor::UniqueId, tensor_ops::Device};
+use crate::{
+    dtypes::Dtype,
+    tensor::{Error, UniqueId},
+    tensor_ops::Device,
+};
 
 use std::vec::Vec;
 
@@ -7,7 +11,7 @@ macro_rules! tuple_impls {
 
         impl<Dev: Device<Elem>, Elem: Dtype, $($name: crate::nn_traits::BuildOnDevice<Elem, Dev>),+> crate::nn_traits::BuildOnDevice<Elem, Dev> for ($($name,)+) {
             type Built = ($($name::Built, )+);
-            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, Dev::Err> {
+            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, Error> {
                 Ok(($(
                     self.$idx.try_build_on_device(device)?,
                 )+))
@@ -38,7 +42,7 @@ macro_rules! tuple_impls {
         }
 
         impl<Dev: Device<Elem>, Elem: Dtype, $($name: crate::nn_traits::ResetParams<Elem, Dev>),+> crate::nn_traits::ResetParams<Elem, Dev> for ($($name,)+) {
-            fn try_reset_params(&mut self) -> Result<(), Dev::Err> {
+            fn try_reset_params(&mut self) -> Result<(), Error> {
                 $(self.$idx.try_reset_params()?;)+
                 Ok(())
             }
@@ -50,14 +54,14 @@ macro_rules! tuple_impls {
                 optimizer: &mut Optim,
                 gradients: &crate::prelude::Gradients<Elem, Dev>,
                 missing_tensors: &mut Vec<UniqueId>,
-            ) -> Result<(), Dev::Err> {
+            ) -> Result<(), Error> {
                 $(self.$idx.try_update_params(optimizer, gradients, missing_tensors)?;)+
                 Ok(())
             }
         }
 
         impl<Dev: Device<Elem>, Elem: Dtype, $($name: crate::nn_traits::ZeroGrads<Elem, Dev>),+> crate::nn_traits::ZeroGrads<Elem, Dev> for ($($name,)+) {
-            fn try_zero_grads(&self, grads: &mut crate::prelude::Gradients<Elem, Dev>) -> Result<(), Dev::Err> {
+            fn try_zero_grads(&self, grads: &mut crate::prelude::Gradients<Elem, Dev>) -> Result<(), Error> {
                 $(self.$idx.try_zero_grads(grads)?;)+
                 Ok(())
             }
@@ -91,20 +95,19 @@ macro_rules! tuple_impls {
         impl<
             Input,
             $last:
-            $(crate::nn_traits::Module::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )*
+            $(crate::nn_traits::Module::<$rev_tail ::Output>, $rev_tail: )*
             crate::nn_traits::Module<Input>
         > crate::nn_traits::Module<Input> for ($($name,)+) {
             type Output = $last ::Output;
-            type Error = $last ::Error;
 
             /// Calls forward sequentially on each module in the tuple.
-            fn try_forward(&self, x: Input) -> Result<Self::Output, Self::Error> {
+            fn try_forward(&self, x: Input) -> Result<Self::Output, Error> {
                 $(let x = self.$idx.try_forward(x)?;)+
                 Ok(x)
             }
 
             /// Calls forward sequentially on each module in the tuple.
-            fn try_forward_mut(&mut self, x: Input) -> Result<Self::Output, Self::Error> {
+            fn try_forward_mut(&mut self, x: Input) -> Result<Self::Output, Error> {
                 $(let x = self.$idx.try_forward_mut(x)?;)+
                 Ok(x)
             }

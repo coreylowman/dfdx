@@ -2,20 +2,17 @@
 
 use crate::{
     shapes::*,
-    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Error, Tensor},
 };
 
-use super::{CachableVec, Cpu, CpuError, LendingIterator};
+use super::{CachableVec, Cpu, LendingIterator};
 
 use rand::{distributions::Distribution, Rng};
 use std::{sync::Arc, vec::Vec};
 
 impl Cpu {
     #[inline]
-    pub(crate) fn try_alloc_zeros<E: Unit>(
-        &self,
-        numel: usize,
-    ) -> Result<CachableVec<E>, CpuError> {
+    pub(crate) fn try_alloc_zeros<E: Unit>(&self, numel: usize) -> Result<CachableVec<E>, Error> {
         self.try_alloc_elem::<E>(numel, Default::default())
     }
 
@@ -24,14 +21,14 @@ impl Cpu {
         &self,
         numel: usize,
         elem: E,
-    ) -> Result<CachableVec<E>, CpuError> {
-        let data = self.cache.try_pop::<E>(numel).map_or_else(
+    ) -> Result<CachableVec<E>, Error> {
+        let data: Result<Vec<E>, Error> = self.cache.try_pop::<E>(numel).map_or_else(
             #[cfg(feature = "fast-alloc")]
             || Ok(std::vec![elem; numel]),
             #[cfg(not(feature = "fast-alloc"))]
             || {
                 let mut data: Vec<E> = Vec::new();
-                data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
+                data.try_reserve(numel).map_err(|_| Error::OutOfMemory)?;
                 data.resize(numel, elem);
                 Ok(data)
             },
@@ -48,17 +45,17 @@ impl Cpu {
                 data.fill(elem);
                 Ok(data)
             },
-        )?;
+        );
 
         Ok(CachableVec {
-            data,
+            data: data?,
             cache: self.cache.clone(),
         })
     }
 }
 
 impl<E: Unit> ZerosTensor<E> for Cpu {
-    fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
         let data = self.try_alloc_zeros::<E>(shape.num_elements())?;
@@ -75,14 +72,14 @@ impl<E: Unit> ZerosTensor<E> for Cpu {
 }
 
 impl<E: Unit> ZeroFillStorage<E> for Cpu {
-    fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Self::Err> {
+    fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         storage.fill(Default::default());
         Ok(())
     }
 }
 
 impl<E: Unit> OnesTensor<E> for Cpu {
-    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
         let data = self.try_alloc_elem::<E>(shape.num_elements(), E::ONE)?;
@@ -104,7 +101,7 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
         src: &S,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
         let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
@@ -126,7 +123,7 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
         src: &S,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
         let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
@@ -145,7 +142,7 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
 }
 
 impl<E: Unit> OneFillStorage<E> for Cpu {
-    fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Self::Err> {
+    fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         storage.fill(E::ONE);
         Ok(())
     }
@@ -156,7 +153,7 @@ impl<E: Unit> SampleTensor<E> for Cpu {
         &self,
         src: &S,
         distr: D,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let mut tensor = self.try_zeros_like(src)?;
         {
             #[cfg(not(feature = "no-std"))]
@@ -173,7 +170,7 @@ impl<E: Unit> SampleTensor<E> for Cpu {
         &self,
         storage: &mut Self::Vec,
         distr: D,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         {
             #[cfg(not(feature = "no-std"))]
             let mut rng = self.rng.lock().unwrap();
@@ -201,11 +198,11 @@ impl<E: Unit> TensorFromVec<E> for Cpu {
         &self,
         src: Vec<E>,
         shape: S,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let num_elements = shape.num_elements();
 
         if src.len() != num_elements {
-            Err(CpuError::WrongNumElements)
+            Err(Error::WrongNumElements)
         } else {
             let src = CachableVec {
                 data: src,

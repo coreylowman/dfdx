@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<E, D>> Tens
         self.try_sigmoid().unwrap()
     }
     /// See [sigmoid]
-    pub fn try_sigmoid(self) -> Result<Self, D::Err> {
+    pub fn try_sigmoid(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(SigmoidKernelOp, self)
     }
 }

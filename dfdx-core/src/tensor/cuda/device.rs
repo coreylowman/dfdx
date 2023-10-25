@@ -1,7 +1,7 @@
 use crate::shapes::{Shape, Unit};
-use crate::tensor::cpu::{Cpu, CpuError};
+use crate::tensor::cpu::Cpu;
 use crate::tensor::{
-    cache::TensorCache, Cache, HasErr, NoneTape, RandomU64, Storage, Synchronize, Tensor,
+    cache::TensorCache, Cache, Error, NoneTape, RandomU64, Storage, Synchronize, Tensor,
 };
 
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
@@ -32,37 +32,22 @@ pub struct Cuda {
     pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
 }
 
-#[derive(Debug)]
-pub enum CudaError {
-    Blas(CublasError),
-    #[cfg(feature = "cudnn")]
-    Cudnn(cudarc::cudnn::CudnnError),
-    Driver(DriverError),
-    Cpu(CpuError),
-}
-
-impl From<CpuError> for CudaError {
-    fn from(value: CpuError) -> Self {
-        Self::Cpu(value)
-    }
-}
-
-impl From<CublasError> for CudaError {
+impl From<CublasError> for Error {
     fn from(value: CublasError) -> Self {
-        Self::Blas(value)
+        Self::CublasError(value)
     }
 }
 
-impl From<DriverError> for CudaError {
+impl From<DriverError> for Error {
     fn from(value: DriverError) -> Self {
-        Self::Driver(value)
+        Self::CudaDriverError(value)
     }
 }
 
 #[cfg(feature = "cudnn")]
-impl From<cudarc::cudnn::CudnnError> for CudaError {
+impl From<cudarc::cudnn::CudnnError> for Error {
     fn from(value: cudarc::cudnn::CudnnError) -> Self {
-        Self::Cudnn(value)
+        Self::CudnnError(value)
     }
 }
 
@@ -79,12 +64,12 @@ impl Cuda {
     }
 
     /// Constructs rng with the given seed.
-    pub fn try_seed_from_u64(seed: u64) -> Result<Self, CudaError> {
+    pub fn try_seed_from_u64(seed: u64) -> Result<Self, Error> {
         Self::try_build(0, seed)
     }
 
     /// Constructs with the given seed & device ordinal
-    pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
+    pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, Error> {
         let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
@@ -112,7 +97,7 @@ impl Cuda {
     pub(crate) unsafe fn alloc_empty<E: DeviceRepr>(
         &self,
         len: usize,
-    ) -> Result<CudaSlice<E>, CudaError> {
+    ) -> Result<CudaSlice<E>, Error> {
         let data = self.cache.try_pop::<E>(len).map_or_else(
             || self.dev.alloc::<E>(len),
             |ptr| Ok(self.dev.upgrade_device_ptr(ptr, len)),
@@ -123,7 +108,7 @@ impl Cuda {
     pub(crate) unsafe fn get_workspace<E>(
         &self,
         len: usize,
-    ) -> Result<MutexGuard<CudaSlice<u8>>, CudaError> {
+    ) -> Result<MutexGuard<CudaSlice<u8>>, Error> {
         let num_bytes_required = len * std::mem::size_of::<E>();
         let mut workspace = self.workspace.as_ref().lock().unwrap();
 
@@ -135,16 +120,6 @@ impl Cuda {
 
         Ok(workspace)
     }
-}
-
-impl std::fmt::Display for CudaError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl HasErr for Cuda {
-    type Err = CudaError;
 }
 
 /// A [CudaSlice] that can be cloned without allocating new memory.
@@ -246,17 +221,17 @@ impl RandomU64 for Cuda {
 }
 
 impl Cache for Cuda {
-    fn try_enable_cache(&self) -> Result<(), Self::Err> {
+    fn try_enable_cache(&self) -> Result<(), Error> {
         self.cache.enable();
         Ok(())
     }
 
-    fn try_disable_cache(&self) -> Result<(), Self::Err> {
+    fn try_disable_cache(&self) -> Result<(), Error> {
         self.cache.disable();
         self.try_empty_cache()
     }
 
-    fn try_empty_cache(&self) -> Result<(), Self::Err> {
+    fn try_empty_cache(&self) -> Result<(), Error> {
         #[cfg(not(feature = "no-std"))]
         let mut cache = self.cache.allocations.write().unwrap();
         #[cfg(feature = "no-std")]
@@ -273,15 +248,15 @@ impl Cache for Cuda {
 }
 
 impl Synchronize for Cuda {
-    fn try_synchronize(&self) -> Result<(), CudaError> {
-        self.dev.synchronize().map_err(CudaError::from)
+    fn try_synchronize(&self) -> Result<(), Error> {
+        self.dev.synchronize().map_err(Error::from)
     }
 }
 
 impl<E: Unit> Storage<E> for Cuda {
     type Vec = CachableCudaSlice<E>;
 
-    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Self::Err> {
+    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error> {
         let mut data = unsafe { self.alloc_empty(len) }?;
         self.dev.memset_zeros(&mut data)?;
         Ok(CachableCudaSlice {

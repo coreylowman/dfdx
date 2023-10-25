@@ -1,7 +1,7 @@
 use crate::{
     dtypes::{Dtype, NotMixedPrecision},
     shapes::{Axes, HasAxes, ReduceShapeTo, Shape},
-    tensor::{Cpu, Tensor, Tensorlike, ZerosTensor},
+    tensor::{Cpu, Error, Tensor, Tensorlike, ZerosTensor},
     tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
 
@@ -11,7 +11,7 @@ impl super::SumKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
         &self,
         dst: Dst,
         inp: &Tensor<Src, crate::dtypes::AMP<crate::dtypes::f16>, Self>,
-    ) -> Result<Tensor<Dst, crate::dtypes::AMP<crate::dtypes::f16>, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, crate::dtypes::AMP<crate::dtypes::f16>, Self>, Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
@@ -46,7 +46,7 @@ impl super::SumKernel<crate::dtypes::AMP<crate::dtypes::f16>> for Cpu {
         inp: &impl Tensorlike<Src, crate::dtypes::AMP<crate::dtypes::f16>, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
@@ -75,7 +75,7 @@ impl<E: Dtype + NotMixedPrecision> super::SumKernel<E> for Cpu {
         &self,
         dst: Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
@@ -108,7 +108,7 @@ impl<E: Dtype + NotMixedPrecision> super::SumKernel<E> for Cpu {
         inp: &impl Tensorlike<Src, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {

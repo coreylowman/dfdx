@@ -4,7 +4,7 @@ use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
+    tensor::{launch_cfg, Cuda, Error, Tensor, Tensorlike},
 };
 
 use std::sync::Arc;
@@ -73,7 +73,7 @@ where
     Self: HasCudaKernel<E>,
     CudaBlas: Gemm<E>,
 {
-    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Error> {
         let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         Ok(self.build_tensor(shape, shape.strides(), data))
     }
@@ -83,7 +83,7 @@ where
         img: &Tensor<L, E, Self>,
         fil: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
@@ -152,7 +152,7 @@ where
         grad_rhs: &mut Self::Vec,
         _: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let patches_item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
         let patches_numel = op.batch * patches_item_numel;
         let filters_numel = op.groups

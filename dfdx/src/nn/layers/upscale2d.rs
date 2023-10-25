@@ -18,9 +18,7 @@ impl<H: Dim, W: Dim, M: UpscaleMethod, Img: GenericUpscale2D<M>> Module<Img>
     for Upscale2D<H, W, M>
 {
     type Output = Img::Output<H, W>;
-    type Error = Img::Err;
-
-    fn try_forward(&self, x: Img) -> Result<Self::Output, Img::Err> {
+    fn try_forward(&self, x: Img) -> Result<Self::Output, Error> {
         x.generic_upscale2d_like(self.method, self.out_height, self.out_width)
     }
 }
@@ -45,9 +43,7 @@ where
     D: Device<E> + Upscale2DKernel<E, M>,
 {
     type Output = Tensor<(C, H::Output, W::Output), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, x: Tensor<(C, H, W), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(C, H, W), E, D, T>) -> Result<Self::Output, Error> {
         let (_c, h, w) = *x.shape();
         let h = h * self.height_factor;
         let w = w * self.width_factor;
@@ -66,9 +62,7 @@ where
     T: 'static + Tape<E, D>,
 {
     type Output = Tensor<(B, C, H::Output, W::Output), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, x: Tensor<(B, C, H, W), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(B, C, H, W), E, D, T>) -> Result<Self::Output, Error> {
         let (_b, _c, h, w) = *x.shape();
         let h = h * self.height_factor;
         let w = w * self.width_factor;

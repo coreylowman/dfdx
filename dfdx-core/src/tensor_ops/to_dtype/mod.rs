@@ -2,10 +2,10 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use crate::prelude::{Shape, Storage, Tensor, Unit};
+use crate::prelude::{Error, Shape, Storage, Tensor, Unit};
 
 pub trait ToDtypeKernel<E1: Unit, E2: Unit>: Storage<E1> + Storage<E2> {
-    fn forward<S: Shape>(inp: Tensor<S, E1, Self>) -> Result<Tensor<S, E2, Self>, Self::Err>;
+    fn forward<S: Shape>(inp: Tensor<S, E1, Self>) -> Result<Tensor<S, E2, Self>, Error>;
 }
 
 /// Copies the elements of a tensor, converting its data to a different dtype.
@@ -29,7 +29,7 @@ pub fn to_dtype<E2: Unit, S: Shape, E1: Unit, D: ToDtypeKernel<E1, E2>>(
 }
 
 impl<S: Shape, E: Unit, D: Storage<E>> Tensor<S, E, D> {
-    pub fn try_to_dtype<E2: Unit>(self) -> Result<Tensor<S, E2, D>, D::Err>
+    pub fn try_to_dtype<E2: Unit>(self) -> Result<Tensor<S, E2, D>, crate::tensor::Error>
     where
         D: ToDtypeKernel<E, E2>,
     {

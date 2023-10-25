@@ -10,7 +10,7 @@ pub trait MinReduceKernel<E: Dtype>: Storage<E> {
         &self,
         dst: Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
@@ -19,13 +19,13 @@ pub trait MinReduceKernel<E: Dtype>: Storage<E> {
         grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReduceShapeTo<Dst, Ax>;
 }
 
 /// Reduction along multiple axes using `min`.
-pub trait MinTo: HasErr + HasShape {
+pub trait MinTo: Sized + HasShape {
     /// Min reduction. **Pytorch equivalent**: `t.amin(Ax)`
     ///
     /// **NOTE** This evenly distributes gradients between all equal maximum values, instead
@@ -55,13 +55,13 @@ pub trait MinTo: HasErr + HasShape {
         self.try_min().unwrap()
     }
     /// Fallible version of [MinTo::min]
-    fn try_min<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_min<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
 impl<S: Shape, E: Dtype, D: MinReduceKernel<E>, T: Tape<E, D>> MinTo for Tensor<S, E, D, T> {
-    fn try_min<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_min<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Error>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {

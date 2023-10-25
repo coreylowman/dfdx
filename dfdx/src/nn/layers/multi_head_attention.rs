@@ -64,7 +64,6 @@ where
     T: Tape<E, D>,
 {
     type Output = Tensor<(S1, M), E, D, T>;
-    type Error = D::Err;
 
     /// Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn try_forward(
@@ -74,7 +73,7 @@ where
             Tensor<(S2, M), E, D>,
             Tensor<(S2, M), E, D>,
         ),
-    ) -> Result<Self::Output, D::Err> {
+    ) -> Result<Self::Output, crate::tensor::Error> {
         assert_eq!(k.shape().0, v.shape().0);
         let (s1, m) = *q.shape();
         let s2 = k.shape().0;
@@ -101,7 +100,6 @@ where
     T: Tape<E, D>,
 {
     type Output = Tensor<(B, S1, M), E, D, T>;
-    type Error = D::Err;
 
     /// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn try_forward(
@@ -111,7 +109,7 @@ where
             Tensor<(B, S2, M), E, D>,
             Tensor<(B, S2, M), E, D>,
         ),
-    ) -> Result<Self::Output, D::Err> {
+    ) -> Result<Self::Output, crate::tensor::Error> {
         assert_eq!(q.shape().0, k.shape().0);
         assert_eq!(q.shape().0, v.shape().0);
         assert_eq!(k.shape().1, v.shape().1);
@@ -153,12 +151,11 @@ where
     E: Dtype,
     D: Device<E>,
     Src: SplitTape,
-    Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src, Error = D::Err>,
+    Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
 {
     type Output = Src;
-    type Error = D::Err;
 
-    fn try_forward(&self, src: Src) -> Result<Self::Output, D::Err> {
+    fn try_forward(&self, src: Src) -> Result<Self::Output, crate::tensor::Error> {
         let (src, tape) = src.split_tape();
         self.try_forward((src.clone().put_tape(tape), src.clone(), src))
     }

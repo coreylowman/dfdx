@@ -33,7 +33,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<SinKernelOp, E>, T: Tape<E, D>> Tensor<S
         self.try_sin().unwrap()
     }
     /// See [sin]
-    pub fn try_sin(self) -> Result<Self, D::Err> {
+    pub fn try_sin(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(SinKernelOp, self)
     }
 }

@@ -12,7 +12,7 @@ impl Default for PReLUConfig {
 
 impl<E: Dtype, D: Device<E>> BuildOnDevice<E, D> for PReLUConfig {
     type Built = PReLU<E, D>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         let a = device.try_tensor(E::from_f64(self.0).unwrap())?;
         Ok(PReLU { a })
     }
@@ -28,16 +28,14 @@ pub struct PReLU<Elem: Dtype, Dev: Device<Elem>> {
 
 impl<E: Dtype, D: Device<E>> ResetParams<E, D> for PReLU<E, D> {
     /// Does nothing.
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         Ok(())
     }
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for PReLU<E, D> {
     type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
         let a = self.a.retaped::<T>().broadcast_like(&x);
         x.try_prelu(a)
     }

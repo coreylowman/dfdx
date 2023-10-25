@@ -14,9 +14,11 @@ where
     <<C as Mul<H>>::Output as Mul<W>>::Output: Dim,
 {
     type Output = Tensor<(<<C as Mul<H>>::Output as Mul<W>>::Output,), E, D, T>;
-    type Error = D::Err;
 
-    fn try_forward(&self, input: Tensor<(C, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(
+        &self,
+        input: Tensor<(C, H, W), E, D, T>,
+    ) -> Result<Self::Output, crate::tensor::Error> {
         let (c, h, w) = *input.shape();
         let dst = (c * h * w,);
         input.try_reshape_like(&dst)
@@ -31,12 +33,11 @@ where
     <<C as Mul<H>>::Output as Mul<W>>::Output: Dim,
 {
     type Output = Tensor<(Batch, <<C as Mul<H>>::Output as Mul<W>>::Output), E, D, T>;
-    type Error = D::Err;
 
     fn try_forward(
         &self,
         input: Tensor<(Batch, C, H, W), E, D, T>,
-    ) -> Result<Self::Output, D::Err> {
+    ) -> Result<Self::Output, crate::tensor::Error> {
         let (batch, c, h, w) = *input.shape();
         let dst = (batch, c * h * w);
         input.try_reshape_like(&dst)

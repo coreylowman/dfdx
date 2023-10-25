@@ -28,7 +28,7 @@ pub type LayerNorm1DConstConfig<const M: usize> = LayerNorm1DConfig<Const<M>>;
 
 impl<M: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LayerNorm1DConfig<M> {
     type Built = LayerNorm1D<M, E, D>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         Ok(LayerNorm1D {
             gamma: device.try_ones_like(&(self.0,))?,
             beta: device.try_zeros_like(&(self.0,))?,
@@ -51,7 +51,7 @@ pub struct LayerNorm1D<M: Dim, Elem: Dtype, Dev: Device<Elem>> {
 }
 
 impl<M: Dim, E: Dtype, D: Device<E>> ResetParams<E, D> for LayerNorm1D<M, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         self.gamma.try_fill_with_ones()?;
         self.beta.try_fill_with_zeros()
     }
@@ -61,8 +61,7 @@ impl<M: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(M,), E, D, T>
     for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<(M,), E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<(M,), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(M,), E, D, T>) -> Result<Self::Output, Error> {
         x.try_normalize(self.epsilon)?
             .try_mul(self.gamma.clone())?
             .try_add(self.beta.clone())
@@ -73,8 +72,7 @@ impl<Batch: Dim, M: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(B
     for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<(Batch, M), E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<(Batch, M), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(Batch, M), E, D, T>) -> Result<Self::Output, Error> {
         let x = x.try_normalize::<Axis<1>>(self.epsilon)?;
         let x = self.gamma.retaped::<T>().broadcast_like(&x).try_mul(x)?;
         self.beta.retaped::<T>().broadcast_like(&x).try_add(x)
@@ -85,11 +83,7 @@ impl<Batch: Dim, Seq: Dim, M: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(Batch, Seq, M), E, D, T>> for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<(Batch, Seq, M), E, D, T>;
-    type Error = D::Err;
-    fn try_forward(
-        &self,
-        x: Tensor<(Batch, Seq, M), E, D, T>,
-    ) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(Batch, Seq, M), E, D, T>) -> Result<Self::Output, Error> {
         let x = x.try_normalize::<Axis<2>>(self.epsilon)?;
         let x = self.gamma.retaped::<T>().broadcast_like(&x).try_mul(x)?;
         self.beta.retaped::<T>().broadcast_like(&x).try_add(x)

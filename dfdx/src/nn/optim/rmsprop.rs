@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{Gradients, Storage, Tensor, Tensorlike, UniqueId},
+    tensor::{Error, Gradients, Storage, Tensor, Tensorlike, UniqueId},
     tensor_ops::{Device, RMSpropConfig},
 };
 
@@ -66,7 +66,7 @@ impl<M, E: Dtype, D: Device<E>> crate::nn::Optimizer<M, E, D> for RMSprop<M, E, 
         t: &mut Tensor<S, E, D>,
         gradients: &Gradients<E, D>,
         missing_params: &mut Vec<UniqueId>,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), Error> {
         let g = gradients.get_ref_checked(t);
         match g {
             None => missing_params.push(t.id()),
@@ -85,25 +85,17 @@ impl<M, E: Dtype, D: Device<E>> crate::nn::Optimizer<M, E, D> for RMSprop<M, E, 
         Ok(())
     }
 
-    fn update(
-        &mut self,
-        module: &mut M,
-        gradients: &Gradients<E, D>,
-    ) -> Result<(), crate::nn::OptimizerUpdateError<<D>::Err>>
+    fn update(&mut self, module: &mut M, gradients: &Gradients<E, D>) -> Result<(), Error>
     where
         M: crate::nn::UpdateParams<E, D>,
     {
         // NOTE: the rest of this is identical to default implementation of update.
         let mut missing_tensors = Vec::new();
-        module
-            .try_update_params(self, gradients, &mut missing_tensors)
-            .map_err(crate::nn::OptimizerUpdateError::DeviceError)?;
+        module.try_update_params(self, gradients, &mut missing_tensors)?;
         let r = if missing_tensors.is_empty() {
             Ok(())
         } else {
-            Err(crate::nn::OptimizerUpdateError::UnusedTensors(
-                missing_tensors,
-            ))
+            Err(Error::UnusedTensors(missing_tensors))
         };
         self.step += 1;
         r

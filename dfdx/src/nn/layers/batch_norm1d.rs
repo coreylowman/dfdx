@@ -42,7 +42,7 @@ pub type BatchNorm1DConstConfig<const C: usize> = BatchNorm1DConfig<Const<C>>;
 
 impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for BatchNorm1DConfig<C> {
     type Built = BatchNorm1D<C, E, D>;
-    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         Ok(BatchNorm1D {
             scale: device.try_ones_like(&(self.0,))?,
             bias: device.try_zeros_like(&(self.0,))?,
@@ -82,7 +82,7 @@ pub struct BatchNorm1D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
 }
 
 impl<C: Dim, E: Dtype, D: Device<E>> crate::nn::ResetParams<E, D> for BatchNorm1D<C, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+    fn try_reset_params(&mut self) -> Result<(), crate::tensor::Error> {
         self.scale.try_fill_with_ones()?;
         self.bias.try_fill_with_zeros()?;
         self.running_mean.try_fill_with_zeros()?;
@@ -94,12 +94,11 @@ impl<B: Dim, C: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     crate::nn::Module<Tensor<(B, C), E, D, T>> for BatchNorm1D<C, E, D>
 {
     type Output = Tensor<(B, C), E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<(B, C), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(B, C), E, D, T>) -> Result<Self::Output, Error> {
         assert!(!T::OWNS_TAPE);
         self.infer_fwd(x)
     }
-    fn try_forward_mut(&mut self, x: Tensor<(B, C), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: Tensor<(B, C), E, D, T>) -> Result<Self::Output, Error> {
         assert!(T::OWNS_TAPE);
         self.train_fwd(x)
     }
@@ -109,15 +108,11 @@ impl<B: Dim, C: Dim, L: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     crate::nn::Module<Tensor<(B, C, L), E, D, T>> for BatchNorm1D<C, E, D>
 {
     type Output = Tensor<(B, C, L), E, D, T>;
-    type Error = D::Err;
-    fn try_forward(&self, x: Tensor<(B, C, L), E, D, T>) -> Result<Self::Output, Self::Error> {
+    fn try_forward(&self, x: Tensor<(B, C, L), E, D, T>) -> Result<Self::Output, Error> {
         assert!(!T::OWNS_TAPE);
         self.infer_fwd(x)
     }
-    fn try_forward_mut(
-        &mut self,
-        x: Tensor<(B, C, L), E, D, T>,
-    ) -> Result<Self::Output, Self::Error> {
+    fn try_forward_mut(&mut self, x: Tensor<(B, C, L), E, D, T>) -> Result<Self::Output, Error> {
         assert!(T::OWNS_TAPE);
         self.train_fwd(x)
     }
@@ -128,7 +123,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
     fn train_fwd<S: Shape, T: Tape<E, D>, Ax: Axes>(
         &mut self,
         x: Tensor<S, E, D, T>,
-    ) -> Result<Tensor<S, E, D, T>, D::Err>
+    ) -> Result<Tensor<S, E, D, T>, crate::tensor::Error>
     where
         S: HasAxes<Ax> + ReduceShapeTo<(C,), Ax>,
     {
@@ -175,7 +170,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
     pub fn infer_fwd<S: Shape, T: Tape<E, D>, Ax: Axes>(
         &self,
         x: Tensor<S, E, D, T>,
-    ) -> Result<Tensor<S, E, D, T>, D::Err>
+    ) -> Result<Tensor<S, E, D, T>, crate::tensor::Error>
     where
         (C,): BroadcastShapeTo<S, Ax>,
     {

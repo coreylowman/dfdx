@@ -34,7 +34,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ReLUKernelOp, E>, T: Tape<E, D>> Tensor<
         self.try_relu().unwrap()
     }
     /// See [relu]
-    pub fn try_relu(self) -> Result<Self, D::Err> {
+    pub fn try_relu(self) -> Result<Self, crate::tensor::Error> {
         try_unary_op(ReLUKernelOp, self)
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Axes, Dtype, HasAxes, ReduceShapeTo, Shape},
-    tensor::{Cpu, Tensor, ZerosTensor},
+    tensor::{Cpu, Error, Tensor, ZerosTensor},
     tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
 
@@ -11,7 +11,7 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
         &self,
         dst: Dst,
         inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
+    ) -> Result<Tensor<Dst, E, Self>, Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
@@ -44,7 +44,7 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
         grad_inp: &mut Self::Vec,
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err>
+    ) -> Result<(), Error>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {

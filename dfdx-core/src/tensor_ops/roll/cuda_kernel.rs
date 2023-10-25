@@ -32,7 +32,7 @@ where
         &self,
         op: super::RollOp,
         inp: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         if !self.dev.has_func(Self::FNS[0], Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::FNS[0], Self::FNS)?;
         }
@@ -66,7 +66,7 @@ where
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let numel = inp.shape.num_elements();
         let strides = inp.shape.strides();
 

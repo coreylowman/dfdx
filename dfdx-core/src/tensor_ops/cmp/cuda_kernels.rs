@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::Shape,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
 };
 use cudarc::driver::{CudaSlice, LaunchAsync};
 
@@ -39,7 +39,7 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
         &self,
         lhs: &Tensor<S, E, Self, T>,
         rhs: &Tensor<S, E, Self, T>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
                 .load_ptx(Op::PTX_SRC.into(), Op::MODULE_NAME, &[Op::FWD_FN_NAME])?;
@@ -80,7 +80,7 @@ impl<E: Unit, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
         &self,
         lhs: &Tensor<S, E, Self, T>,
         scalar: E,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
                 .load_ptx(Op::PTX_SRC.into(), Op::MODULE_NAME, &[Op::FWD_FN_NAME])?;

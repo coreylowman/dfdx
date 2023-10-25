@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
 };
 
 use std::sync::Arc;
@@ -71,7 +71,7 @@ where
         op: super::Upscale2DOp,
         inp: &Tensor<I, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::FWD, Self::FWD) {
             self.dev
                 .load_ptx(PTX_SRC.into(), Self::FWD, &[Self::FWD, Self::BWD])?;
@@ -96,7 +96,7 @@ where
         grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
         let bwd_fn = self.dev.get_func(Self::FWD, Self::BWD).unwrap();
         let cfg = launch_cfg::<128>(out.shape().num_elements() as u32);

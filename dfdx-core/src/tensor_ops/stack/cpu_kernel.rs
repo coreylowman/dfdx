@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{unique_id, Cpu, Tensor},
+    tensor::{unique_id, Cpu, Error, Tensor},
 };
 
 use std::vec::Vec;
@@ -10,7 +10,7 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
         &self,
         num: Num,
         inp: &[Tensor<S, E, Self>],
-    ) -> Result<Tensor<S::Larger, E, Self>, Self::Err>
+    ) -> Result<Tensor<S::Larger, E, Self>, Error>
     where
         S: super::AddDim<Num>,
     {
@@ -52,7 +52,7 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
         &self,
         mut grad_inp: Vec<&mut Self::Vec>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let mut offset = 0;
         for item in grad_inp.drain(..) {
             for gi in item.iter_mut() {

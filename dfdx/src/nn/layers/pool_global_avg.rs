@@ -23,9 +23,10 @@ impl<C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(C, H, W), E, D, T>> for AvgPoolGlobal
 {
     type Output = Tensor<(C,), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, input: Tensor<(C, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(
+        &self,
+        input: Tensor<(C, H, W), E, D, T>,
+    ) -> Result<Self::Output, crate::tensor::Error> {
         input.try_mean()
     }
 }
@@ -34,9 +35,10 @@ impl<B: Dim, C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, C, H, W), E, D, T>> for AvgPoolGlobal
 {
     type Output = Tensor<(B, C), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, input: Tensor<(B, C, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(
+        &self,
+        input: Tensor<(B, C, H, W), E, D, T>,
+    ) -> Result<Self::Output, crate::tensor::Error> {
         input.try_mean()
     }
 }

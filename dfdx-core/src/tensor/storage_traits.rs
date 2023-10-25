@@ -4,12 +4,7 @@ use std::vec::Vec;
 
 use crate::shapes::*;
 
-use super::Tensor;
-
-/// Represents something that has an error associated type
-pub trait HasErr: Sized {
-    type Err: std::fmt::Debug + std::fmt::Display;
-}
+use super::{Error, Tensor};
 
 pub trait RandomU64 {
     /// Generates a random u64 number
@@ -17,40 +12,40 @@ pub trait RandomU64 {
 }
 
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
-pub trait Storage<E>: 'static + std::fmt::Debug + Default + Clone + HasErr {
+pub trait Storage<E>: 'static + std::fmt::Debug + Default + Clone {
     /// Generic Storage type
     type Vec: 'static + std::fmt::Debug + Clone + Send + Sync;
 
     /// Allocates a gradient for the given nd array
-    fn try_alloc_grad(&self, storage: &Self::Vec) -> Result<Self::Vec, Self::Err> {
+    fn try_alloc_grad(&self, storage: &Self::Vec) -> Result<Self::Vec, Error> {
         self.try_alloc_len(self.len(storage))
     }
 
-    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Self::Err>;
+    fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error>;
 
     fn tensor_to_vec<S: Shape, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
 
     fn len(&self, v: &Self::Vec) -> usize;
 }
 
-pub trait Synchronize: HasErr {
+pub trait Synchronize {
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn synchronize(&self) {
         self.try_synchronize().unwrap()
     }
 
     /// Blocks until all work on device to complete. Useful for benchmarking.
-    fn try_synchronize(&self) -> Result<(), Self::Err>;
+    fn try_synchronize(&self) -> Result<(), Error>;
 }
 
-pub trait Cache: HasErr {
+pub trait Cache {
     /// Enables the cache of the device.
     fn enable_cache(&self) {
         self.try_enable_cache().unwrap()
     }
 
     /// Tries to enable the cache of the device.
-    fn try_enable_cache(&self) -> Result<(), Self::Err>;
+    fn try_enable_cache(&self) -> Result<(), Error>;
 
     /// Disables the cache of the device. This will also empty the cache
     /// if there are things in it. See [Cache::empty_cache] for
@@ -61,7 +56,7 @@ pub trait Cache: HasErr {
 
     /// Tries to disable the cache of the device. See [Cache::disable_cache] for
     /// details of when this is useful.
-    fn try_disable_cache(&self) -> Result<(), Self::Err>;
+    fn try_disable_cache(&self) -> Result<(), Error>;
 
     /// Empties the cache of the device.
     ///
@@ -78,18 +73,18 @@ pub trait Cache: HasErr {
 
     /// Tries to empty the cache of the device. See [Cache::empty_cache] for
     /// details of when this is useful.
-    fn try_empty_cache(&self) -> Result<(), Self::Err>;
+    fn try_empty_cache(&self) -> Result<(), Error>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.
-pub trait AllocGrad: HasErr {
+pub trait AllocGrad {
     type Gradient: 'static;
-    fn try_alloc_grad(&self) -> Result<Self::Gradient, Self::Err>;
+    fn try_alloc_grad(&self) -> Result<Self::Gradient, Error>;
 }
 
 impl<S: Shape, E, D: Storage<E>, T> AllocGrad for Tensor<S, E, D, T> {
     type Gradient = D::Vec;
-    fn try_alloc_grad(&self) -> Result<Self::Gradient, D::Err> {
+    fn try_alloc_grad(&self) -> Result<Self::Gradient, Error> {
         self.device.try_alloc_grad(self.data.as_ref())
     }
 }
@@ -143,7 +138,7 @@ pub trait ZerosTensor<E>: Storage<E> {
     }
 
     /// Fallible version of [ZerosTensor::zeros]
-    fn try_zeros<S: ConstShape>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_zeros<S: ConstShape>(&self) -> Result<Tensor<S, E, Self>, Error> {
         self.try_zeros_like::<S>(&Default::default())
     }
 
@@ -168,11 +163,11 @@ pub trait ZerosTensor<E>: Storage<E> {
     }
 
     /// Fallible version of [ZerosTensor::zeros_like]
-    fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+    fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error>;
 }
 
 pub trait ZeroFillStorage<E>: Storage<E> {
-    fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Self::Err>;
+    fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error>;
 }
 
 /// Construct tensors filled with ones.
@@ -188,7 +183,7 @@ pub trait OnesTensor<E>: Storage<E> {
     }
 
     /// Fallible version of [OnesTensor::ones]
-    fn try_ones<S: ConstShape>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_ones<S: ConstShape>(&self) -> Result<Tensor<S, E, Self>, Error> {
         self.try_ones_like::<S>(&Default::default())
     }
 
@@ -213,11 +208,11 @@ pub trait OnesTensor<E>: Storage<E> {
     }
 
     /// Fallible version of [OnesTensor::ones_like]
-    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error>;
 }
 
 pub trait OneFillStorage<E>: Storage<E> {
-    fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Self::Err>;
+    fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Error>;
 }
 
 /// Build upper & lower triangle tensors.
@@ -266,7 +261,7 @@ pub trait TriangleTensor<E>: Storage<E> {
         &self,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         self.try_upper_tri_like::<S>(&Default::default(), val, diagonal)
     }
 
@@ -286,7 +281,7 @@ pub trait TriangleTensor<E>: Storage<E> {
         src: &S,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S::Shape, E, Self>, Error>;
 
     /// Build a tensor containing the lower triangle part of each lowest 2D matrix
     /// set to the given value, along the given diagonal. The other values will be `E::default()`.
@@ -332,7 +327,7 @@ pub trait TriangleTensor<E>: Storage<E> {
         &self,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         self.try_lower_tri_like::<S>(&Default::default(), val, diagonal)
     }
 
@@ -352,7 +347,7 @@ pub trait TriangleTensor<E>: Storage<E> {
         src: &S,
         val: E,
         diagonal: impl Into<Option<isize>>,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S::Shape, E, Self>, Error>;
 }
 
 /// Constructs tensors filled with random values from a given distribution.
@@ -396,7 +391,7 @@ pub trait SampleTensor<E>: Storage<E> {
     fn try_sample<S: ConstShape, D: Distribution<E>>(
         &self,
         distr: D,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         self.try_sample_like::<S, D>(&Default::default(), distr)
     }
 
@@ -413,14 +408,14 @@ pub trait SampleTensor<E>: Storage<E> {
         &self,
         src: &S,
         distr: D,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S::Shape, E, Self>, Error>;
 
     /// Fills tensor `Storage<E>` with data from a given distribution
     fn try_fill_with_distr<D: Distribution<E>>(
         &self,
         storage: &mut Self::Vec,
         distr: D,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 pub trait TensorToArray<S: Shape, E>: Storage<E> {
@@ -457,7 +452,7 @@ pub trait TensorFromVec<E>: Storage<E> {
         &self,
         src: Vec<E>,
         shape: S,
-    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    ) -> Result<Tensor<S, E, Self>, Error>;
 }
 
 impl<S: Shape, E, D: Storage<E>, T> Tensor<S, E, D, T> {
@@ -470,7 +465,7 @@ impl<S: Shape, E, D: Storage<E>, T> Tensor<S, E, D, T> {
     pub fn try_to_device<Dst: TensorFromVec<E>>(
         &self,
         device: &Dst,
-    ) -> Result<Tensor<S, E, Dst>, Dst::Err> {
+    ) -> Result<Tensor<S, E, Dst>, Error> {
         let buf = self.as_vec();
         device.try_tensor_from_vec(buf, self.shape)
     }
@@ -492,23 +487,23 @@ pub trait TensorFrom<Src, S: Shape, E>: Storage<E> {
         self.try_tensor(src).unwrap()
     }
     /// Fallible version of [TensorFrom::tensor]
-    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
+    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Error>;
 }
 
 impl<E, D: TensorFromVec<E>> TensorFrom<E, Rank0, E> for D {
-    fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Error> {
         self.try_tensor_from_vec(vec![src], ())
     }
 }
 
 impl<E: Copy, const M: usize, D: TensorFromVec<E>> TensorFrom<[E; M], Rank1<M>, E> for D {
-    fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Error> {
         self.try_tensor(&src)
     }
 }
 
 impl<E: Copy, const M: usize, D: TensorFromVec<E>> TensorFrom<&[E; M], Rank1<M>, E> for D {
-    fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Error> {
         self.try_tensor_from_vec(src.to_vec(), (Const::<M>,))
     }
 }
@@ -516,7 +511,7 @@ impl<E: Copy, const M: usize, D: TensorFromVec<E>> TensorFrom<&[E; M], Rank1<M>,
 impl<E: Copy, const M: usize, const N: usize, D: TensorFromVec<E>>
     TensorFrom<[[E; N]; M], Rank2<M, N>, E> for D
 {
-    fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Error> {
         let vec: Vec<E> = src.iter().flat_map(|v| v.iter().copied()).collect();
 
         self.try_tensor_from_vec(vec, (Const::<M>, Const::<N>))
@@ -526,10 +521,7 @@ impl<E: Copy, const M: usize, const N: usize, D: TensorFromVec<E>>
 impl<E: Copy, const M: usize, const N: usize, const O: usize, D: TensorFromVec<E>>
     TensorFrom<[[[E; O]; N]; M], Rank3<M, N, O>, E> for D
 {
-    fn try_tensor(
-        &self,
-        src: [[[E; O]; N]; M],
-    ) -> Result<Tensor<Rank3<M, N, O>, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: [[[E; O]; N]; M]) -> Result<Tensor<Rank3<M, N, O>, E, Self>, Error> {
         let vec: Vec<E> = src
             .iter()
             .flat_map(|v| v.iter())
@@ -552,7 +544,7 @@ impl<
     fn try_tensor(
         &self,
         src: [[[[E; P]; O]; N]; M],
-    ) -> Result<Tensor<Rank4<M, N, O, P>, E, Self>, Self::Err> {
+    ) -> Result<Tensor<Rank4<M, N, O, P>, E, Self>, Error> {
         let vec: Vec<E> = src
             .iter()
             .flat_map(|v| v.iter())
@@ -565,13 +557,13 @@ impl<
 }
 
 impl<E, S: ConstShape, D: TensorFromVec<E>> TensorFrom<Vec<E>, S, E> for D {
-    fn try_tensor(&self, src: Vec<E>) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: Vec<E>) -> Result<Tensor<S, E, Self>, Error> {
         self.try_tensor_from_vec(src, S::default())
     }
 }
 
 impl<E, S: Shape, D: TensorFromVec<E>> TensorFrom<(Vec<E>, S), S, E> for D {
-    fn try_tensor(&self, (src, shape): (Vec<E>, S)) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_tensor(&self, (src, shape): (Vec<E>, S)) -> Result<Tensor<S, E, Self>, Error> {
         self.try_tensor_from_vec(src, shape)
     }
 }

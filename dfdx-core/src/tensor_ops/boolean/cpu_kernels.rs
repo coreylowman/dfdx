@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Shape, Unit},
-    tensor::{cpu::LendingIterator, Cpu, HasErr, Tensor, ZerosTensor},
+    tensor::{cpu::LendingIterator, Cpu, Error, Tensor, ZerosTensor},
 };
 
 use super::BooleanKernel;
@@ -11,7 +11,7 @@ impl Cpu {
         op: O,
         lhs: &Tensor<S, E, Self>,
         rhs: &Tensor<S, E, Self>,
-    ) -> Result<Tensor<S, E, Self>, <Self as HasErr>::Err> {
+    ) -> Result<Tensor<S, E, Self>, Error> {
         let mut out = self.try_zeros_like(&lhs.shape)?;
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
@@ -24,10 +24,7 @@ impl Cpu {
 }
 
 impl BooleanKernel for Cpu {
-    fn not<S: Shape>(
-        &self,
-        inp: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    fn not<S: Shape>(&self, inp: &Tensor<S, bool, Self>) -> Result<Tensor<S, bool, Self>, Error> {
         let mut out = inp.clone();
         for x in out.buf_iter_mut() {
             *x = !*x;
@@ -39,7 +36,7 @@ impl BooleanKernel for Cpu {
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         self.eval_binary(|l, r| l && r, lhs, rhs)
     }
 
@@ -47,7 +44,7 @@ impl BooleanKernel for Cpu {
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         self.eval_binary(|l, r| l || r, lhs, rhs)
     }
 
@@ -55,7 +52,7 @@ impl BooleanKernel for Cpu {
         &self,
         lhs: &Tensor<S, bool, Self>,
         rhs: &Tensor<S, bool, Self>,
-    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Error> {
         self.eval_binary(|l, r| l ^ r, lhs, rhs)
     }
 }

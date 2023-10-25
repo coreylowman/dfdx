@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Error, Tensor},
 };
 
 use std::sync::Arc;
@@ -51,7 +51,7 @@ impl<E: Dtype> super::Pool2DKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Error> {
         let data = unsafe { self.alloc_empty::<E>(s.num_elements()) }?;
         Ok(self.build_tensor(s, s.strides(), data))
     }
@@ -60,7 +60,7 @@ where
         op: super::Pool2DOp,
         inp: &Tensor<I, E, Self>,
         out: &mut Tensor<O, E, Self>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         if !self.dev.has_func(Self::FWD, Self::FWD) {
             self.dev
                 .load_ptx(PTX_SRC.into(), Self::FWD, &[Self::FWD, Self::BWD])?;
@@ -87,7 +87,7 @@ where
         grad_inp: &mut Self::Vec,
         out: &Tensor<O, E, Self>,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
         let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides).into())?;
         let bwd_fn = self.dev.get_func(Self::FWD, Self::BWD).unwrap();

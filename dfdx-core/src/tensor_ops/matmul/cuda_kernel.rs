@@ -1,7 +1,7 @@
 use crate::{
     dtypes::*,
     shapes::*,
-    tensor::{cuda::Cuda, Tensor},
+    tensor::{cuda::Cuda, Error, Tensor},
 };
 
 use cudarc::{
@@ -245,7 +245,7 @@ where
         &self,
         lhs: &Tensor<(M, K), E, Self>,
         rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(M, N), E, Self>, Error> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let shape = (m, n);
@@ -275,7 +275,7 @@ where
         rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let strides = (m, n).strides();
@@ -320,7 +320,7 @@ where
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
         rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(B, M, N), E, Self>, Error> {
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let shape = (batch, m, n);
@@ -347,7 +347,7 @@ where
         rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let strides = (batch, m, n).strides();
@@ -396,7 +396,7 @@ where
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
         rhs: &Tensor<(B, K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(B, M, N), E, Self>, Error> {
         assert_ne!(lhs.strides[0], 0);
         assert_ne!(rhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
@@ -425,7 +425,7 @@ where
         rhs: &Tensor<(B, K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
         let strides = (batch, m, n).strides();
@@ -470,7 +470,7 @@ where
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
         rhs: &Tensor<(B, S, K, N), E, Self>,
-    ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err> {
+    ) -> Result<Tensor<(B, S, M, N), E, Self>, Error> {
         assert_ne!(lhs.strides[0], 0);
         assert_ne!(rhs.strides[0], 0);
         assert_ne!(lhs.strides[1], 0);
@@ -527,7 +527,7 @@ where
         rhs: &Tensor<(B, S, K, N), E, Self>,
         grad_rhs: &mut Self::Vec,
         grad_out: &Self::Vec,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Error> {
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
         let strides = (batch, seq, m, n).strides();

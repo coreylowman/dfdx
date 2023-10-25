@@ -55,7 +55,7 @@ pub trait RMSpropKernel<E: Dtype>: Storage<E> {
         square_avg: &mut Self::Vec,
         grad_avg: &mut Self::Vec,
         grad: &Self::Vec,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Error>;
 }
 
 impl RMSpropConfig {
@@ -67,7 +67,7 @@ impl RMSpropConfig {
         square_avg: &mut D::Vec,
         grad_avg: &mut D::Vec,
         grad: &D::Vec,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), crate::tensor::Error> {
         param.device.rmsprop_kernel(
             self,
             std::sync::Arc::make_mut(&mut param.data),
