@@ -113,7 +113,6 @@ extern crate no_std_compat as std;
 
 pub mod data;
 pub mod dtypes;
-pub mod feature_flags;
 pub mod losses;
 pub mod nn_traits;
 pub mod shapes;

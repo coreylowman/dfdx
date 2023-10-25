@@ -1,4 +1,107 @@
-//! # Architecture Configuration vs Models
+//! # dfdx
+//!
+//! dfdx is a cuda accelerated tensor and neural network library, writtten
+//! entirely in rust!
+//!
+//! Additionally, it can track compile time shapes across tensor operations,
+//! ensuring that all your neural networks are checked **at compile time**.
+//!
+//! The following sections provide some high level core concepts & examples, and
+//! there is more detailed documentation in each of dfdx's submodules.
+//!
+//! See [feature_flags] for more information on features.
+//!
+//! # Shapes & Tensors
+//!
+//! *See [dtypes], [shapes], and [tensor] for more information.*
+//!
+//! At its core a [`tensor::Tensor`] is just a nd-array. Just like
+//! rust arrays there are two parts:
+//! 1. Shape ([shapes])
+//! 2. Dtype ([dtypes])
+//!
+//! dfdx represents shapes as **tuples** of dimensions ([`shapes::Dim`]),
+//! where a dimension can either be known at:
+//! 1. Compile time [`shapes::Const<M>`]
+//! 2. Run time [`usize`]
+//!
+//! You can freely mix and match these dimensions together. Here are some
+//! example shapes:
+//! - `()` - unit shape
+//! - `(usize,)` - 1d shape with a runtime known dimension
+//! - `(usize, Const<5>)` - 2d shape with both types of dimensions
+//! - `(Const<3>, usize, Const<5>)` - 3d shape!
+//! - `Rank3<3, 5, 7>` - Equivalent to `(Const<3>, Const<5>, Const<7>)`
+//!
+//! Here are some comparisons between representing nd arrays in rust vs dfdx:
+//!
+//! | rust array | dfdx `Tensor` |
+//! | --- | --- |
+//! | f32 | Tensor<(), f32, ...> |
+//! | [u32; 5] | Tensor<Rank1<5>, u32, ...> |
+//! | [[u8; 3]; 2] | Tensor<Rank2<2, 3>, u8, ...> |
+//! | Vec<[bool; 5]> | Tensor<(usize, Const<5>), bool, ...> |
+//!
+//! The `Rank1`, `Rank2` shapes used above are actually type aliases for
+//! when **all dimensions are compile time**:
+//! - [`shapes::Rank0`] is just `()`.
+//! - [`shapes::Rank1<M>`] is `(Const<M>, )`
+//! - [`shapes::Rank2<M, N>`] is `(Const<M>, Const<N>)`
+//!
+//! # Allocating tensors with Devices
+//!
+//! *See [tensor] for more information.*
+//!
+//! Devices are used to allocate tensors (and neural networks!). They are akin
+//! to [std::alloc::GlobalAlloc] in rust - they just allocate memory.
+//! They are also used to execute tensor ops, which we will get to later on.
+//!
+//! There are two options for this currently, with more planned to be added in the future:
+//!
+//! 1. [tensor::Cpu] - for tensors stored on the heap
+//! 2. [tensor::Cuda] - for tensors stored in GPU memory
+//!
+//! Both devices implement [Default], you can also create them with a certain seed
+//! and ordinal.
+//!
+//! Here's how you might use a device:
+//!
+//! ```rust
+//! # use dfdx_core::prelude::*;
+//! let dev: Cpu = Default::default();
+//! let t: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
+//! ```
+//!
+//! # Tensor Operations (tip of the iceberg)
+//!
+//! *See [tensor_ops] for more information*
+//!
+//! Once you've instantiated tensors with a device, you can start doing operations on them!
+//! There are **many many** operations, here are a few core ones and how they related
+//! to things like numpy/pytorch:
+//!
+//! | Operation | dfdx | numpy | pytorch |
+//! | --- | --- | --- | --- |
+//! | Unary Operations | `a.sqrt()` | `a.sqrt()` | `a.sqrt()` |
+//! | Binary Operations | `a + b` | `a + b` | `a + b` |
+//! | gemm/gemv | [tensor_ops::matmul] | `a @ b` | `a @ b` |
+//! | 2d Convolution | [tensor_ops::TryConv2D] | - | `torch.conv2d` |
+//! | 2d Transposed Convolution | [tensor_ops::TryConvTrans2D] | - | `torch.conv_transpose2d` |
+//! | Slicing | [tensor_ops::slice] | `a[...]` | `a[...]` |
+//! | Select | [tensor_ops::SelectTo] | `a[...]` | `torch.select` |
+//! | Gather | [tensor_ops::GatherTo] | `np.take` | `torch.gather` |
+//! | Broadcasting | [tensor_ops::BroadcastTo] | implicit/`np.broadcast` | implicit/`torch.broadcast_to` |
+//! | Permute | [tensor_ops::PermuteTo] | `np.transpose(...)` | `torch.permute` |
+//! | Where | [tensor_ops::ChooseFrom] | `np.where` | `torch.where` |
+//! | Reshape | [tensor_ops::ReshapeTo] | `np.reshape(shape)` | `a.reshape(shape)` |
+//! | View | [tensor_ops::ReshapeTo] | `np.view(...)` | `a.view(...)` |
+//! | Roll | [tensor_ops::Roll] | `np.rollaxis(...)` | `a.roll(...)` |
+//! | Stack | [tensor_ops::TryStack] | `np.stack` | `torch.stack` |
+//! | Concat | [tensor_ops::TryConcat] | `np.concatenate` | `torch.concat` |
+//!
+//! and **much much more!**
+//!
+//! # Neural Network Architecture Configuration vs Models
 //!
 //! `dfdx-nn` differentiates between the *architecture* of a model, and the constructed model (that has parameters on the device).
 //! This is mainly to make specifying architecture not dependent on the dtype and device
@@ -149,6 +252,7 @@
 
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
+pub mod feature_flags;
 pub mod nn;
 
 pub use dfdx_core::*;
