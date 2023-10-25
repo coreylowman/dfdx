@@ -76,7 +76,7 @@ impl Cuda {
         #[cfg(feature = "cudnn")]
         let cudnn = cudarc::cudnn::Cudnn::new(dev.clone())?;
         let par_stream = Arc::new(dev.fork_default_stream()?);
-        let workspace = Arc::new(Mutex::new(dev.alloc_zeros::<u8>(0)?));
+        let workspace = Arc::new(Mutex::new(dev.alloc_zeros::<u8>(1)?));
         Ok(Self {
             cpu,
             dev,
