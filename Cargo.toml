@@ -1,5 +1,5 @@
 [workspace]
-members = ["dfdx", "dfdx-nn-core", "dfdx-nn-derives", "dfdx-nn"]
+members = ["dfdx-core", "dfdx-derives", "dfdx"]
 resolver = "2"
 
 [workspace.dependencies]
