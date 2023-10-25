@@ -1,3 +1,5 @@
+/// Represents a number of different errors that can occur from creating tensors
+/// or launching tensor operations. This encompasses both Cpu and CUDA errors.
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
@@ -5,9 +7,8 @@ pub enum Error {
     OutOfMemory,
     /// Not enough elements were provided when creating a tensor
     WrongNumElements,
-
-    UnusedTensors(Vec<crate::tensor::UniqueId>),
-
+    /// Some tensors were unused by an optimizer in a graph.
+    UnusedTensors(std::vec::Vec<crate::tensor::UniqueId>),
     #[cfg(feature = "cuda")]
     CublasError(cudarc::cublas::result::CublasError),
     #[cfg(feature = "cuda")]
