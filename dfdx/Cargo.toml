@@ -32,3 +32,11 @@ harness = false
 [[bench]]
 name = "conv2d"
 harness = false
+
+[[bench]]
+name = "sum"
+harness = false
+
+[[bench]]
+name = "softmax"
+harness = false
