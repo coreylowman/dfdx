@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::sqrt()].
+/// Calls [crate::tensor_ops::sqrt()].
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Sqrt;
 

@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::prelu()] with learnable values along second dimension.
+/// Calls [crate::tensor_ops::prelu()] with learnable values along second dimension.
 #[derive(Debug, Clone, Copy)]
 pub struct PReLU1DConfig<C: Dim> {
     pub a: f64,

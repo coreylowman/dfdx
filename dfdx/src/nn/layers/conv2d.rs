@@ -19,7 +19,7 @@ use crate::prelude::*;
 /// };
 /// ```
 ///
-/// To create a biased conv, combine with [crate::Bias2D].
+/// To create a biased conv, combine with [crate::nn::Bias2D].
 ///
 /// Generics:
 /// - `InChan`: The number of input channels in an image.

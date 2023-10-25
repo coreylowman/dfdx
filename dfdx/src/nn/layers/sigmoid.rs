@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::sigmoid()].
+/// Calls [crate::tensor_ops::sigmoid()].
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Sigmoid;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Sigmoid {

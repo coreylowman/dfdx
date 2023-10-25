@@ -12,8 +12,8 @@ use crate::prelude::*;
 /// # Training vs Inference
 ///
 /// BatchNorm2D supports the following cases (see sections below for more details):
-/// 1. **Training**: [crate::Module::forward_mut()] and [OwnedTape] on the input tensor
-/// 2. **Inference**: [crate::Module::forward()] and [NoneTape] on the input tensor.
+/// 1. **Training**: [crate::nn::Module::forward_mut()] and [OwnedTape] on the input tensor
+/// 2. **Inference**: [crate::nn::Module::forward()] and [NoneTape] on the input tensor.
 ///
 /// *NOTE: ModuleMut/NoneTape, and Module/OwnedTape will fail to compile.*
 ///

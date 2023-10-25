@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::dropout()] with `p = 1.0 / N` in [Module::forward_mut()], and does nothing in  [Module::forward()].
+/// Calls [crate::tensor_ops::dropout()] with `p = 1.0 / N` in [Module::forward_mut()], and does nothing in  [Module::forward()].
 ///
 /// Generics:
 /// - `N`: p is set as `1.0 / N`
@@ -44,12 +44,11 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Ten
     }
 }
 
-/// Calls [dfdx::tensor_ops::dropout()] in [Module::forward_mut()], and does nothing in  [Module::forward()].
+/// Calls [crate::tensor_ops::dropout()] in [crate::nn::Module::forward_mut()], and does nothing in  [crate::nn::Module::forward()].
 ///
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use dfdx::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout = Dropout { p: 0.5 };
 /// let grads = dropout.alloc_grads();

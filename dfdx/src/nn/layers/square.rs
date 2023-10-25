@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::square()].
+/// Calls [crate::tensor_ops::square()].
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Square;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Square {

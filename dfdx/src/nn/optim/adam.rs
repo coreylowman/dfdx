@@ -23,7 +23,7 @@ use crate::{
 /// });
 /// ```
 ///
-/// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
+/// See module level documentation at [crate::nn::optim] for examples of how to actually use an optimizer.
 #[derive(Debug, Clone)]
 pub struct Adam<M, E: Dtype, D: Storage<E>> {
     /// Hyperparameter configuration

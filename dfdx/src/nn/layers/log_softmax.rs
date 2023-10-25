@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::log_softmax()].
+/// Calls [crate::tensor_ops::log_softmax()].
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct LogSoftmax;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for LogSoftmax {

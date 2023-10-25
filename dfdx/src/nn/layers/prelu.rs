@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::prelu()] with learnable value.
+/// Calls [crate::tensor_ops::prelu()] with learnable value.
 #[derive(Debug, Clone, Copy)]
 pub struct PReLUConfig(pub f64);
 

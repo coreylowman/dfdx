@@ -10,8 +10,8 @@
 //!
 //! # Updating network parameters
 //!
-//! This is done via [crate::Optimizer::update()], where you pass in a mutable [crate::Module], and
-//! the [dfdx::tensor::Gradients]:
+//! This is done via [crate::nn::Optimizer::update()], where you pass in a mutable [crate::nn::Module], and
+//! the [crate::tensor::Gradients]:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;

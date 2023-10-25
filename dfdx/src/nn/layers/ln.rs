@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::ln()].
+/// Calls [crate::tensor_ops::ln()].
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Ln;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Ln {

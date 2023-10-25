@@ -5,10 +5,10 @@
 //! that a model is stored on.
 //!
 //! For example, a linear model has a couple pieces:
-//! 1. The architecture configuration type: [LinearConfig]
-//! 2. The actual built type that contains the parameters: [Linear]
+//! 1. The architecture configuration type: [nn::LinearConfig]
+//! 2. The actual built type that contains the parameters: [nn::Linear]
 //!
-//! There's a third piece for convenience: [LinearConstConfig], which let's you specify dimensions at compile time.
+//! There's a third piece for convenience: [nn::LinearConstConfig], which let's you specify dimensions at compile time.
 //!
 //! For specifying architecture, you just need the dimensions for the linear, but not the device/dtype:
 //! ```rust
@@ -22,11 +22,11 @@
 //! ```
 //! **Note** that we don't have any idea on what device or what dtype this will be.
 //!
-//! When we build this configuration into a [Linear] object, it will be placed on a device and have a certain dtype.
+//! When we build this configuration into a [nn::Linear] object, it will be placed on a device and have a certain dtype.
 //!
 //! # Building a model from an architecture
 //!
-//! We will use [BuildModuleExt::build_module()], an extension trait on devices, to actually construct a model.
+//! We will use [nn::BuildModuleExt::build_module()], an extension trait on devices, to actually construct a model.
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
@@ -40,7 +40,7 @@
 //!
 //! # Using a model
 //!
-//! There are many things you can do with models. The main action is calling [Module::forward()] and [Module::forward_mut()]
+//! There are many things you can do with models. The main action is calling [nn::Module::forward()] and [nn::Module::forward_mut()]
 //! during inference and training.
 //!
 //! ```rust
@@ -63,9 +63,9 @@
 //!
 //! Under the hood, the code generated for Sequential vs tuples are identical.
 //!
-//! ## Deriving [Sequential]
+//! ## Deriving [nn::Sequential]
 //!
-//! See [Sequential] for more detailed information.
+//! See [nn::Sequential] for more detailed information.
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
@@ -114,16 +114,16 @@
 //!
 //! # Optimizers and Gradients
 //!
-//! *See [optim] for more information*
+//! *See [nn::optim] for more information*
 //!
 //! dfdx-nn supports a number of the standard optimizers:
 //!
 //! | Optimizer | dfdx | pytorch |
 //! | --- | --- | --- |
-//! | SGD | [optim::Sgd] | `torch.optim.SGD` |
-//! | Adam | [optim::Adam] | torch.optim.Adam` |
-//! | AdamW | [optim::Adam] with [optim::WeightDecay::Decoupled] | `torch.optim.AdamW` |
-//! | RMSprop | [optim::RMSprop] | `torch.optim.RMSprop` |
+//! | SGD | [nn::optim::Sgd] | `torch.optim.SGD` |
+//! | Adam | [nn::optim::Adam] | torch.optim.Adam` |
+//! | AdamW | [nn::optim::Adam] with [nn::optim::WeightDecay::Decoupled] | `torch.optim.AdamW` |
+//! | RMSprop | [nn::optim::RMSprop] | `torch.optim.RMSprop` |
 //!
 //! You can use optimizers to optimize neural networks (or even tensors!). Here's
 //! a simple example of how to do this:

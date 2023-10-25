@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::relu()].
+/// Calls [crate::tensor_ops::relu()].
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct ReLU;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for ReLU {

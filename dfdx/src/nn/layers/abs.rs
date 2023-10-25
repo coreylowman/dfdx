@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::abs()]
+/// Calls [crate::tensor_ops::abs()]
 #[derive(Default, Debug, Clone, Copy, crate::nn::CustomModule)]
 pub struct Abs;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> crate::nn::Module<Tensor<S, E, D, T>>

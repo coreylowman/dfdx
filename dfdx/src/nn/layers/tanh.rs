@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [dfdx::tensor_ops::tanh()].
+/// Calls [crate::tensor_ops::tanh()].
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Tanh;
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Tanh {
