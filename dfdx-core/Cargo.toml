@@ -52,10 +52,11 @@ default = ["std", "fast-alloc", "cpu"]
 nightly = ["half?/use-intrinsics", "gemm?/nightly"]
 
 std = ["cudarc?/std", "rand_distr/std_math", "gemm?/std"]
-fast-alloc = ["std"]
 no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std", "num-traits/libm"]
 
 cpu = ["dep:gemm", "dep:rayon"]
+fast-alloc = ["std"]
+
 cuda = ["dep:cudarc", "dep:glob"]
 cudnn = ["cuda", "cudarc?/cudnn"]
 
