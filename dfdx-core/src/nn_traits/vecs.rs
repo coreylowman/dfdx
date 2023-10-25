@@ -1,5 +1,7 @@
 use crate::{dtypes::Dtype, tensor::UniqueId, tensor_ops::Device};
 
+use std::vec::Vec;
+
 impl<E: Dtype, D: Device<E>, T: crate::nn_traits::BuildOnDevice<E, D>>
     crate::nn_traits::BuildOnDevice<E, D> for Vec<T>
 {

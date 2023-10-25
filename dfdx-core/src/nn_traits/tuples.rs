@@ -1,5 +1,7 @@
 use crate::{dtypes::Dtype, tensor::UniqueId, tensor_ops::Device};
 
+use std::vec::Vec;
+
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),*]) => {
 

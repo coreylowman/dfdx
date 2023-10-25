@@ -1,6 +1,8 @@
 mod tuples;
 mod vecs;
 
+use std::vec::Vec;
+
 use crate::prelude::{Device, Dtype, Gradients, Shape, Tensor, UniqueId};
 
 /// Mutable & Immutable forward of `Input` that produces [Module::Output].
