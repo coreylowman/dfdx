@@ -3,9 +3,9 @@ members = ["dfdx-core", "dfdx-derives", "dfdx"]
 resolver = "2"
 
 [workspace.dependencies]
-num-traits = { version = "0.2.15", default-features = false }
-safetensors = { version = "0.3.3", default-features = false }
-memmap2 = { version = "0.5", default-features = false }
+num-traits = { version = "0.2.17", default-features = false }
+safetensors = { version = "0.4.0", default-features = false }
+memmap2 = { version = "0.9.0", default-features = false }
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false }
-libm = "0.2.7"
+libm = "0.2.8"

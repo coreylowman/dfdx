@@ -329,9 +329,9 @@ pub(crate) mod tests {
     }
 
     #[cfg(feature = "f16")]
-    impl AssertClose for half::f16 {
+    impl AssertClose for crate::dtypes::f16 {
         type Elem = Self;
-        const DEFAULT_TOLERANCE: Self::Elem = half::f16::from_f32_const(1e-2);
+        const DEFAULT_TOLERANCE: Self::Elem = crate::dtypes::f16::from_f32_const(1e-2);
         fn get_far_pair(&self, rhs: &Self, tolerance: Self) -> Option<(Self, Self)> {
             if num_traits::Float::abs(self - rhs) > tolerance {
                 Some((*self, *rhs))
