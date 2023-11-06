@@ -4,9 +4,9 @@ use crate::prelude::*;
 #[derive(Default, Debug, Clone, Copy, CustomModule)]
 pub struct Id;
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Id {
-    type Output = Tensor<S, E, D, T>;
-    fn try_forward(&self, x: Tensor<S, E, D, T>) -> Result<Self::Output, Error> {
+impl<Input> Module<Input> for Id {
+    type Output = Input;
+    fn try_forward(&self, x: Input) -> Result<Self::Output, Error> {
         Ok(x)
     }
 }
