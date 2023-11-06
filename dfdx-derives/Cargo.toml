@@ -13,6 +13,7 @@ proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["extra-traits"] }
 dfdx-core = { path = "../dfdx-core" }
+heck = "0.4.1"
 
 [features]
 nightly = ["dfdx-core/nightly"]

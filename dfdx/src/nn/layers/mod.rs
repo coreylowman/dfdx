@@ -1,3 +1,5 @@
+pub mod ops;
+
 mod abs;
 mod add_into;
 mod batch_norm1d;
@@ -19,6 +21,8 @@ mod flatten2d;
 mod gelu;
 mod generalized_add;
 mod generalized_mul;
+pub mod id;
+mod input_into;
 mod layer_norm1d;
 mod leaky_relu;
 mod linear;
@@ -26,6 +30,7 @@ mod ln;
 mod log_softmax;
 mod matmul;
 mod multi_head_attention;
+mod on;
 #[cfg(feature = "nightly")]
 mod pool_2d_avg;
 #[cfg(feature = "nightly")]
@@ -72,6 +77,7 @@ pub use flatten2d::Flatten2D;
 pub use gelu::{AccurateGeLU, FastGeLU};
 pub use generalized_add::GeneralizedAdd;
 pub use generalized_mul::GeneralizedMul;
+pub use id::Id;
 pub use layer_norm1d::{LayerNorm1D, LayerNorm1DConfig, LayerNorm1DConstConfig};
 pub use leaky_relu::LeakyReLU;
 pub use linear::{Linear, LinearConfig, LinearConstConfig};
@@ -79,6 +85,7 @@ pub use ln::Ln;
 pub use log_softmax::LogSoftmax;
 pub use matmul::{MatMul, MatMulConfig, MatMulConstConfig};
 pub use multi_head_attention::{MultiHeadAttention, MultiHeadAttentionConfig};
+pub use on::On;
 #[cfg(feature = "nightly")]
 pub use pool_2d_avg::{AvgPool2D, AvgPool2DConst};
 #[cfg(feature = "nightly")]

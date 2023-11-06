@@ -957,3 +957,457 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         }
     })
 }
+
+/// Generates a module containing helpful structs and implementations for a input wrapper.
+///
+/// ## Example
+///
+/// The following definition:
+/// ```ignore
+/// #[input_wrapper]
+/// pub struct MyWrapper<A, B> {
+///     pub a: A,
+///     pub b: B,
+/// }
+/// ```
+///
+/// Generates the following module:
+/// ```ignore
+/// pub mod my_wrapper {
+///     // structs for the fields
+///     pub struct a;
+///     pub struct b;
+///     // note: if MyWrapper was a tuple-struct,
+///     // the fields would be named _0, _1 and so on
+///
+///     // structs to help in tuple conversions (Module impls omitted)
+///     pub struct FromTuple;
+///     pub struct IntoTuple;
+///     
+///     // access for the `a` field
+///     impl<M: Module<A>, A, B> Module<MyWrapper<A, B>> for On<a, M>
+///     {
+///         type Output = MyWrapper<<M as Module<A>>::Output, B>;
+///         fn try_forward(&self, x: MyWrapper<A, B>) -> Result<Self::Output, Error> {/* (...) */}
+///         fn try_forward_mut(&mut self, x: MyWrapper<A, B>) -> Result<Self::Output, Error> {/* (...) */}
+///     }
+///
+///     // access for the `b` field
+///     impl<M: Module<B>, A, B> Module<MyWrapper<A, B>> for On<b, M>
+///     {
+///         type Output = MyWrapper<A, <M as Module<B>>::Output>;
+///         fn try_forward(&self, x: MyWrapper<A, B>) -> Result<Self::Output, Error> {/* ... */}
+///         fn try_forward_mut(&mut self, x: MyWrapper<A, B>) -> Result<Self::Output, Error> {/* ... */}
+///     }
+/// }
+/// ```
+/// To better visualize the generated code and items, it's recommended to expand it with Rust-Analyzer,
+/// or to generate the project's documentation.
+///
+/// Those helpers can then be used as modules:
+/// ```ignore
+/// #[derive(Default, Clone, Sequential)]
+/// pub struct Arch {
+///     // (...)
+///
+///     // assuming Input is of type (X, Y), converts the input into MyWrapper<X, Y>
+///     pub input_to_wrapper: my_wrapper::FromTuple,
+///     
+///     // apply module T on the field `a`, while also mapping the input into:
+///     // MyWrapper<<T as Module<X>>::Output, Y>
+///     pub t: On<my_wrapper::a, T>,
+///     
+///     // converts the input into a tuple:
+///     // (<T as Module<X>>::Output, Y)
+///     pub input_to_tuple: split1::IntoTuple,
+///     
+///     // (...)
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn input_wrapper(
+    _attr: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let wrapper = parse_macro_input!(input as DeriveInput);
+
+    // - TODO: any bounds on the struct definition probably should be copied into other impls.
+    // - NOTE: check on how to deal with the `Self` (as this won't refer to the struct on the On Module impl).
+
+    // eg. MyWrapper
+    let wrapper_ident = wrapper.ident.clone();
+    let wrapper_vis = wrapper.vis.clone();
+    let wrapper_lowercase = format!("{}", heck::AsSnakeCase(wrapper_ident.to_string()));
+    // eg. my_wrapper
+    // TODO: allow renaming
+    let wrapper_lowercase_ident = syn::Ident::new(&wrapper_lowercase, wrapper_ident.span());
+
+    // get wrapper field info
+    // eg. [(pub, Some(my_field), MyFieldType, field span)]
+    let mut wrapper_fields = vec![];
+    match &wrapper.data {
+        Data::Struct(ref obj) => match obj.fields {
+            Fields::Named(ref fields) => {
+                let fields = fields.named.iter().map(|f| {
+                    let ty = &f.ty;
+                    assert_ne!(
+                        quote!(#ty).to_string(),
+                        "M",
+                        "A generic type named `M` is not allowed because this is used internally"
+                    );
+                    (&f.vis, &f.ident, &f.ty, f.span())
+                });
+                wrapper_fields.extend(fields)
+            }
+            Fields::Unnamed(ref fields) => {
+                let fields = fields.unnamed.iter().map(|f: &syn::Field| {
+                    let ty = &f.ty;
+                    assert_ne!(
+                        quote!(#ty).to_string(),
+                        "M",
+                        "A generic type named `M` is not allowed because this is used internally"
+                    );
+                    (&f.vis, &None, &f.ty, f.span())
+                });
+                wrapper_fields.extend(fields)
+            }
+            // no fields
+            Fields::Unit => {}
+        },
+        Data::Enum(_) => unimplemented!("Input wrapper cannot be derived for enums."),
+        Data::Union(_) => unimplemented!("Input wrapper cannot be derived for unions."),
+    };
+
+    // wrapper fields as structs
+    let mut wrapper_field_structs_quote = vec![];
+    let mut are_fields_named = false;
+    for (i, (_vis, field, _ty, span)) in wrapper_fields.iter().enumerate() {
+        let (doc, field) = if let Some(field) = field {
+            are_fields_named = true;
+            let doc = format!(
+                "Indicates the [`{}::{}`] field.  \nThis field is the `{}` value (`0`-based index).",
+                wrapper_ident,
+                field,
+                i
+            );
+            (doc, field.clone())
+        } else {
+            let doc = format!(
+                "Indicates the `{}`-th value from [`{}`] (0-based index).",
+                i, wrapper_ident
+            );
+            let field = syn::Ident::new(&format!("_{}", i), *span);
+            (doc, field)
+        };
+        wrapper_field_structs_quote.push(quote! {
+            #[doc = #doc]
+            #[allow(non_camel_case_types)]
+            #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            pub struct #field;
+        });
+    }
+
+    let imports = if are_fields_named {
+        quote! {
+            use super::#wrapper_ident;
+        }
+    } else {
+        quote! {
+            use super::#wrapper_ident;
+            // TODO: import tuple stuff
+            use crate::prelude;
+        }
+    };
+
+    let wrapper_generics = wrapper.generics.clone();
+    let wrapper_generics_params = wrapper_generics.params.iter().collect::<Vec<_>>();
+    // eg. MyWrapper<A, B> -> [A, B]
+    let wrapper_generics_param_idents = {
+        wrapper_generics_params
+            .iter()
+            .map(|p| {
+                use syn::GenericParam::*;
+                match p {
+                    Lifetime(l) => &l.lifetime.ident,
+                    Type(t) => &t.ident,
+                    Const(c) => &c.ident,
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+
+    // eg. MyWrapper<A, B> -> [A, B]
+    let wrapper_generic_names = wrapper_generics_param_idents.iter().collect::<Vec<_>>();
+
+    // eg. MyWrapper<A> { field1: A, field2: bool} -> [A, bool]
+    let field_ty_names = wrapper_fields
+        .iter()
+        .map(|(_, _, ty, _)| ty)
+        .collect::<Vec<_>>();
+
+    // create structs to represent tuple conversions
+    let tuple_conversion_structs = {
+        let field_ty_names = field_ty_names
+            .iter()
+            .map(|ty| quote! {#ty}.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let wrapper_generic_names = wrapper_generic_names
+            .iter()
+            .map(|ident| ident.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let doc1 = format!(
+            "Indicates a conversion from a ({}) tuple into a `{}<{}>`.",
+            &field_ty_names, wrapper_ident, &wrapper_generic_names
+        );
+        let doc2 = format!(
+            "Indicates a conversion from a `{}<{}>` into a ({}) tuple.",
+            wrapper_ident, &wrapper_generic_names, &field_ty_names
+        );
+        quote! {
+            #[doc = #doc1]
+            #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, crate::prelude::CustomModule)]
+            pub struct FromTuple;
+            #[doc = #doc2]
+            #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, crate::prelude::CustomModule)]
+            pub struct IntoTuple;
+        }
+    };
+
+    // impl From<> conversions
+    let tuple_conversions = {
+        let doc1 = format!("Conversion of a tuple into a [`{}`].", wrapper_ident,);
+        let doc2 = format!("Conversion of a [`{}`] into a tuple.", wrapper_ident,);
+
+        let mut field_from_tuple = vec![];
+        let mut field_to_tuple = vec![];
+        for (i, (_, ident, _, _span)) in wrapper_fields.iter().enumerate() {
+            let i = syn::Index::from(i);
+            if let Some(ident) = ident {
+                field_from_tuple.push(quote! {#ident: x.#i});
+                field_to_tuple.push(quote! {x.#ident});
+            } else {
+                field_from_tuple.push(quote! {x.#i});
+                field_to_tuple.push(quote! {x.#i});
+            };
+        }
+
+        let (from_tuple, to_tuple) = if are_fields_named {
+            (
+                quote! {
+                    #wrapper_ident {
+                        #(#field_from_tuple), *
+                    }
+                },
+                quote! { (#(#field_to_tuple), *) },
+            )
+        } else {
+            (
+                quote! {
+                    #wrapper_ident (
+                        #(#field_from_tuple), *
+                    )
+                },
+                quote! {(#(#field_to_tuple), *)},
+            )
+        };
+
+        quote! {
+            #[doc = #doc1]
+            impl<#(#wrapper_generic_names), *> From<(#(#field_ty_names), *)> for #wrapper_ident<#(#wrapper_generic_names), *> {
+                fn from(x: (#(#field_ty_names), *)) -> Self {
+                    #from_tuple
+                }
+            }
+            #[doc = #doc2]
+            impl<#(#wrapper_generic_names), *> From<#wrapper_ident<#(#wrapper_generic_names), *>> for (#(#field_ty_names), *) {
+                fn from(x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Self {
+                    #to_tuple
+                }
+            }
+        }
+    };
+
+    // impl Module for conversions into and from tuples
+    let module_conversions = {
+        let doc1 = format!("Module to convert a tuple into a [`{}`].", wrapper_ident,);
+        let doc2 = format!("Module to convert a [`{}`] into a tuple.", wrapper_ident,);
+        quote! {
+            #[doc = #doc1]
+            impl<#(#wrapper_generic_names), *> crate::prelude::Module<(#(#field_ty_names), *)> for FromTuple {
+                type Output = #wrapper_ident<#(#wrapper_generic_names), *>;
+                fn try_forward(&self, x: (#(#field_ty_names), *)) -> Result<Self::Output, crate::prelude::Error> {
+                    Ok(x.into())
+                }
+            }
+            #[doc = #doc2]
+            impl<#(#wrapper_generic_names), *> crate::prelude::Module<#wrapper_ident<#(#wrapper_generic_names), *>> for IntoTuple {
+                type Output = (#(#field_ty_names), *);
+                fn try_forward(&self, x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, crate::prelude::Error> {
+                    Ok(x.into())
+                }
+            }
+        }
+    };
+
+    // assertion
+    for generic_ident in wrapper_generic_names.iter() {
+        let count = wrapper_fields
+            .iter()
+            .map(|(_, _, field_ty, _)| is_ident_container(generic_ident, field_ty))
+            .filter(|contains| *contains)
+            .count();
+        if count > 1 {
+            panic!("the generic {generic_ident} should be used in at most one field");
+        }
+    }
+
+    // field access modules
+    let mut field_access_modules = vec![];
+    for (i, (_vis, ident, ty, span)) in wrapper_fields.iter().enumerate() {
+        let (doc, on_acccess, forward) = if let Some(ident) = ident {
+            let doc = format!(
+                "Module that access [`{}::{}`] and then applies Module `M` on it.",
+                wrapper_ident, ident
+            );
+            let on_access = ident.clone();
+            let forward = syn::Ident::new(&format!("x{i}"), ident.span());
+            (doc, on_access, forward)
+        } else {
+            let doc = format!(
+                "Module that access the `{}`-th value from [`{}`] and then applies Module `M` on it.",
+                i,
+                wrapper_ident,
+            );
+            let on_access = syn::Ident::new(&format!("_{}", i), *span);
+            let forward = syn::Ident::new(&format!("x{i}"), *span);
+            (doc, on_access, forward)
+        };
+
+        let mut contains_ident = false;
+        let output_generics = wrapper_generic_names.iter().map(|ty_ident| {
+            //
+            if is_ident_container(ty_ident, ty) {
+                if contains_ident {
+                    panic!(
+                        "the field {ident:?} at index {i} should contain at most one generic type"
+                    );
+                }
+                contains_ident = true;
+                quote!(<M as crate::prelude::Module<#ty>>::Output)
+            } else {
+                quote!(#ty_ident)
+            }
+        });
+
+        let mut field_extraction_idents = vec![];
+        let mut field_extraction = vec![];
+        let mut field_construction = vec![];
+        for (i, (_, _ident, _, span)) in wrapper_fields.iter().enumerate() {
+            let ii = syn::Index::from(i);
+            if let Some(_ident) = _ident {
+                let xident = syn::Ident::new(&format!("x{i}"), _ident.span());
+                field_extraction_idents.push(xident.clone());
+                field_extraction.push(quote! {let #xident = x.#_ident;});
+                field_construction.push(quote! {#_ident: #xident,});
+            } else {
+                let xident = syn::Ident::new(&format!("x{i}"), *span);
+                field_extraction_idents.push(xident.clone());
+                field_extraction.push(quote! {let #xident = x.#ii;});
+                field_construction.push(quote! {#xident,});
+            };
+        }
+        let field_replacement = if are_fields_named {
+            quote! {
+                #wrapper_ident {
+                    #(#field_construction)*
+                }
+            }
+        } else {
+            quote! {
+                #wrapper_ident (
+                    #(#field_construction)*
+                )
+            }
+        };
+
+        let field_access_module = quote! {
+            #[doc = #doc]
+            impl<M: crate::prelude::Module<#ty>, #(#wrapper_generic_names), *> crate::prelude::Module<#wrapper_ident<#(#wrapper_generic_names), *>> for crate::prelude::On<#on_acccess, M> {
+                type Output = #wrapper_ident<#(#output_generics), *>;
+                fn try_forward(&self, x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, crate::prelude::Error> {
+                    #(#field_extraction)*
+                    let #forward = self.t.try_forward(#forward)?;
+                    let x = #field_replacement;
+                    Ok(x)
+                }
+                fn try_forward_mut(&mut self, x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, crate::prelude::Error> {
+                    #(#field_extraction)*
+                    let #forward = self.t.try_forward_mut(#forward)?;
+                    let x = #field_replacement;
+                    Ok(x)
+                }
+            }
+        };
+        field_access_modules.push(field_access_module);
+    }
+
+    // all of the generated content
+    let _mod = quote! {
+        #wrapper_vis mod #wrapper_lowercase_ident {
+            #imports
+
+            #(#wrapper_field_structs_quote)*
+
+            #tuple_conversion_structs
+
+            #tuple_conversions
+
+            #module_conversions
+
+            #(#field_access_modules)*
+        }
+    };
+    let output = quote!(
+        #wrapper
+
+        #[doc = "Automatically generated by `input_wrapper`. The containing items are visible on your project's documentation."]
+        #_mod
+    );
+    proc_macro::TokenStream::from(output)
+}
+
+/// Checks whether `ty` contains any ident that matches the `ident`.
+fn is_ident_container(ident: &syn::Ident, ty: &syn::Type) -> bool {
+    match ty {
+        syn::Type::Array(_) => todo!("input_wrapper is_ident_container for array"),
+        syn::Type::BareFn(_) => todo!("input_wrapper is_ident_container for bare fn"),
+        syn::Type::Group(_) => todo!("input_wrapper is_ident_container for group"),
+        syn::Type::ImplTrait(_) => todo!("input_wrapper is_ident_container for impl trait"),
+        syn::Type::Infer(_) => todo!("input_wrapper is_ident_container for infer"),
+        syn::Type::Macro(_) => todo!("input_wrapper is_ident_container for macro"),
+        syn::Type::Never(_) => todo!("input_wrapper is_ident_container for never"),
+        syn::Type::Paren(_) => todo!("input_wrapper is_ident_container for paren"),
+        syn::Type::Path(ty) => {
+            let mut is = false;
+            if let Some(qself) = &ty.qself {
+                is |= is_ident_container(ident, &qself.ty);
+            }
+            if let Some(segment) = &ty.path.segments.last() {
+                is |= &segment.ident == ident;
+            }
+            is
+        }
+        syn::Type::Ptr(_) => todo!("input_wrapper is_ident_container for ptr"),
+        syn::Type::Reference(_) => todo!("input_wrapper is_ident_container for reference"),
+        syn::Type::Slice(_) => todo!("input_wrapper is_ident_container for slice"),
+        syn::Type::TraitObject(_) => todo!("input_wrapper is_ident_container for trait object"),
+        syn::Type::Tuple(_) => todo!("input_wrapper is_ident_container for tuple"),
+        syn::Type::Verbatim(_) => todo!("input_wrapper is_ident_container for verbatim"),
+        other => unimplemented!(
+            "input_wrapper is_ident_container not implemented for {}",
+            quote!(#other).to_string()
+        ),
+    }
+}
