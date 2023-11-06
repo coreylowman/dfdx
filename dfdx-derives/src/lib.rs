@@ -523,7 +523,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         .unzip::<_, _, Vec<_>, Vec<_>>();
                     (
                         quote! { #(let x = #recurse;)* },
-                        quote! { #(let x = #recurse;)* },
+                        quote! { #(let x = #recurse_mut;)* },
                     )
                 }
                 Fields::Unit => (quote! { let x = x; }, quote! { let x = x; }),
