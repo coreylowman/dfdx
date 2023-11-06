@@ -311,4 +311,22 @@ mod tests {
         let mut opt = crate::nn::optim::Sgd::new(&bn, Default::default());
         opt.update(&mut bn, &g).expect("");
     }
+
+    #[derive(Default, Clone, Sequential)]
+    struct Arch {
+        pub batch: BatchNorm2DConstConfig<3>,
+    }
+
+    #[test]
+    fn test_batchnorm2d_update_with_derive() {
+        let dev: TestDevice = Default::default();
+
+        let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
+        let mut bn = dev.build_module::<TestDtype>(Arch::default());
+        let y = bn.forward_mut(x1.leaky_trace());
+        let g = y.square().mean().backward();
+
+        let mut opt = crate::nn::optim::Sgd::new(&bn, Default::default());
+        opt.update(&mut bn, &g).expect("");
+    }
 }
