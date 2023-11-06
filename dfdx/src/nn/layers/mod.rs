@@ -22,7 +22,6 @@ mod gelu;
 mod generalized_add;
 mod generalized_mul;
 pub mod id;
-mod input_into;
 mod layer_norm1d;
 mod leaky_relu;
 mod linear;
