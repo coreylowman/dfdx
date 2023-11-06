@@ -39,12 +39,6 @@ mod tests {
     use crate::tests::*;
 
     #[input_wrapper]
-    pub struct MyWrapper<A, B> {
-        pub a: A,
-        pub b: B,
-    }
-
-    #[input_wrapper]
     pub struct Split1<Forward, Skip> {
         pub forward: Forward,
         pub skip: Skip,
@@ -73,8 +67,20 @@ mod tests {
     fn test_residual_add_backward() {
         let dev: TestDevice = Default::default();
 
-        let model =
-            dev.build_module::<TestDtype>(<ResidualAdd1<LinearConstConfig<2, 2>>>::default());
+        let model = dev.build_module::<f32>(<ResidualAdd1<LinearConstConfig<2, 2>>>::default());
+        let model = DeviceResidualAdd1::<LinearConstConfig<2, 2>, TestDtype, TestDevice> {
+            t: On {
+                t: Linear {
+                    weight: model.t.t.weight.to_dtype::<TestDtype>(),
+                    bias: model.t.t.bias.to_dtype::<TestDtype>(),
+                },
+                _n: Default::default(),
+            },
+            add: Default::default(),
+            input_to_tuple: Default::default(),
+            input_to_wrapper: Default::default(),
+            split: Default::default(),
+        };
 
         let x: Tensor<Rank2<4, 2>, f32, _> = dev.sample_normal();
         let x = x.to_dtype::<TestDtype>();
@@ -115,8 +121,20 @@ mod tests {
     fn test_residual_add_backward2() {
         let dev: TestDevice = Default::default();
 
-        let model =
-            dev.build_module::<TestDtype>(<ResidualAdd2<LinearConstConfig<2, 2>>>::default());
+        let model = dev.build_module::<f32>(<ResidualAdd2<LinearConstConfig<2, 2>>>::default());
+        let model = DeviceResidualAdd2::<LinearConstConfig<2, 2>, TestDtype, TestDevice> {
+            t: On {
+                t: Linear {
+                    weight: model.t.t.weight.to_dtype::<TestDtype>(),
+                    bias: model.t.t.bias.to_dtype::<TestDtype>(),
+                },
+                _n: Default::default(),
+            },
+            add: Default::default(),
+            input_to_tuple: Default::default(),
+            input_to_wrapper: Default::default(),
+            split: Default::default(),
+        };
 
         let x: Tensor<Rank2<4, 2>, f32, _> = dev.sample_normal();
         let x = x.to_dtype::<TestDtype>();
