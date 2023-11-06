@@ -489,23 +489,44 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     let impl_module = {
-        let src = match input.data {
+        let (src, src_mut) = match input.data {
             Data::Struct(ref data) => match data.fields {
                 Fields::Named(ref fields) => {
-                    let recurse = fields.named.iter().map(|f| {
-                        let name = &f.ident;
-                        quote_spanned! {f.span()=> self.#name.try_forward(x)? }
-                    });
-                    quote! { #(let x = #recurse;)* }
+                    let (recurse, recurse_mut) = fields
+                        .named
+                        .iter()
+                        .map(|f| {
+                            let name = &f.ident;
+                            (
+                                quote_spanned! {f.span()=> self.#name.try_forward(x)? },
+                                quote_spanned! {f.span()=> self.#name.try_forward_mut(x)? },
+                            )
+                        })
+                        .unzip::<_, _, Vec<_>, Vec<_>>();
+                    (
+                        quote! { #(let x = #recurse;)* },
+                        quote! { #(let x = #recurse_mut;)* },
+                    )
                 }
                 Fields::Unnamed(ref fields) => {
-                    let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
-                        let index = Index::from(i);
-                        quote_spanned! {f.span()=> self.#index.try_forward(x)? }
-                    });
-                    quote! { #(let x = #recurse;)* }
+                    let (recurse, recurse_mut) = fields
+                        .unnamed
+                        .iter()
+                        .enumerate()
+                        .map(|(i, f)| {
+                            let index = Index::from(i);
+                            (
+                                quote_spanned! {f.span()=> self.#index.try_forward(x)? },
+                                quote_spanned! {f.span()=> self.#index.try_forward_mut(x)? },
+                            )
+                        })
+                        .unzip::<_, _, Vec<_>, Vec<_>>();
+                    (
+                        quote! { #(let x = #recurse;)* },
+                        quote! { #(let x = #recurse_mut;)* },
+                    )
                 }
-                Fields::Unit => quote! { let x = x; },
+                Fields::Unit => (quote! { let x = x; }, quote! { let x = x; }),
             },
             _ => unreachable!(),
         };
@@ -518,6 +539,10 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 type Output = #output_ty;
                 fn try_forward(&self, x: Input) -> Result<Self::Output, Error> {
                     #src
+                    Ok(x)
+                }
+                fn try_forward_mut(&mut self, x: Input) -> Result<Self::Output, Error> {
+                    #src_mut
                     Ok(x)
                 }
             }
