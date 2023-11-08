@@ -55,29 +55,30 @@ impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for BatchNorm1DConfig<C
 }
 
 /// See [BatchNorm1DConfig].
-#[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct BatchNorm1D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     /// Scale for affine transform. Defaults to 1.0
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub scale: Tensor<(C,), Elem, Dev>,
     /// Bias for affine transform. Defaults to 0.0
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub bias: Tensor<(C,), Elem, Dev>,
     /// Spatial mean that is updated during training. Defaults to 0.0
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub running_mean: Tensor<(C,), Elem, Dev>,
     /// Spatial variance that is updated during training. Defaults to 1.0
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub running_var: Tensor<(C,), Elem, Dev>,
     /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub epsilon: f64,
     /// Controls exponential moving average of running stats. Defaults to 0.1
     ///
     /// `running_stat * (1.0 - momentum) + stat * momentum`.
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub momentum: f64,
 }
 

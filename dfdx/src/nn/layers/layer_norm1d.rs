@@ -38,15 +38,16 @@ impl<M: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LayerNorm1DConfig<M
 }
 
 /// See [LayerNorm1DConfig]
-#[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct LayerNorm1D<M: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub gamma: Tensor<(M,), Elem, Dev>,
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub beta: Tensor<(M,), Elem, Dev>,
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub epsilon: f64,
 }
 

@@ -110,7 +110,12 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                                 where_clause
                                     .predicates
                                     .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                                quote_spanned!(f.span()=> #[module] #[serialize] #vis #name: <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                                let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                                    quote!(#[serialize])
+                                } else {
+                                    quote!()
+                                };
+                                quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis #name: <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                             } else {
                                 quote_spanned!(f.span()=> #vis #name: #ty,)
                             }
@@ -126,7 +131,12 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                                 where_clause
                                     .predicates
                                     .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                                quote_spanned!(f.span()=> #[module] #[serialize] #vis <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                                let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                                    quote!(#[serialize])
+                                } else {
+                                    quote!()
+                                };
+                                quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                             } else {
                                 quote_spanned!(f.span()=> #vis #ty,)
                             }
@@ -162,8 +172,13 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
         let (built_impl, _, built_where) = built_generics.split_for_impl();
 
         let def = if has_fields_to_build {
+            let safetensors_derive = if cfg!(feature = "safetensors") {
+                quote!(dfdx_derives::SaveSafeTensors, dfdx_derives::LoadSafeTensors)
+            } else {
+                quote!()
+            };
             quote! {
-                #[derive(Clone, Debug, dfdx_derives::ResetParams, dfdx_derives::UpdateParams, dfdx_derives::ZeroGrads, dfdx_derives::SaveSafeTensors, dfdx_derives::LoadSafeTensors)]
+                #[derive(Clone, Debug, dfdx_derives::ResetParams, dfdx_derives::UpdateParams, dfdx_derives::ZeroGrads, #safetensors_derive)]
                 pub struct #built_name #built_impl #built_where #fields
             }
         } else {
@@ -181,26 +196,32 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
             let (build_impl, _, _) = build_generics.split_for_impl();
             let (built_impl, built_ty, built_where) = built_generics.split_for_impl();
 
-            quote! {
-                #[cfg(feature = "safetensors")]
-                impl #built_impl dfdx_core::nn_traits::SaveSafeTensors for #builder_name #built_ty #built_where {
-                    fn write_safetensors(
-                        &self,
-                        location: &str,
-                        tensors: &mut Vec<(String, ::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
-                    ) {}
-                }
+            let safetensors_impls = if cfg!(feature = "safetensors") {
+                quote! {
+                    impl #built_impl dfdx_core::nn_traits::SaveSafeTensors for #builder_name #built_ty #built_where {
+                        fn write_safetensors(
+                            &self,
+                            location: &str,
+                            tensors: &mut Vec<(String, ::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                        ) {}
+                    }
 
-                #[cfg(feature = "safetensors")]
-                impl #built_impl dfdx_core::nn_traits::LoadSafeTensors for #builder_name #built_ty #built_where {
-                    fn read_safetensors<'a>(
-                        &mut self,
-                        location: &str,
-                        tensors: &::safetensors::SafeTensors<'a>,
-                    ) -> Result<(), ::safetensors::SafeTensorError> {
-                        Ok(())
+                    impl #built_impl dfdx_core::nn_traits::LoadSafeTensors for #builder_name #built_ty #built_where {
+                        fn read_safetensors<'a>(
+                            &mut self,
+                            location: &str,
+                            tensors: &::safetensors::SafeTensors<'a>,
+                        ) -> Result<(), ::safetensors::SafeTensorError> {
+                            Ok(())
+                        }
                     }
                 }
+            } else {
+                quote! {}
+            };
+
+            quote! {
+                #safetensors_impls
 
                 impl #build_impl dfdx_core::nn_traits::ResetParams<Elem, Dev> for #builder_name #built_ty #built_where {
                     fn try_reset_params(&mut self) -> Result<(), dfdx_core::tensor::Error> {
@@ -373,7 +394,12 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             where_clause
                                 .predicates
                                 .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                            quote_spanned!(f.span()=> #[module] #[serialize] #vis #name: <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                            let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                                quote!(#[serialize])
+                            } else {
+                                quote!()
+                            };
+                            quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis #name: <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                         });
                         quote! { #(#fields)* }
                     }
@@ -384,7 +410,12 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             where_clause
                                 .predicates
                                 .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                            quote_spanned!(f.span()=> #[module] #[serialize] #vis <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                            let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                                quote!(#[serialize])
+                            } else {
+                                quote!()
+                            };
+                            quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                         });
                         quote! { #(#fields)* }
                     }
@@ -397,8 +428,14 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
         let (built_impl, _, built_where) = built_generics.split_for_impl();
 
+        let safetensors_derive = if cfg!(feature = "safetensors") {
+            quote!(dfdx_derives::SaveSafeTensors, dfdx_derives::LoadSafeTensors)
+        } else {
+            quote!()
+        };
+
         quote! {
-            #[derive(Clone, Debug, dfdx_derives::ResetParams, dfdx_derives::UpdateParams, dfdx_derives::ZeroGrads, dfdx_derives::SaveSafeTensors, dfdx_derives::LoadSafeTensors)]
+            #[derive(Clone, Debug, dfdx_derives::ResetParams, dfdx_derives::UpdateParams, dfdx_derives::ZeroGrads, #safetensors_derive)]
             pub struct #built_name #built_impl #built_where {
                 #fields
             }
@@ -849,7 +886,7 @@ pub fn save_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     proc_macro::TokenStream::from(quote! {
-        #[cfg(feature = "safetensors")]
+        // note: SaveSafeTensors definition is already gated by the safetensors feature
         impl #impl_generics dfdx_core::nn_traits::SaveSafeTensors for #name #ty_generics #where_clause {
             fn write_safetensors(
                 &self,
@@ -911,7 +948,7 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     proc_macro::TokenStream::from(quote! {
-        #[cfg(feature = "safetensors")]
+        // note: LoadSafeTensors definition is already gated by the safetensors feature
         impl #impl_generics dfdx_core::nn_traits::LoadSafeTensors for #name #ty_generics #where_clause {
             fn read_safetensors<'a>(
                 &mut self,
