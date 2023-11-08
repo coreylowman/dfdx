@@ -110,6 +110,7 @@
 extern crate alloc;
 #[cfg(all(feature = "no-std", not(feature = "std")))]
 extern crate no_std_compat as std;
+extern crate self as dfdx_core;
 
 pub mod data;
 pub mod dtypes;

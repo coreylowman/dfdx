@@ -252,10 +252,19 @@
 
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
+extern crate self as dfdx;
+
 pub mod feature_flags;
 pub mod nn;
 
 pub use dfdx_core::*;
+
+#[cfg(feature = "safetensors")]
+pub use safetensors;
+
+pub use dfdx_derives::{CustomModule, ResetParams, Sequential, UpdateParams, ZeroGrads};
+#[cfg(feature = "safetensors")]
+pub use dfdx_derives::{LoadSafeTensors, SaveSafeTensors};
 
 pub mod prelude {
     pub use crate::nn::*;
