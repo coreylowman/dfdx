@@ -53,7 +53,11 @@ cudnn = ["dfdx-core/cudnn"]
 f16 = ["dfdx-core/f16"]
 
 numpy = ["dfdx-core/numpy"]
-safetensors = ["dep:safetensors", "dfdx-core/safetensors"]
+safetensors = [
+    "dep:safetensors",
+    "dfdx-core/safetensors",
+    "dfdx-derives/safetensors",
+]
 
 test-f16 = ["f16", "dfdx-core/f16"]
 test-amp-f16 = ["f16", "dfdx-core/f16"]
