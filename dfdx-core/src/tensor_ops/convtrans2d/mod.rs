@@ -51,7 +51,7 @@ pub(super) trait ConvTrans2DKernel<E: Dtype>: Storage<E> {
     ) -> Result<(), Error>;
 }
 
-pub trait TryConvTrans2D<Stride, Padding, Dilation, Groups>: Sized {
+pub trait TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>: Sized {
     type Convolved;
 
     /// Applies a 2D convolution to the input tensor.
@@ -61,8 +61,9 @@ pub trait TryConvTrans2D<Stride, Padding, Dilation, Groups>: Sized {
         padding: Padding,
         dilation: Dilation,
         groups: Groups,
+        output_padding: OutputPadding,
     ) -> Self::Convolved {
-        self.try_convtrans2d(stride, padding, dilation, groups)
+        self.try_convtrans2d(stride, padding, dilation, groups, output_padding)
             .unwrap()
     }
 
@@ -73,6 +74,7 @@ pub trait TryConvTrans2D<Stride, Padding, Dilation, Groups>: Sized {
         padding: Padding,
         dilation: Dilation,
         groups: Groups,
+        output_padding: OutputPadding,
     ) -> Result<Self::Convolved, Error>;
 }
 
@@ -82,13 +84,16 @@ impl<
         const PADDING: usize,
         const DILATION: usize,
         Groups: Dim,
+        const OUTPUT_PADDING: usize,
         const DIM: usize,
-    > TryConvTrans2D<Const<STRIDE>, Const<PADDING>, Const<DILATION>, Groups>
+    > TryConvTrans2D<Const<STRIDE>, Const<PADDING>, Const<DILATION>, Groups, Const<OUTPUT_PADDING>>
     for (Const<DIM>, Const<KERNEL>)
 where
-    Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 }>: Sized,
+    Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 + OUTPUT_PADDING }>:
+        Sized,
 {
-    type Convolved = Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 }>;
+    type Convolved =
+        Const<{ (DIM - 1) * STRIDE - 2 * PADDING + DILATION * (KERNEL - 1) + 1 + OUTPUT_PADDING }>;
 
     fn try_convtrans2d(
         self,
@@ -96,13 +101,14 @@ where
         _: Const<PADDING>,
         _: Const<DILATION>,
         _: Groups,
+        _: Const<OUTPUT_PADDING>,
     ) -> Result<Self::Convolved, Error> {
         Ok(Const)
     }
 }
 
-impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
-    TryConvTrans2D<Stride, Padding, Dilation, Groups> for (usize, Kernel)
+impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim, OutputPadding: Dim>
+    TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding> for (usize, Kernel)
 {
     type Convolved = usize;
 
@@ -112,18 +118,33 @@ impl<Kernel: Dim, Stride: Dim, Padding: Dim, Dilation: Dim, Groups: Dim>
         padding: Padding,
         dilation: Dilation,
         _: Groups,
+        output_padding: OutputPadding,
     ) -> Result<Self::Convolved, Error> {
         let (dim, kernel) = self;
-        Ok(
-            ((dim - 1) * stride.size() + dilation.size() * (kernel.size() - 1) + 1)
-                .checked_sub(2 * padding.size())
-                .unwrap(),
-        )
+        Ok(((dim - 1) * stride.size()
+            + dilation.size() * (kernel.size() - 1)
+            + 1
+            + output_padding.size())
+        .checked_sub(2 * padding.size())
+        .unwrap())
     }
 }
 
-impl<InpChan, OutChanOverGroups, Kernel, Stride, Padding, Dilation, Groups, H, W, E, D, T>
-    TryConvTrans2D<Stride, Padding, Dilation, Groups>
+impl<
+        InpChan,
+        OutChanOverGroups,
+        Kernel,
+        Stride,
+        Padding,
+        Dilation,
+        Groups,
+        OutputPadding,
+        H,
+        W,
+        E,
+        D,
+        T,
+    > TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>
     for (
         Tensor<(InpChan, H, W), E, D, T>,
         Tensor<(InpChan, OutChanOverGroups, Kernel, Kernel), E, D>,
@@ -136,6 +157,7 @@ where
     Padding: Dim,
     Dilation: Dim,
     Groups: Dim,
+    OutputPadding: Dim,
     H: Dim,
     W: Dim,
     E: Dtype,
@@ -143,16 +165,18 @@ where
     T: Tape<E, D>,
     OutChanOverGroups: std::ops::Mul<Groups>,
     <OutChanOverGroups as std::ops::Mul<Groups>>::Output: Dim,
-    (H, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
-    (W, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
-    <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
-    <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    (H, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>,
+    (W, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>,
+    <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved:
+        Dim,
+    <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved:
+        Dim,
 {
     type Convolved = Tensor<
         (
             <OutChanOverGroups as std::ops::Mul<Groups>>::Output,
-            <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
-            <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved,
+            <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved,
         ),
         E,
         D,
@@ -165,11 +189,13 @@ where
         padding: Padding,
         dilation: Dilation,
         groups: Groups,
+        output_padding: OutputPadding,
     ) -> Result<Self::Convolved, Error> {
         let (img, filters) = self;
         let (inp_chan, h, w) = img.shape;
         let img = img.try_reshape_like(&(Const::<1>, inp_chan, h, w))?;
-        let out = (img, filters).try_convtrans2d(stride, padding, dilation, groups)?;
+        let out =
+            (img, filters).try_convtrans2d(stride, padding, dilation, groups, output_padding)?;
         let (_, out_chan, out_h, out_w) = out.shape;
         out.try_reshape_like(&(out_chan, out_h, out_w))
     }
@@ -182,13 +208,14 @@ impl<
         Padding,
         Dilation,
         Groups,
+        OutputPadding,
         Batch,
         H,
         W,
         E,
         D,
         T,
-    > TryConvTrans2D<Stride, Padding, Dilation, Groups>
+    > TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>
     for (
         Tensor<(Batch, InpChan, H, W), E, D, T>,
         Tensor<(InpChan, OutChanOverGroups, Kernel, Kernel), E, D>,
@@ -201,6 +228,7 @@ where
     Padding: Dim,
     Dilation: Dim,
     Groups: Dim,
+    OutputPadding: Dim,
     Batch: Dim,
     H: Dim,
     W: Dim,
@@ -209,17 +237,19 @@ where
     T: Tape<E, D>,
     OutChanOverGroups: std::ops::Mul<Groups>,
     <OutChanOverGroups as std::ops::Mul<Groups>>::Output: Dim,
-    (H, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
-    (W, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups>,
-    <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
-    <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved: Dim,
+    (H, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>,
+    (W, Kernel): TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>,
+    <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved:
+        Dim,
+    <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved:
+        Dim,
 {
     type Convolved = Tensor<
         (
             Batch,
             <OutChanOverGroups as std::ops::Mul<Groups>>::Output,
-            <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
-            <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups>>::Convolved,
+            <(H, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved,
+            <(W, Kernel) as TryConvTrans2D<Stride, Padding, Dilation, Groups, OutputPadding>>::Convolved,
         ),
         E,
         D,
@@ -232,6 +262,7 @@ where
         padding: Padding,
         dilation: Dilation,
         groups: Groups,
+        output_padding: OutputPadding,
     ) -> Result<Self::Convolved, Error> {
         let (img, filters) = self;
         assert_eq!(img.shape.1, filters.shape.0);
@@ -242,8 +273,8 @@ where
         if img.strides != img.shape.strides() || filters.strides != filters.shape.strides() {
             panic!("Image & filter inputs to conv2d must be contiguous");
         }
-        let h_out = (h, kernel).convtrans2d(stride, padding, dilation, groups);
-        let w_out = (w, kernel).convtrans2d(stride, padding, dilation, groups);
+        let h_out = (h, kernel).convtrans2d(stride, padding, dilation, groups, output_padding);
+        let w_out = (w, kernel).convtrans2d(stride, padding, dilation, groups, output_padding);
         let op = ConvTrans2DOp {
             stride: stride.size(),
             padding: padding.size(),
