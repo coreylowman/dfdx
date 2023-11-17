@@ -163,6 +163,8 @@ mod clamp;
 mod cmp;
 mod concat;
 mod concat_along;
+mod concat_shape_along;
+mod concat_tensor_along;
 mod cos;
 mod div;
 mod dropout;
@@ -224,7 +226,10 @@ pub use clamp::clamp;
 pub use cmp::{eq, ge, gt, le, lt, ne, TryEq, TryGe, TryGt, TryLe, TryLt, TryNe};
 #[allow(deprecated)]
 pub use concat::TryConcat;
+#[allow(deprecated)]
 pub use concat_along::TryConcatAlong;
+pub use concat_shape_along::TryConcatShapeAlong;
+pub use concat_tensor_along::TryConcatTensorAlong;
 pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;

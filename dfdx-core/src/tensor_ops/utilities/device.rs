@@ -18,8 +18,8 @@ pub trait Device<E: Dtype>:
     + super::super::stack::StackKernel<usize>
     + super::super::concat::ConcatKernel<E>
     + super::super::concat::ConcatKernel<usize>
-    + super::super::concat_along::ConcatAlongKernel<E>
-    + super::super::concat_along::ConcatAlongKernel<usize>
+    + super::super::concat_tensor_along::ConcatAlongKernel<E>
+    + super::super::concat_tensor_along::ConcatAlongKernel<usize>
 
     // optimizers
     + super::super::adam::AdamKernel<E>
