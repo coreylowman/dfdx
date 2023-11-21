@@ -107,7 +107,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                                 where_clause
                                     .predicates
                                     .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
-                                let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                                let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
                                     quote!(#[serialize])
                                 } else {
                                     quote!()
@@ -128,7 +128,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                                 where_clause
                                     .predicates
                                     .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
-                                let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                                let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
                                     quote!(#[serialize])
                                 } else {
                                     quote!()
@@ -390,7 +390,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             where_clause
                                 .predicates
                                 .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
-                            let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                            let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
                                 quote!(#[serialize])
                             } else {
                                 quote!()
@@ -406,7 +406,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             where_clause
                                 .predicates
                                 .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
-                            let safetensors_serialize_attr = if cfg!(features = "safetensors") {
+                            let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
                                 quote!(#[serialize])
                             } else {
                                 quote!()
