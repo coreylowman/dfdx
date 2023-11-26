@@ -52,7 +52,7 @@ impl Webgpu {
     }
 }
 
-impl<E: Unit + SafeZeros> ZerosTensor<E> for Webgpu {
+impl<E: Unit + SafeZeros + From<f32>> ZerosTensor<E> for Webgpu {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
@@ -63,7 +63,7 @@ impl<E: Unit + SafeZeros> ZerosTensor<E> for Webgpu {
     }
 }
 
-impl<E: Unit + SafeZeros> ZeroFillStorage<E> for Webgpu {
+impl<E: Unit + SafeZeros + From<f32>> ZeroFillStorage<E> for Webgpu {
     fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         storage.copy_to_device(&self.dev, &self.queue, &vec![0u8; storage.size()]);
 
