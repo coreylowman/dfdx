@@ -16,6 +16,12 @@ pub enum Error {
 
     #[cfg(feature = "cudnn")]
     CudnnError(cudarc::cudnn::CudnnError),
+
+    #[cfg(feature = "webgpu")]
+    WebgpuAdapterNotFound,
+
+    #[cfg(feature = "webgpu")]
+    WebgpuRequestDeviceError(wgpu::RequestDeviceError),
 }
 
 impl std::fmt::Display for Error {

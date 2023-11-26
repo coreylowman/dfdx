@@ -49,6 +49,7 @@ fast-alloc = ["dfdx-core/fast-alloc"]
 
 cuda = ["dfdx-core/cuda"]
 cudnn = ["dfdx-core/cudnn"]
+webgpu = ["dfdx-core/webgpu"]
 
 f16 = ["dfdx-core/f16"]
 
