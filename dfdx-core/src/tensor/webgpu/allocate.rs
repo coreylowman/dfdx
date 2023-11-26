@@ -23,12 +23,7 @@ impl Webgpu {
         buf: Vec<E>,
     ) -> Result<Tensor<S, E, Self>, Error> {
         let buffer = unsafe { self.alloc_empty::<E>(buf.len()) }?;
-        let buf_ptr = buf.as_ptr();
-        let slice = unsafe {
-            std::slice::from_raw_parts(buf_ptr as *const u8, buf.len() * std::mem::size_of::<E>())
-        };
-        self.queue.write_buffer(&buffer, 0, slice);
-        self.queue.submit(std::iter::empty());
+        buffer.copy_to_device::<E>(&self.dev, &self.queue, &buf);
 
         Ok(self.build_tensor(shape, shape.strides(), buffer))
     }
@@ -57,23 +52,29 @@ impl Webgpu {
     }
 }
 
-impl<E: Unit + SafeZeros> ZerosTensor<E> for Webgpu {
+impl<E: Unit + SafeZeros + From<f32>> ZerosTensor<E> for Webgpu {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
         let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
-        self.queue
-            .write_buffer(&data, 0, &vec![0; data.size() as usize]);
-        self.queue.submit(std::iter::empty());
+        data.copy_to_device(
+            &self.dev,
+            &self.queue,
+            &vec![E::from(0.0); shape.num_elements()],
+        );
+
         Ok(self.build_tensor(shape, strides, data))
     }
 }
 
-impl<E: Unit + SafeZeros> ZeroFillStorage<E> for Webgpu {
+impl<E: Unit + SafeZeros + From<f32>> ZeroFillStorage<E> for Webgpu {
     fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error> {
-        self.queue
-            .write_buffer(&storage.data, 0, &vec![0; storage.data.size() as usize]);
-        self.queue.submit(std::iter::empty());
+        storage.copy_to_device(
+            &self.dev,
+            &self.queue,
+            &vec![E::from(0.0); storage.size() as usize / std::mem::size_of::<E>()],
+        );
+
         Ok(())
     }
 }
@@ -120,22 +121,11 @@ where
 impl<E: Unit> OneFillStorage<E> for Webgpu {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         let len = storage.size() as usize / std::mem::size_of::<E>();
-        let buf_ptr = std::vec![E::ONE; len].as_mut_ptr();
-        let buf = unsafe {
-            Vec::from_raw_parts(
-                buf_ptr as *mut u8,
-                storage.size() as usize,
-                storage.size() as usize,
-            )
-        };
-        self.queue.write_buffer(&storage.data, 0, &buf);
-        // unsafe {
-        //     std::ptr::copy_nonoverlapping(
-        //         std::vec![E::ONE; len].as_ptr(),
-        //         storage.data.slice(..).get_mapped_range_mut().as_mut_ptr() as *mut E,
-        //         len,
-        //     )
-        // };
+        let buf = std::vec![E::ONE; len];
+        storage
+            .data
+            .copy_to_device::<E>(&self.dev, &self.queue, &buf);
+
         Ok(())
     }
 }
@@ -193,13 +183,9 @@ impl<E: Unit> CopySlice<E> for Webgpu {
             src.len() * std::mem::size_of::<E>(),
             "Slices must have same number of elements as *physical* Storage<E> of tensors."
         );
-        unsafe {
-            std::ptr::copy_nonoverlapping(
-                src.as_ptr(),
-                dst.data.slice(..).get_mapped_range_mut().as_mut_ptr() as *mut E,
-                src.len(),
-            )
-        };
+        dst.data
+            .data
+            .copy_to_device(&dst.device.dev, &dst.device.queue, src);
     }
 
     fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]) {
@@ -208,13 +194,9 @@ impl<E: Unit> CopySlice<E> for Webgpu {
             dst.len() * std::mem::size_of::<E>(),
             "Slices must have same number of elements as *physical* Storage<E> of tensors."
         );
-        unsafe {
-            std::ptr::copy_nonoverlapping(
-                src.data.slice(..).get_mapped_range().as_ptr() as *const E,
-                dst.as_mut_ptr(),
-                src.data.size() as usize,
-            )
-        };
+        src.data
+            .data
+            .copy_to_host(&src.device.dev, &src.device.queue, dst);
     }
 }
 

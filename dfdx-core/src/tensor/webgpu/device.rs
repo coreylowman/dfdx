@@ -34,6 +34,49 @@ impl core::ops::Deref for Buffer {
     }
 }
 
+impl Buffer {
+    pub(crate) fn size(&self) -> u64 {
+        self.size as u64
+    }
+
+    pub(crate) fn capacity(&self) -> usize {
+        self.data.size() as usize
+    }
+
+    pub(crate) fn copy_to_device<E: Unit>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
+        let slice = unsafe {
+            std::slice::from_raw_parts(
+                slice.as_ptr() as *const u8,
+                slice.len() * std::mem::size_of::<E>(),
+            )
+        };
+        queue.write_buffer(&self.data, 0, slice);
+        queue.submit(std::iter::empty());
+        dev.poll(Maintain::Wait);
+    }
+
+    pub(crate) fn copy_to_host<E: Unit>(&self, dev: &Device, queue: &Queue, buf: &mut [E]) {
+        let ptr = Arc::new(AtomicPtr::<E>::new(std::ptr::null_mut()));
+        let ptr2 = Arc::clone(&ptr);
+        DownloadBuffer::read_buffer(dev, queue, &self.data.slice(..self.size()), move |res| {
+            let Ok(data) = res else {
+                panic!();
+            };
+            ptr2.store((*data).as_ptr() as *mut u8 as *mut E, Ordering::SeqCst);
+        });
+        queue.submit(std::iter::empty());
+        dev.poll(Maintain::Wait);
+
+        while ptr.load(Ordering::SeqCst).is_null() {}
+        let ptr = ptr.load(Ordering::SeqCst);
+        // TODO: How are we sure this is safe?
+        let slice = unsafe {
+            std::slice::from_raw_parts(ptr, self.size() as usize / std::mem::size_of::<E>())
+        };
+        buf.copy_from_slice(slice);
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Webgpu {
     pub(crate) cpu: Cpu,
@@ -308,33 +351,7 @@ impl<E: Unit> Storage<E> for Webgpu {
             tape: NoneTape,
         };
         let buf = std::sync::Arc::get_mut(&mut cpu_tensor.data).unwrap();
-        // TODO: this is so ugly
-        let ptr = Arc::new(AtomicPtr::<E>::new(std::ptr::null_mut()));
-        let ptr2 = Arc::clone(&ptr);
-        DownloadBuffer::read_buffer(
-            &self.dev,
-            &self.queue,
-            &tensor.data.data.data.slice(..tensor.data.data.size as u64),
-            move |res| {
-                let Ok(data) = res else {
-                    panic!();
-                };
-                ptr2.store((*data).as_ptr() as *mut u8 as *mut E, Ordering::SeqCst);
-            },
-        );
-        self.queue.submit(std::iter::empty());
-        self.dev.poll(Maintain::Wait);
-
-        while ptr.load(Ordering::SeqCst).is_null() {}
-        let ptr = ptr.load(Ordering::SeqCst);
-        // TODO: How are we sure this is safe?
-        let slice = unsafe {
-            std::slice::from_raw_parts(
-                ptr,
-                tensor.data.data.size() as usize / std::mem::size_of::<E>(),
-            )
-        };
-        buf.data.copy_from_slice(slice);
+        tensor.data.copy_to_host::<E>(&self.dev, &self.queue, buf);
         self.cpu.tensor_to_vec::<S, _>(&cpu_tensor)
     }
 }
