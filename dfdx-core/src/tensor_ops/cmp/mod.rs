@@ -7,6 +7,9 @@ mod cpu_kernels;
 #[cfg(feature = "cuda")]
 mod cuda_kernels;
 
+#[cfg(feature = "webgpu")]
+mod webgpu_kernels;
+
 pub trait CmpKernel<Op, E>: Storage<E> + Storage<bool> {
     fn forward<S: Shape, T>(
         &self,

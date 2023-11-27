@@ -2,6 +2,9 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
+#[cfg(feature = "webgpu")]
+mod webgpu_kernel;
+
 use crate::prelude::{Error, Shape, Storage, Tensor, Unit};
 
 pub trait ToDtypeKernel<E1: Unit, E2: Unit>: Storage<E1> + Storage<E2> {

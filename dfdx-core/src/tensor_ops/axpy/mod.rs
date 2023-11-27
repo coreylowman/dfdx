@@ -7,6 +7,9 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
+#[cfg(feature = "webgpu")]
+mod webgpu_kernel;
+
 /// Elementwise `a * alpha + b * beta`.
 ///
 /// See [Tensor::axpy] for in place version.

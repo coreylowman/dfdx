@@ -1,5 +1,4 @@
-extern crate alloc;
-use alloc::borrow::Cow;
+use std::borrow::Cow;
 
 use crate::prelude::{
     ops::{BinaryKernel, UnaryKernel},

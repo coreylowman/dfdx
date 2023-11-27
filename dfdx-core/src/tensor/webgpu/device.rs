@@ -37,8 +37,8 @@ impl core::ops::Deref for Buffer {
 }
 
 impl Buffer {
-    pub(crate) fn size(&self) -> u64 {
-        self.size as u64
+    pub(crate) fn size(&self) -> usize {
+        self.size
     }
 
     #[allow(unused)]
@@ -57,16 +57,16 @@ impl Buffer {
         let (sender, receiver) = std::sync::mpsc::channel();
         let buffer = dev.create_buffer(&BufferDescriptor {
             label: None,
-            size: self.size(),
+            size: self.size() as u64,
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         {
             let mut encoder = dev.create_command_encoder(&Default::default());
-            encoder.copy_buffer_to_buffer(&self.data, 0, &buffer, 0, self.size());
+            encoder.copy_buffer_to_buffer(&self.data, 0, &buffer, 0, self.size() as u64);
             queue.submit(Some(encoder.finish()));
         }
-        let slice = buffer.slice(..self.size());
+        let slice = buffer.slice(..self.size() as u64);
         slice.map_async(wgpu::MapMode::Read, move |_| {
             sender.send(()).unwrap();
         });
@@ -190,11 +190,11 @@ impl<E> Clone for CachableBuffer<E> {
                 let mut encoder = self.dev.create_command_encoder(&Default::default());
                 let bfr = self.dev.create_buffer(&BufferDescriptor {
                     label: None,
-                    size: round_to_buffer_alignment(self.data.size()),
+                    size: round_to_buffer_alignment(self.data.size() as u64),
                     usage: BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
-                encoder.copy_buffer_to_buffer(&self.data, 0, &bfr, 0, self.data.size());
+                encoder.copy_buffer_to_buffer(&self.data, 0, &bfr, 0, self.data.size() as u64);
                 (
                     encoder,
                     Buffer {
@@ -205,7 +205,7 @@ impl<E> Clone for CachableBuffer<E> {
             },
             |bfr| {
                 let mut encoder = self.dev.create_command_encoder(&Default::default());
-                encoder.copy_buffer_to_buffer(&self.data, 0, &bfr, 0, self.data.size());
+                encoder.copy_buffer_to_buffer(&self.data, 0, &bfr, 0, self.data.size() as u64);
                 (encoder, bfr)
             },
         );
