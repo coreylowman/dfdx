@@ -67,11 +67,9 @@ mod tests {
         let dev: Webgpu = Default::default();
         dev.enable_cache();
         let a: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
-        let b: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         let mut b = a.clone();
         assert_eq!(dev.cache.len(), 0);
-        dev.synchronize();
-        // will actually clone the data - should reuse allocation from cache
+        // will actually clone the data - should create new allocation
         std::sync::Arc::make_mut(&mut b.data);
         assert_eq!(dev.cache.len(), 0);
     }

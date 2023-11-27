@@ -14,11 +14,13 @@ use crate::{
 use core::sync::atomic::AtomicPtr;
 use std::{
     marker::PhantomData,
-    sync::{atomic::Ordering, Arc, Mutex},
+    sync::{atomic::Ordering, Arc},
     vec::Vec,
 };
 
 use super::allocate::round_to_buffer_alignment;
+
+static CONSTRUCTOR_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[derive(Debug)]
 pub struct Buffer {
@@ -39,40 +41,52 @@ impl Buffer {
         self.size as u64
     }
 
+    #[allow(unused)]
     pub(crate) fn capacity(&self) -> usize {
         self.data.size() as usize
     }
 
-    pub(crate) fn copy_to_device<E: Unit>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
-        let slice = unsafe {
-            std::slice::from_raw_parts(
-                slice.as_ptr() as *const u8,
-                slice.len() * std::mem::size_of::<E>(),
-            )
-        };
+    pub(crate) fn copy_to_device<E: Unit + bytemuck::Pod>(
+        &self,
+        dev: &Device,
+        queue: &Queue,
+        slice: &[E],
+    ) {
+        let slice = bytemuck::cast_slice(slice);
         queue.write_buffer(&self.data, 0, slice);
         queue.submit(std::iter::empty());
         dev.poll(Maintain::Wait);
     }
 
-    pub(crate) fn copy_to_host<E: Unit>(&self, dev: &Device, queue: &Queue, buf: &mut [E]) {
-        let ptr = Arc::new(AtomicPtr::<E>::new(std::ptr::null_mut()));
-        let ptr2 = Arc::clone(&ptr);
-        DownloadBuffer::read_buffer(dev, queue, &self.data.slice(..self.size()), move |res| {
-            let Ok(data) = res else {
-                panic!();
-            };
-            ptr2.store((*data).as_ptr() as *mut u8 as *mut E, Ordering::SeqCst);
+    pub(crate) fn copy_to_host<E: Unit + bytemuck::Pod>(
+        &self,
+        dev: &Device,
+        queue: &Queue,
+        buf: &mut [E],
+    ) {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let buffer = dev.create_buffer(&BufferDescriptor {
+            label: None,
+            size: self.size(),
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
-        queue.submit(std::iter::empty());
+        {
+            let mut encoder = dev.create_command_encoder(&Default::default());
+            encoder.copy_buffer_to_buffer(&self.data, 0, &buffer, 0, self.size());
+            queue.submit(Some(encoder.finish()));
+        }
+        let slice = buffer.slice(..self.size());
+        slice.map_async(wgpu::MapMode::Read, move |_| {
+            sender.send(()).unwrap();
+        });
+        // queue.submit(std::iter::empty());
         dev.poll(Maintain::Wait);
 
-        while ptr.load(Ordering::SeqCst).is_null() {}
-        let ptr = ptr.load(Ordering::SeqCst);
+        let _ = receiver.recv().unwrap();
+        let data = slice.get_mapped_range();
         // TODO: How are we sure this is safe?
-        let slice = unsafe {
-            std::slice::from_raw_parts(ptr, self.size() as usize / std::mem::size_of::<E>())
-        };
+        let slice = bytemuck::cast_slice(&*data);
         buf.copy_from_slice(slice);
     }
 }
@@ -85,8 +99,6 @@ pub struct Webgpu {
     pub(crate) dev: Arc<Device>,
     pub(crate) queue: Arc<Queue>,
 
-    pub(crate) read_workspace: Arc<Mutex<Buffer>>,
-    pub(crate) write_workspace: Arc<Mutex<Buffer>>,
     pub(crate) cache: Arc<TensorCache<Buffer>>,
 }
 
@@ -104,46 +116,19 @@ impl Default for Webgpu {
 
 impl Webgpu {
     pub fn seed_from_u64(seed: u64) -> Self {
-        Self::try_seed_from_u64(seed).unwrap()
+        Self::try_build(seed).unwrap()
     }
 
-    pub fn try_seed_from_u64(seed: u64) -> Result<Self, Error> {
-        Self::try_build(0, seed)
-    }
-
-    pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, Error> {
+    pub fn try_build(seed: u64) -> Result<Self, Error> {
         let cpu = Cpu::seed_from_u64(seed);
         let instance = Arc::new(Instance::new(InstanceDescriptor::default()));
-        let adapter = instance
-            .enumerate_adapters(Backends::PRIMARY)
-            .skip(ordinal)
-            .next()
+        let adapter = futures_lite::future::block_on(instance.request_adapter(&Default::default()))
             .ok_or(Error::WebgpuAdapterNotFound)?;
         let adapter = Arc::new(adapter);
         let (dev, queue) =
             futures_lite::future::block_on(adapter.request_device(&Default::default(), None))?;
         let dev = Arc::new(dev);
         let queue = Arc::new(queue);
-
-        let read_workspace = Arc::new(Mutex::new(Buffer {
-            data: dev.create_buffer(&BufferDescriptor {
-                label: None,
-                size: COPY_BUFFER_ALIGNMENT,
-                usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-                mapped_at_creation: true,
-            }),
-            size: COPY_BUFFER_ALIGNMENT as usize,
-        }));
-
-        let write_workspace = Arc::new(Mutex::new(Buffer {
-            data: dev.create_buffer(&BufferDescriptor {
-                label: None,
-                size: COPY_BUFFER_ALIGNMENT,
-                usage: BufferUsages::MAP_WRITE | BufferUsages::COPY_SRC,
-                mapped_at_creation: true,
-            }),
-            size: COPY_BUFFER_ALIGNMENT as usize,
-        }));
 
         Ok(Self {
             cpu,
@@ -152,8 +137,6 @@ impl Webgpu {
             dev,
             queue,
 
-            read_workspace,
-            write_workspace,
             cache: Default::default(),
         })
     }
@@ -316,7 +299,7 @@ impl Synchronize for Webgpu {
     }
 }
 
-impl<E: Unit> Storage<E> for Webgpu {
+impl<E: Unit + bytemuck::Pod> Storage<E> for Webgpu {
     type Vec = CachableBuffer<E>;
 
     fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error> {
