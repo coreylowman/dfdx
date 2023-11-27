@@ -74,7 +74,7 @@ impl<E: Dtype> super::ScalarCmpKernel<super::NeKernelOp, E> for Webgpu {
     fn forward<S: crate::prelude::Shape, T>(
         &self,
         lhs: &crate::prelude::Tensor<S, E, Self, T>,
-        rhs: E
+        rhs: E,
     ) -> Result<crate::prelude::Tensor<S, bool, Self>, crate::prelude::Error> {
         todo!()
     }
