@@ -1,6 +1,9 @@
 use std::borrow::Cow;
 
-use crate::prelude::{ops::{UnaryKernel, BinaryKernel}, Dtype, Webgpu};
+use crate::prelude::{
+    ops::{BinaryKernel, UnaryKernel},
+    Dtype, Webgpu,
+};
 
 impl<E: Dtype> UnaryKernel<super::ScalarDivKernelOp<E>, E> for Webgpu {
     const BACKWARD_WITHOUT_INP: bool = false;
@@ -27,7 +30,7 @@ impl<E: Dtype> UnaryKernel<super::ScalarDivKernelOp<E>, E> for Webgpu {
     }
 }
 
-impl <E:Dtype> BinaryKernel<super::BinaryDivKernelOp, E> for Webgpu {
+impl<E: Dtype> BinaryKernel<super::BinaryDivKernelOp, E> for Webgpu {
     const BACKWARD_WITHOUT_DATA: bool = true;
 
     fn forward<S: crate::prelude::Shape>(

@@ -1,6 +1,6 @@
 use crate::prelude::{Dtype, Webgpu};
 
-impl<E: Dtype> super::RollKernel<E> for Webgpu{
+impl<E: Dtype> super::RollKernel<E> for Webgpu {
     fn forward<S: crate::prelude::Shape>(
         &self,
         op: super::RollOp,

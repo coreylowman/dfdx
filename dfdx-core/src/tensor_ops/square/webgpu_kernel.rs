@@ -26,4 +26,3 @@ impl<E: Dtype> UnaryKernel<super::SquareKernelOp, E> for Webgpu {
         todo!()
     }
 }
-

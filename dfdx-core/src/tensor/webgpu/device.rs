@@ -68,7 +68,6 @@ impl Buffer {
         slice.map_async(wgpu::MapMode::Read, move |_| {
             sender.send(()).unwrap();
         });
-        // queue.submit(std::iter::empty());
         dev.poll(Maintain::Wait);
 
         let _ = receiver.recv().unwrap();

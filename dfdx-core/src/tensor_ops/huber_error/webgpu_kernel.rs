@@ -25,4 +25,3 @@ impl<E: Dtype> BinaryKernel<super::HuberErrorKernelOp<E>, E> for Webgpu {
         todo!()
     }
 }
-
