@@ -47,13 +47,8 @@ impl Buffer {
         self.data.size() as usize
     }
 
-    pub(crate) fn copy_to_device<E: Unit + bytemuck::Pod>(
-        &self,
-        dev: &Device,
-        queue: &Queue,
-        slice: &[E],
-    ) {
-        let slice = bytemuck::cast_slice(slice);
+    pub(crate) fn copy_to_device<E: Unit>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
+        let slice = unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const u8, self.size()) };
         queue.write_buffer(&self.data, 0, slice);
         queue.submit(std::iter::empty());
         dev.poll(Maintain::Wait);
@@ -310,7 +305,7 @@ impl Synchronize for Webgpu {
     }
 }
 
-impl<E: Unit + bytemuck::Pod> Storage<E> for Webgpu {
+impl<E: Unit> Storage<E> for Webgpu {
     type Vec = CachableBuffer<E>;
 
     fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error> {

@@ -17,7 +17,7 @@ pub(crate) fn round_to_buffer_alignment(size: u64) -> u64 {
 }
 
 impl Webgpu {
-    fn tensor_from_host_buf<S: Shape, E: Unit + bytemuck::Pod>(
+    fn tensor_from_host_buf<S: Shape, E: Unit>(
         &self,
         shape: S,
         buf: Vec<E>,
@@ -28,7 +28,7 @@ impl Webgpu {
         Ok(self.build_tensor(shape, shape.strides(), buffer))
     }
 
-    pub(crate) fn build_tensor<S: Shape, E: Unit + bytemuck::Pod>(
+    pub(crate) fn build_tensor<S: Shape, E: Unit>(
         &self,
         shape: S,
         strides: S::Concrete,
@@ -52,7 +52,7 @@ impl Webgpu {
     }
 }
 
-impl<E: Unit + SafeZeros + From<f32> + bytemuck::Pod> ZerosTensor<E> for Webgpu {
+impl<E: Unit + SafeZeros + From<bool>> ZerosTensor<E> for Webgpu {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
@@ -63,7 +63,7 @@ impl<E: Unit + SafeZeros + From<f32> + bytemuck::Pod> ZerosTensor<E> for Webgpu 
     }
 }
 
-impl<E: Unit + SafeZeros + From<f32> + bytemuck::Pod> ZeroFillStorage<E> for Webgpu {
+impl<E: Unit + SafeZeros + From<bool>> ZeroFillStorage<E> for Webgpu {
     fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         storage.copy_to_device(&self.dev, &self.queue, &vec![0u8; storage.size()]);
 
@@ -71,7 +71,7 @@ impl<E: Unit + SafeZeros + From<f32> + bytemuck::Pod> ZeroFillStorage<E> for Web
     }
 }
 
-impl<E: Unit + bytemuck::Pod> OnesTensor<E> for Webgpu {
+impl<E: Unit> OnesTensor<E> for Webgpu {
     fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let buf = vec![E::ONE; shape.num_elements()];
@@ -79,7 +79,7 @@ impl<E: Unit + bytemuck::Pod> OnesTensor<E> for Webgpu {
     }
 }
 
-impl<E: Unit + bytemuck::Pod> TriangleTensor<E> for Webgpu
+impl<E: Unit> TriangleTensor<E> for Webgpu
 where
     Cpu: TriangleTensor<E>,
 {
@@ -110,7 +110,7 @@ where
     }
 }
 
-impl<E: Unit + bytemuck::Pod> OneFillStorage<E> for Webgpu {
+impl<E: Unit> OneFillStorage<E> for Webgpu {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         let len = storage.size() as usize / std::mem::size_of::<E>();
         let buf = vec![E::ONE; len];
@@ -122,7 +122,7 @@ impl<E: Unit + bytemuck::Pod> OneFillStorage<E> for Webgpu {
     }
 }
 
-impl<E: Unit + bytemuck::Pod> SampleTensor<E> for Webgpu
+impl<E: Unit> SampleTensor<E> for Webgpu
 where
     Cpu: SampleTensor<E>,
 {
@@ -168,7 +168,7 @@ where
     }
 }
 
-impl<E: Unit + bytemuck::Pod> CopySlice<E> for Webgpu {
+impl<E: Unit> CopySlice<E> for Webgpu {
     fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]) {
         assert_eq!(
             dst.data.size() as usize,
@@ -192,7 +192,7 @@ impl<E: Unit + bytemuck::Pod> CopySlice<E> for Webgpu {
     }
 }
 
-impl<E: Unit + bytemuck::Pod> TensorFromVec<E> for Webgpu {
+impl<E: Unit> TensorFromVec<E> for Webgpu {
     fn try_tensor_from_vec<S: Shape>(
         &self,
         src: Vec<E>,
@@ -208,7 +208,7 @@ impl<E: Unit + bytemuck::Pod> TensorFromVec<E> for Webgpu {
     }
 }
 
-impl<S: Shape, E: Unit + bytemuck::Pod> TensorToArray<S, E> for Webgpu
+impl<S: Shape, E: Unit> TensorToArray<S, E> for Webgpu
 where
     Cpu: TensorToArray<S, E> + Storage<E>,
 {
