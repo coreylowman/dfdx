@@ -21,8 +21,6 @@ use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
 use super::allocate::round_to_buffer_alignment;
 
-static CONSTRUCTOR_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
 #[derive(Debug)]
 pub struct Buffer {
     pub(crate) data: wgpu::Buffer,
