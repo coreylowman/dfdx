@@ -4,6 +4,9 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
+#[cfg(feature = "webgpu")]
+mod webgpu_kernel;
+
 pub trait SliceKernel<E: Unit>: Storage<E> {
     fn forward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,

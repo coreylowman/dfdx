@@ -46,24 +46,14 @@ impl Buffer {
         self.data.size() as usize
     }
 
-    pub(crate) fn copy_to_device<E: Unit + bytemuck::Pod>(
-        &self,
-        dev: &Device,
-        queue: &Queue,
-        slice: &[E],
-    ) {
-        let slice = bytemuck::cast_slice(slice);
+    pub(crate) fn copy_to_device<E: Unit>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
+        let slice = unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const u8, self.size()) };
         queue.write_buffer(&self.data, 0, slice);
         queue.submit(std::iter::empty());
         dev.poll(Maintain::Wait);
     }
 
-    pub(crate) fn copy_to_host<E: Unit + bytemuck::Pod>(
-        &self,
-        dev: &Device,
-        queue: &Queue,
-        buf: &mut [E],
-    ) {
+    pub(crate) fn copy_to_host<E: Unit>(&self, dev: &Device, queue: &Queue, buf: &mut [E]) {
         let (sender, receiver) = std::sync::mpsc::channel();
         let buffer = dev.create_buffer(&BufferDescriptor {
             label: None,
@@ -86,7 +76,12 @@ impl Buffer {
         let _ = receiver.recv().unwrap();
         let data = slice.get_mapped_range();
         // TODO: How are we sure this is safe?
-        let slice = bytemuck::cast_slice(&*data);
+        let slice = unsafe {
+            std::slice::from_raw_parts(
+                data.as_ptr() as *const E,
+                self.size() / std::mem::size_of::<E>(),
+            )
+        };
         buf.copy_from_slice(slice);
     }
 }
@@ -299,7 +294,7 @@ impl Synchronize for Webgpu {
     }
 }
 
-impl<E: Unit + bytemuck::Pod> Storage<E> for Webgpu {
+impl<E: Unit> Storage<E> for Webgpu {
     type Vec = CachableBuffer<E>;
 
     fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error> {

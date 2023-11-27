@@ -3,6 +3,9 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
+#[cfg(feature = "webgpu")]
+mod webgpu_kernel;
+
 use crate::{
     shapes::{Dtype, HasShape, Shape},
     tensor::{Error, Merge, PutTape, SplitTape, Storage, Tape, Tensor},

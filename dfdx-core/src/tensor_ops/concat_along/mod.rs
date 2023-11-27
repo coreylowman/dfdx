@@ -3,6 +3,8 @@ use crate::{shapes::*, tensor::*};
 mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
+#[cfg(feature = "webgpu")]
+mod webgpu_kernel;
 
 /// Concatenate two tensors along a given axis.
 ///
