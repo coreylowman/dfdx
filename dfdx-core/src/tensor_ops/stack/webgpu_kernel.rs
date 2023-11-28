@@ -1,4 +1,5 @@
 use crate::{shapes::*, tensor::Webgpu};
+use std::vec::Vec;
 
 impl<E: Dtype> super::StackKernel<E> for Webgpu {
     fn forward<S: Shape, Num: Dim>(

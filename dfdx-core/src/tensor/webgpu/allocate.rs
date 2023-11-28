@@ -74,7 +74,7 @@ impl<E: Unit + SafeZeros> ZeroFillStorage<E> for Webgpu {
 impl<E: Unit> OnesTensor<E> for Webgpu {
     fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
-        let buf = std::vec![E::ONE; shape.num_elements()];
+        let buf = vec![E::ONE; shape.num_elements()];
         self.tensor_from_host_buf(shape, buf)
     }
 }
@@ -90,7 +90,7 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
-        let mut data = std::vec![val; shape.num_elements()];
+        let mut data = vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, true, offset);
         self.tensor_from_host_buf(shape, data)
@@ -103,7 +103,7 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
-        let mut data = std::vec![val; shape.num_elements()];
+        let mut data = vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, false, offset);
         self.tensor_from_host_buf(shape, data)
@@ -113,7 +113,7 @@ where
 impl<E: Unit> OneFillStorage<E> for Webgpu {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Error> {
         let len = storage.size() as usize / std::mem::size_of::<E>();
-        let buf = std::vec![E::ONE; len];
+        let buf = vec![E::ONE; len];
         storage
             .data
             .copy_to_device::<E>(&self.dev, &self.queue, &buf);

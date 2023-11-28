@@ -11,6 +11,12 @@ use crate::{
     },
 };
 
+#[cfg(feature = "no-std")]
+use spin::Mutex;
+
+#[cfg(not(feature = "no-std"))]
+use std::sync::Mutex;
+
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
 use super::allocate::round_to_buffer_alignment;
@@ -52,7 +58,7 @@ impl Buffer {
     }
 
     pub(crate) fn copy_to_host<E: Unit>(&self, dev: &Device, queue: &Queue, buf: &mut [E]) {
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = thingbuf::mpsc::channel(1);
         let buffer = dev.create_buffer(&BufferDescriptor {
             label: None,
             size: self.size() as u64,
@@ -66,11 +72,11 @@ impl Buffer {
         }
         let slice = buffer.slice(..self.size() as u64);
         slice.map_async(wgpu::MapMode::Read, move |_| {
-            sender.send(()).unwrap();
+            futures_lite::future::block_on(sender.send(())).unwrap();
         });
         dev.poll(Maintain::Wait);
 
-        let _ = receiver.recv().unwrap();
+        let _ = futures_lite::future::block_on(receiver.recv());
         let data = slice.get_mapped_range();
         // TODO: How are we sure this is safe?
         let slice = unsafe {
@@ -110,7 +116,7 @@ impl Default for Webgpu {
     }
 }
 
-static CONSTRUCTOR_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+static CONSTRUCTOR_MUTEX: Mutex<()> = Mutex::new(());
 
 impl Webgpu {
     pub fn seed_from_u64(seed: u64) -> Self {
@@ -118,7 +124,11 @@ impl Webgpu {
     }
 
     pub fn try_build(seed: u64) -> Result<Self, Error> {
-        let _lock = CONSTRUCTOR_MUTEX.lock().unwrap();
+        #[cfg(feature = "no-std")]
+        let _lock = { CONSTRUCTOR_MUTEX.lock() };
+        #[cfg(not(feature = "no-std"))]
+        let _lock = { CONSTRUCTOR_MUTEX.lock().unwrap() };
+
         let cpu = Cpu::seed_from_u64(seed);
         let instance = Arc::new(Instance::new(InstanceDescriptor::default()));
         let adapter = futures_lite::future::block_on(instance.request_adapter(&Default::default()))
@@ -332,7 +342,7 @@ impl<E: Unit> Storage<E> for Webgpu {
             device: self.cpu.clone(),
             tape: NoneTape,
         };
-        let buf = std::sync::Arc::get_mut(&mut cpu_tensor.data).unwrap();
+        let buf = Arc::get_mut(&mut cpu_tensor.data).unwrap();
         tensor.data.copy_to_host::<E>(&self.dev, &self.queue, buf);
         self.cpu.tensor_to_vec::<S, _>(&cpu_tensor)
     }
