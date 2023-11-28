@@ -52,28 +52,20 @@ impl Webgpu {
     }
 }
 
-impl<E: Unit + SafeZeros + From<bool>> ZerosTensor<E> for Webgpu {
+impl<E: Unit + SafeZeros> ZerosTensor<E> for Webgpu {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
         let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
-        data.copy_to_device(
-            &self.dev,
-            &self.queue,
-            &vec![E::from(false); shape.num_elements()],
-        );
+        data.copy_to_device(&self.dev, &self.queue, &vec![0u8; data.size()]);
 
         Ok(self.build_tensor(shape, strides, data))
     }
 }
 
-impl<E: Unit + SafeZeros + From<bool>> ZeroFillStorage<E> for Webgpu {
+impl<E: Unit + SafeZeros> ZeroFillStorage<E> for Webgpu {
     fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error> {
-        storage.copy_to_device(
-            &self.dev,
-            &self.queue,
-            &vec![E::from(false); storage.size() as usize / std::mem::size_of::<E>()],
-        );
+        storage.copy_to_device(&self.dev, &self.queue, &vec![0u8; storage.size()]);
 
         Ok(())
     }

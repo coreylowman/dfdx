@@ -132,9 +132,9 @@ impl Device<f32> for crate::tensor::Cuda {}
 impl Device<f64> for crate::tensor::Cuda {}
 
 #[cfg(all(feature = "webgpu", feature = "f16"))]
-impl Device<f16> for crate::tensor::Cuda {}
+impl Device<f16> for crate::tensor::Webgpu {}
 #[cfg(all(feature = "webgpu", feature = "f16"))]
-impl Device<AMP<f16>> for crate::tensor::Cuda {}
+impl Device<AMP<f16>> for crate::tensor::Webgpu {}
 #[cfg(feature = "webgpu")]
 impl Device<f32> for crate::tensor::Webgpu {}
 #[cfg(feature = "webgpu")]
