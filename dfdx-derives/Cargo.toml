@@ -16,3 +16,4 @@ dfdx-core = { path = "../dfdx-core" }
 
 [features]
 nightly = ["dfdx-core/nightly"]
+safetensors = ["dfdx-core/safetensors"]

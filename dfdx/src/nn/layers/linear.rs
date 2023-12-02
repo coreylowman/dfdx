@@ -47,13 +47,14 @@ impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LinearConfi
 }
 
 /// See [LinearConfig].
-#[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct Linear<I: Dim, O: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub weight: Tensor<(O, I), Elem, Dev>,
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub bias: Tensor<(O,), Elem, Dev>,
 }
 

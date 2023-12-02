@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
-//// where every element of the tuple has the same output type
+/// where every element of the tuple has the same output type
 ///
 /// This provides a utility for networks where multiple inputs are needed
 ///
@@ -19,13 +19,12 @@ use crate::prelude::*;
 /// let b: Tensor<Rank1<3>, f32, _> = dev.zeros();
 /// let _: Tensor<Rank1<5>, f32, _> = model.forward((a, b));
 /// ```
-#[derive(
-    Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams, LoadSafeTensors, SaveSafeTensors,
-)]
+#[derive(Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 #[repr(transparent)]
 pub struct AddInto<T>(
     #[module]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub T,
 );
 

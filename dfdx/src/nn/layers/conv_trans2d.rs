@@ -77,7 +77,8 @@ where
 }
 
 /// See [ConvTrans2DConfig].
-#[derive(Debug, Clone, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Debug, Clone, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct ConvTrans2D<InChan, OutChan, KernelSize, Stride, Padding, Dilation, Groups, Elem, Dev>
 where
     OutChan: std::ops::Div<Groups>,
@@ -93,7 +94,7 @@ where
     Dev: Device<Elem>,
 {
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     #[allow(clippy::type_complexity)]
     pub weight: Tensor<
         (

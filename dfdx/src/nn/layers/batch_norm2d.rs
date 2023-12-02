@@ -57,21 +57,22 @@ impl<C: Dim, E: Dtype, D: Device<E>> crate::nn::BuildOnDevice<E, D> for BatchNor
 }
 
 /// See [BatchNorm2DConfig]
-#[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct BatchNorm2D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub scale: Tensor<(C,), Elem, Dev>,
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub bias: Tensor<(C,), Elem, Dev>,
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub running_mean: Tensor<(C,), Elem, Dev>,
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub running_var: Tensor<(C,), Elem, Dev>,
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub epsilon: f64,
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub momentum: f64,
 }
 
