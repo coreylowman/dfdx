@@ -17,15 +17,14 @@ use crate::prelude::*;
 /// let y = model.forward(x);
 /// assert_eq!(y.array(), [0.0, 0.0, 0.0, 1.0, 8.0]);
 /// ```
-#[derive(
-    Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams, LoadSafeTensors, SaveSafeTensors,
-)]
+#[derive(Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct GeneralizedMul<T, U> {
     #[module]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub t: T,
     #[module]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub u: U,
 }
 

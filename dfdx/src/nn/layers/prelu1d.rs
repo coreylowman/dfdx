@@ -25,10 +25,11 @@ impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for PReLU1DConfig<C> {
 }
 
 /// See [PReLU1DConfig].
-#[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct PReLU1D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub a: Tensor<(C,), Elem, Dev>,
 }
 

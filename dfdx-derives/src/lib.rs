@@ -8,15 +8,15 @@ macro_rules! has_attr {
     };
 }
 
-/// Allows you to implement [dfdx_core::nn_traits::Module], while automatically implementing the following:
-/// 1. [dfdx_core::nn_traits::BuildOnDevice]
-/// 2. [dfdx_core::nn_traits::ResetParams]
-/// 3. [dfdx_core::nn_traits::UpdateParams]
-/// 4. [dfdx_core::nn_traits::ZeroGrads]
-/// 5. [dfdx_core::nn_traits::SaveSafeTensors]
-/// 6. [dfdx_core::nn_traits::LoadSafeTensors]
+/// Allows you to implement [dfdx::nn_traits::Module], while automatically implementing the following:
+/// 1. [dfdx::nn_traits::BuildOnDevice]
+/// 2. [dfdx::nn_traits::ResetParams]
+/// 3. [dfdx::nn_traits::UpdateParams]
+/// 4. [dfdx::nn_traits::ZeroGrads]
+/// 5. [dfdx::nn_traits::SaveSafeTensors]
+/// 6. [dfdx::nn_traits::LoadSafeTensors]
 ///
-/// If your struct contains sub module configs, then you must add the `#[module]` attribute to those items. Any field that is marked with `#[module]` will be expected to implement [dfdx_core::nn_traits::BuildOnDevice].
+/// If your struct contains sub module configs, then you must add the `#[module]` attribute to those items. Any field that is marked with `#[module]` will be expected to implement [dfdx::nn_traits::BuildOnDevice].
 ///
 /// You can control the name of the built struct with the `#[built(<type name>)]` attribute on the struct.
 ///
@@ -25,9 +25,8 @@ macro_rules! has_attr {
 /// Here we have a unit struct that just calls a method on Tensor in the forward:
 ///
 /// ```ignore
-/// # use dfdx::*;
-/// # use dfdx_core::prelude::*;
-/// #[derive(Default, Debug, Clone, Copy, CustomModule)]
+/// # use dfdx::prelude::*;
+/// #[derive(Default, Debug, Clone, Copy, dfdx::CustomModule)]
 /// pub struct Abs;
 /// impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Abs {
 ///     type Output = Tensor<S, E, D, T>;
@@ -40,9 +39,8 @@ macro_rules! has_attr {
 /// # Using CustomModule on structs with non-parameter fields
 ///
 /// ```ignore
-/// # use dfdx::*;
-/// # use dfdx_core::prelude::*;
-/// #[derive(Default, Debug, Clone, Copy, CustomModule)]
+/// # use dfdx::prelude::*;
+/// #[derive(Default, Debug, Clone, Copy, dfdx::CustomModule)]
 /// pub struct Reshape<S: Shape>(pub S);
 ///
 /// impl<Src: Shape, Dst: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<Src, E, D, T>>
@@ -63,9 +61,8 @@ macro_rules! has_attr {
 /// 3. We must annotate the sub module with `#[module]`
 ///
 /// ```ignore
-/// # use dfdx::*;
-/// # use dfdx_core::prelude::*;
-/// #[derive(Debug, Clone, CustomModule)]
+/// # use dfdx::prelude::*;
+/// #[derive(Debug, Clone, dfdx::CustomModule)]
 /// #[built(ResidualMatMul)]
 /// pub struct ResidualMatMulConfig<I: Dim, O: Dim>(#[module] pub matmul: MatMulConfig<I, O>);
 ///
@@ -109,8 +106,13 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                                 has_fields_to_build = true;
                                 where_clause
                                     .predicates
-                                    .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                                quote_spanned!(f.span()=> #[module] #[serialize] #vis #name: <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                                    .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
+                                let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
+                                    quote!(#[serialize])
+                                } else {
+                                    quote!()
+                                };
+                                quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis #name: <#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                             } else {
                                 quote_spanned!(f.span()=> #vis #name: #ty,)
                             }
@@ -125,8 +127,13 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                                 has_fields_to_build = true;
                                 where_clause
                                     .predicates
-                                    .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                                quote_spanned!(f.span()=> #[module] #[serialize] #vis <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                                    .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
+                                let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
+                                    quote!(#[serialize])
+                                } else {
+                                    quote!()
+                                };
+                                quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis <#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                             } else {
                                 quote_spanned!(f.span()=> #vis #ty,)
                             }
@@ -143,10 +150,10 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
         let built_name = if has_fields_to_build {
             built_generics
                 .params
-                .push(parse_quote!(Elem: dfdx_core::prelude::Dtype));
+                .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
             built_generics
                 .params
-                .push(parse_quote!(Dev: dfdx_core::prelude::Device<Elem>));
+                .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
             input
                 .attrs
                 .iter()
@@ -162,8 +169,13 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
         let (built_impl, _, built_where) = built_generics.split_for_impl();
 
         let def = if has_fields_to_build {
+            let safetensors_derive = if cfg!(feature = "safetensors") {
+                quote!(::dfdx::SaveSafeTensors, ::dfdx::LoadSafeTensors)
+            } else {
+                quote!()
+            };
             quote! {
-                #[derive(Clone, Debug, dfdx_derives::ResetParams, dfdx_derives::UpdateParams, dfdx_derives::ZeroGrads, dfdx_derives::SaveSafeTensors, dfdx_derives::LoadSafeTensors)]
+                #[derive(Clone, Debug, ::dfdx::ResetParams, ::dfdx::UpdateParams, ::dfdx::ZeroGrads, #safetensors_derive)]
                 pub struct #built_name #built_impl #built_where #fields
             }
         } else {
@@ -173,54 +185,60 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
             if !has_fields_to_build {
                 build_generics
                     .params
-                    .push(parse_quote!(Elem: dfdx_core::prelude::Dtype));
+                    .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
                 build_generics
                     .params
-                    .push(parse_quote!(Dev: dfdx_core::prelude::Device<Elem>));
+                    .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
             }
             let (build_impl, _, _) = build_generics.split_for_impl();
             let (built_impl, built_ty, built_where) = built_generics.split_for_impl();
 
+            let safetensors_impls = if cfg!(feature = "safetensors") {
+                quote! {
+                    impl #built_impl ::dfdx::nn_traits::SaveSafeTensors for #builder_name #built_ty #built_where {
+                        fn write_safetensors(
+                            &self,
+                            location: &str,
+                            tensors: &mut Vec<(String, ::dfdx::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                        ) {}
+                    }
+
+                    impl #built_impl ::dfdx::nn_traits::LoadSafeTensors for #builder_name #built_ty #built_where {
+                        fn read_safetensors<'a>(
+                            &mut self,
+                            location: &str,
+                            tensors: &::dfdx::safetensors::SafeTensors<'a>,
+                        ) -> Result<(), ::dfdx::safetensors::SafeTensorError> {
+                            Ok(())
+                        }
+                    }
+                }
+            } else {
+                quote! {}
+            };
+
             quote! {
-                #[cfg(feature = "safetensors")]
-                impl #built_impl dfdx_core::nn_traits::SaveSafeTensors for #builder_name #built_ty #built_where {
-                    fn write_safetensors(
-                        &self,
-                        location: &str,
-                        tensors: &mut Vec<(String, ::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
-                    ) {}
-                }
+                #safetensors_impls
 
-                #[cfg(feature = "safetensors")]
-                impl #built_impl dfdx_core::nn_traits::LoadSafeTensors for #builder_name #built_ty #built_where {
-                    fn read_safetensors<'a>(
-                        &mut self,
-                        location: &str,
-                        tensors: &::safetensors::SafeTensors<'a>,
-                    ) -> Result<(), ::safetensors::SafeTensorError> {
+                impl #build_impl ::dfdx::nn_traits::ResetParams<Elem, Dev> for #builder_name #built_ty #built_where {
+                    fn try_reset_params(&mut self) -> Result<(), ::dfdx::tensor::Error> {
                         Ok(())
                     }
                 }
 
-                impl #build_impl dfdx_core::nn_traits::ResetParams<Elem, Dev> for #builder_name #built_ty #built_where {
-                    fn try_reset_params(&mut self) -> Result<(), dfdx_core::tensor::Error> {
-                        Ok(())
-                    }
-                }
-
-                impl #build_impl dfdx_core::nn_traits::UpdateParams<Elem, Dev> for #builder_name #built_ty #built_where {
-                    fn try_update_params<M, Optim: dfdx_core::nn_traits::Optimizer<M, Elem, Dev>>(
+                impl #build_impl ::dfdx::nn_traits::UpdateParams<Elem, Dev> for #builder_name #built_ty #built_where {
+                    fn try_update_params<M, Optim: ::dfdx::nn_traits::Optimizer<M, Elem, Dev>>(
                         &mut self,
                         optimizer: &mut Optim,
-                        gradients: &dfdx_core::tensor::Gradients<Elem, Dev>,
-                        missing_tensors: &mut Vec<dfdx_core::tensor::UniqueId>,
-                    ) -> Result<(), dfdx_core::tensor::Error> {
+                        gradients: &::dfdx::tensor::Gradients<Elem, Dev>,
+                        missing_tensors: &mut Vec<::dfdx::tensor::UniqueId>,
+                    ) -> Result<(), ::dfdx::tensor::Error> {
                         Ok(())
                     }
                 }
 
-                impl #build_impl dfdx_core::nn_traits::ZeroGrads<Elem, Dev> for #builder_name #built_ty #built_where {
-                    fn try_zero_grads(&self, grads: &mut dfdx_core::tensor::Gradients<Elem, Dev>) -> Result<(), dfdx_core::tensor::Error> {
+                impl #build_impl ::dfdx::nn_traits::ZeroGrads<Elem, Dev> for #builder_name #built_ty #built_where {
+                    fn try_zero_grads(&self, grads: &mut ::dfdx::tensor::Gradients<Elem, Dev>) -> Result<(), ::dfdx::tensor::Error> {
                         Ok(())
                     }
                 }
@@ -236,10 +254,10 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
         if !has_fields_to_build {
             build_generics
                 .params
-                .push(parse_quote!(Elem: dfdx_core::prelude::Dtype));
+                .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
             build_generics
                 .params
-                .push(parse_quote!(Dev: dfdx_core::prelude::Device<Elem>));
+                .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
         }
         let (build_impl, _, _) = build_generics.split_for_impl();
         let (_, built_ty, built_where) = built_generics.split_for_impl();
@@ -256,9 +274,9 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                         }
                     });
                     quote! {
-                        impl #build_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
+                        impl #build_impl ::dfdx::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, ::dfdx::tensor::Error> {
                                 let built = #built_name { #(#recurse)* };
                                 Ok(built)
                             }
@@ -275,9 +293,9 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                         }
                     });
                     quote! {
-                        impl #build_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
+                        impl #build_impl ::dfdx::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, ::dfdx::tensor::Error> {
                                 let built = #built_name(#(#recurse)*);
                                 Ok(built)
                             }
@@ -286,9 +304,9 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                 }
                 Fields::Unit => {
                     quote! {
-                        impl #build_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
+                        impl #build_impl ::dfdx::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, ::dfdx::tensor::Error> {
                                 Ok(#built_name)
                             }
                         }
@@ -308,7 +326,7 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 /// Implements all of the dfdx_nn traits automatically on your type. Assumes all fields on your type
 /// are modules (i.e. they also implement all the dfdx_nn traits).
 ///
-/// [dfdx_core::nn_traits::Module] is implemented as calling each of the fields on the type in definition order.
+/// [dfdx::nn_traits::Module] is implemented as calling each of the fields on the type in definition order.
 ///
 /// # Example usage
 /// Here we define a simple feedforward network with 3 layers.
@@ -320,9 +338,8 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 /// 4. act2
 /// 5. linear3
 /// ```ignore
-/// # use dfdx_core::prelude::*;
-/// # use dfdx::*;
-/// #[derive(Debug, Clone, Sequential)]
+/// # use dfdx::prelude::*;
+/// #[derive(Debug, Clone, dfdx::Sequential)]
 /// #[built(Mlp)]
 /// struct MlpConfig {
 ///     // Linear with compile time input size & runtime known output size
@@ -350,10 +367,10 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut built_generics = input.generics.clone();
     built_generics
         .params
-        .push(parse_quote!(Elem: dfdx_core::prelude::Dtype));
+        .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
     built_generics
         .params
-        .push(parse_quote!(Dev: dfdx_core::prelude::Device<Elem>));
+        .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
 
     // get the generics for the impl. `Input` must be added only to the impl_generics.
     // NOTE: without cloning, `Input` will appear in both impl & ty generics.
@@ -372,8 +389,13 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             let vis = &f.vis;
                             where_clause
                                 .predicates
-                                .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                            quote_spanned!(f.span()=> #[module] #[serialize] #vis #name: <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                                .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
+                            let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
+                                quote!(#[serialize])
+                            } else {
+                                quote!()
+                            };
+                            quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis #name: <#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                         });
                         quote! { #(#fields)* }
                     }
@@ -383,8 +405,13 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             let vis = &f.vis;
                             where_clause
                                 .predicates
-                                .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
-                            quote_spanned!(f.span()=> #[module] #[serialize] #vis <#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
+                                .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
+                            let safetensors_serialize_attr = if cfg!(feature = "safetensors") {
+                                quote!(#[serialize])
+                            } else {
+                                quote!()
+                            };
+                            quote_spanned!(f.span()=> #[module] #safetensors_serialize_attr #vis <#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built,)
                         });
                         quote! { #(#fields)* }
                     }
@@ -397,8 +424,14 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
         let (built_impl, _, built_where) = built_generics.split_for_impl();
 
+        let safetensors_derive = if cfg!(feature = "safetensors") {
+            quote!(::dfdx::SaveSafeTensors, ::dfdx::LoadSafeTensors)
+        } else {
+            quote!()
+        };
+
         quote! {
-            #[derive(Clone, Debug, dfdx_derives::ResetParams, dfdx_derives::UpdateParams, dfdx_derives::ZeroGrads, dfdx_derives::SaveSafeTensors, dfdx_derives::LoadSafeTensors)]
+            #[derive(Clone, Debug, ::dfdx::ResetParams, ::dfdx::UpdateParams, ::dfdx::ZeroGrads, #safetensors_derive)]
             pub struct #built_name #built_impl #built_where {
                 #fields
             }
@@ -417,9 +450,9 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         quote_spanned! {f.span()=> #name: self.#name.try_build_on_device(device)?, }
                     });
                     quote! {
-                        impl #built_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
+                        impl #built_impl ::dfdx::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, ::dfdx::tensor::Error> {
                                 let built = #built_name {
                                     #(#recurse)*
                                 };
@@ -434,9 +467,9 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         quote_spanned! {f.span()=> self.#index.try_build_on_device(device)?, }
                     });
                     quote! {
-                        impl #built_impl dfdx_core::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
+                        impl #built_impl ::dfdx::nn_traits::BuildOnDevice<Elem, Dev> for #builder_name #builder_ty #built_where {
                             type Built = #built_name #built_ty;
-                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, dfdx_core::tensor::Error> {
+                            fn try_build_on_device(&self, device: &Dev) -> Result<Self::Built, ::dfdx::tensor::Error> {
                                 #built_name(
                                     #(#recurse)*
                                 )
@@ -461,11 +494,11 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         let ty = &f.ty;
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
                         where_clause
                             .predicates
-                            .push(parse_quote!(<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built: dfdx_core::nn_traits::Module<#last_ty>));
-                        last_ty = parse_quote!(<<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built as dfdx_core::nn_traits::Module<#last_ty>>::Output);
+                            .push(parse_quote!(<#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built: ::dfdx::nn_traits::Module<#last_ty>));
+                        last_ty = parse_quote!(<<#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built as ::dfdx::nn_traits::Module<#last_ty>>::Output);
                     });
                 }
                 Fields::Unnamed(ref fields) => {
@@ -473,11 +506,11 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         let ty = &f.ty;
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>));
                         where_clause
                             .predicates
-                            .push(parse_quote!(<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built: dfdx_core::nn_traits::Module<#last_ty>));
-                        last_ty = parse_quote!(<<#ty as dfdx_core::nn_traits::BuildOnDevice<Elem, Dev>>::Built as dfdx_core::nn_traits::Module<#last_ty>>::Output);
+                            .push(parse_quote!(<#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built: ::dfdx::nn_traits::Module<#last_ty>));
+                        last_ty = parse_quote!(<<#ty as ::dfdx::nn_traits::BuildOnDevice<Elem, Dev>>::Built as ::dfdx::nn_traits::Module<#last_ty>>::Output);
                     });
                 }
                 Fields::Unit => {}
@@ -535,7 +568,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         let (module_impl, _, module_where) = module_generics.split_for_impl();
 
         quote! {
-            impl #module_impl dfdx_core::nn_traits::Module<Input> for #built_name #built_ty #module_where {
+            impl #module_impl ::dfdx::nn_traits::Module<Input> for #built_name #built_ty #module_where {
                 type Output = #output_ty;
                 fn try_forward(&self, x: Input) -> Result<Self::Output, Error> {
                     #src
@@ -568,7 +601,7 @@ pub fn reset_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     ) {
         custom_generics
             .params
-            .push(parse_quote!(Elem: dfdx_core::prelude::Dtype));
+            .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
     }
 
     if !custom_generics.params.iter().any(
@@ -576,7 +609,7 @@ pub fn reset_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     ) {
         custom_generics
             .params
-            .push(parse_quote!(Dev: dfdx_core::prelude::Device<Elem>));
+            .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
     }
 
     let where_clause = input.generics.make_where_clause();
@@ -589,7 +622,7 @@ pub fn reset_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     if has_attr!(f, "module") {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::ResetParams<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::ResetParams<Elem, Dev>));
                         quote_spanned!(f.span()=>self.#name.try_reset_params()?;)
                     } else {
                         Default::default()
@@ -604,7 +637,7 @@ pub fn reset_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     if has_attr!(f, "module") {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::ResetParams<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::ResetParams<Elem, Dev>));
                         quote_spanned!(f.span()=>self.#index.try_reset_params()?;)
                     } else {
                         Default::default()
@@ -622,8 +655,8 @@ pub fn reset_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (_, ty_generics, where_clause) = input.generics.split_for_impl();
 
     proc_macro::TokenStream::from(quote! {
-        impl #impl_generics dfdx_core::nn_traits::ResetParams<Elem, Dev> for #name #ty_generics #where_clause {
-            fn try_reset_params(&mut self) -> Result<(), dfdx_core::tensor::Error> {
+        impl #impl_generics ::dfdx::nn_traits::ResetParams<Elem, Dev> for #name #ty_generics #where_clause {
+            fn try_reset_params(&mut self) -> Result<(), ::dfdx::tensor::Error> {
                 #resets
                 Ok(())
             }
@@ -643,7 +676,7 @@ pub fn update_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     ) {
         custom_generics
             .params
-            .push(parse_quote!(Elem: dfdx_core::prelude::Dtype));
+            .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
     }
 
     if !custom_generics.params.iter().any(
@@ -651,7 +684,7 @@ pub fn update_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     ) {
         custom_generics
             .params
-            .push(parse_quote!(Dev: dfdx_core::prelude::Device<Elem>));
+            .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
     }
 
     let where_clause = input.generics.make_where_clause();
@@ -664,7 +697,7 @@ pub fn update_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     if has_attr!(f, "module") {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::UpdateParams<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::UpdateParams<Elem, Dev>));
                         quote_spanned!(f.span()=>self.#name.try_update_params(optimizer, gradients, missing_tensors)?;)
                     } else if has_attr!(f, "param") {
                         quote_spanned!(f.span()=>optimizer.update_tensor(&mut self.#name, gradients, missing_tensors)?;)
@@ -681,7 +714,7 @@ pub fn update_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     if has_attr!(f, "module") {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::UpdateParams<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::UpdateParams<Elem, Dev>));
                         quote_spanned!(f.span()=>self.#index.try_update_params(optimizer, gradients, missing_tensors)?;)
                     } else if has_attr!(f, "param") {
                         quote_spanned!(f.span()=>optimizer.update_tensor(&mut self.#index, gradients, missing_tensors)?;)
@@ -701,13 +734,13 @@ pub fn update_params(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let (_, ty_generics, where_clause) = input.generics.split_for_impl();
 
     proc_macro::TokenStream::from(quote! {
-        impl #impl_generics dfdx_core::nn_traits::UpdateParams<Elem, Dev> for #struct_name #ty_generics #where_clause {
-            fn try_update_params<_Model, Optim: dfdx_core::nn_traits::Optimizer<_Model, Elem, Dev>>(
+        impl #impl_generics ::dfdx::nn_traits::UpdateParams<Elem, Dev> for #struct_name #ty_generics #where_clause {
+            fn try_update_params<_Model, Optim: ::dfdx::nn_traits::Optimizer<_Model, Elem, Dev>>(
                 &mut self,
                 optimizer: &mut Optim,
-                gradients: &dfdx_core::tensor::Gradients<Elem, Dev>,
-                missing_tensors: &mut Vec<dfdx_core::tensor::UniqueId>,
-            ) -> Result<(), dfdx_core::tensor::Error> {
+                gradients: &::dfdx::tensor::Gradients<Elem, Dev>,
+                missing_tensors: &mut Vec<::dfdx::tensor::UniqueId>,
+            ) -> Result<(), ::dfdx::tensor::Error> {
                 #updates
                 Ok(())
             }
@@ -727,7 +760,7 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     ) {
         custom_generics
             .params
-            .push(parse_quote!(Elem: dfdx_core::prelude::Dtype));
+            .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
     }
 
     if !custom_generics.params.iter().any(
@@ -735,7 +768,7 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     ) {
         custom_generics
             .params
-            .push(parse_quote!(Dev: dfdx_core::prelude::Device<Elem>));
+            .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
     }
 
     let where_clause = input.generics.make_where_clause();
@@ -749,7 +782,7 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::ZeroGrads<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::ZeroGrads<Elem, Dev>));
                         quote_spanned!(f.span()=>self.#name.try_zero_grads(grads)?;)
                     } else if has_attr!(f, "param")
                     {
@@ -768,7 +801,7 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::ZeroGrads<Elem, Dev>));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::ZeroGrads<Elem, Dev>));
                         quote_spanned!(f.span()=>self.#index.try_zero_grads(grads)?;)
                     } else if has_attr!(f, "param")
                     {
@@ -789,8 +822,8 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (_, ty_generics, where_clause) = input.generics.split_for_impl();
 
     proc_macro::TokenStream::from(quote! {
-        impl #impl_generics dfdx_core::nn_traits::ZeroGrads<Elem, Dev> for #name #ty_generics #where_clause {
-            fn try_zero_grads(&self, grads: &mut dfdx_core::prelude::Gradients<Elem, Dev>) -> Result<(), dfdx_core::tensor::Error> {
+        impl #impl_generics ::dfdx::nn_traits::ZeroGrads<Elem, Dev> for #name #ty_generics #where_clause {
+            fn try_zero_grads(&self, grads: &mut ::dfdx::prelude::Gradients<Elem, Dev>) -> Result<(), ::dfdx::tensor::Error> {
                 #zero_grads
                 Ok(())
             }
@@ -816,7 +849,7 @@ pub fn save_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                     {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::SaveSafeTensors));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::SaveSafeTensors));
                         quote_spanned!(f.span()=>self.#name.write_safetensors(&format!("{location}{}", #name_str), tensors);)
                     } else {
                         Default::default()
@@ -832,7 +865,7 @@ pub fn save_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                     {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::SaveSafeTensors));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::SaveSafeTensors));
                         quote_spanned!(f.span()=>self.#index.write_safetensors(&format!("{location}{}", #index), tensors);)
                     } else {
                         Default::default()
@@ -849,12 +882,12 @@ pub fn save_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     proc_macro::TokenStream::from(quote! {
-        #[cfg(feature = "safetensors")]
-        impl #impl_generics dfdx_core::nn_traits::SaveSafeTensors for #name #ty_generics #where_clause {
+        // note: SaveSafeTensors definition is already gated by the safetensors feature
+        impl #impl_generics ::dfdx::nn_traits::SaveSafeTensors for #name #ty_generics #where_clause {
             fn write_safetensors(
                 &self,
                 location: &str,
-                tensors: &mut Vec<(String, ::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                tensors: &mut Vec<(String, ::dfdx::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
             ) {
                 #save_fields
             }
@@ -879,7 +912,7 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                     if has_attr!(f, "serialize") {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::LoadSafeTensors));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::LoadSafeTensors));
                         quote_spanned!(f.span()=>self.#name.read_safetensors(&format!("{location}{}", #name_str), tensors)?;)
                     } else {
                         Default::default()
@@ -894,7 +927,7 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                     if has_attr!(f, "serialize") {
                         where_clause
                             .predicates
-                            .push(parse_quote!(#ty: dfdx_core::nn_traits::LoadSafeTensors));
+                            .push(parse_quote!(#ty: ::dfdx::nn_traits::LoadSafeTensors));
                         quote_spanned!(f.span()=>self.#index.read_safetensors(&format!("{location}{}", #index), tensors)?;)
                     } else {
                         Default::default()
@@ -911,13 +944,13 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     proc_macro::TokenStream::from(quote! {
-        #[cfg(feature = "safetensors")]
-        impl #impl_generics dfdx_core::nn_traits::LoadSafeTensors for #name #ty_generics #where_clause {
+        // note: LoadSafeTensors definition is already gated by the safetensors feature
+        impl #impl_generics ::dfdx::nn_traits::LoadSafeTensors for #name #ty_generics #where_clause {
             fn read_safetensors<'a>(
                 &mut self,
                 location: &str,
-                tensors: &::safetensors::SafeTensors<'a>,
-            ) -> Result<(), ::safetensors::SafeTensorError> {
+                tensors: &::dfdx::safetensors::SafeTensors<'a>,
+            ) -> Result<(), ::dfdx::safetensors::SafeTensorError> {
                 #load_fields
                 Ok(())
             }

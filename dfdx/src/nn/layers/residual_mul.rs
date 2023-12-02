@@ -16,13 +16,12 @@ use crate::prelude::*;
 /// let y = model.forward(x);
 /// assert_eq!(y.array(), [0.0, 0.0, 0.0, 1.0, 4.0]);
 /// ```
-#[derive(
-    Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams, SaveSafeTensors, LoadSafeTensors,
-)]
+#[derive(Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 #[repr(transparent)]
 pub struct ResidualMul<T>(
     #[module]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub T,
 );
 

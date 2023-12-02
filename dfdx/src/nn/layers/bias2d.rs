@@ -36,10 +36,11 @@ impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for Bias2DConfig<C> {
 }
 
 /// See [Bias2DConfig]
-#[derive(Clone, Debug, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct Bias2D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub bias: Tensor<(C,), Elem, Dev>,
 }
 

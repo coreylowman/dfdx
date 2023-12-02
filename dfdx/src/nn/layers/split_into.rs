@@ -21,13 +21,12 @@ use crate::prelude::*;
 /// let model = dev.build_module::<f32>(Model::default());
 /// let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<7>, f32, _>) = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
-#[derive(
-    Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams, LoadSafeTensors, SaveSafeTensors,
-)]
+#[derive(Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 #[repr(transparent)]
 pub struct SplitInto<T>(
     #[module]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub T,
 );
 

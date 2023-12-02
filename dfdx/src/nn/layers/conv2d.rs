@@ -99,7 +99,8 @@ where
 }
 
 /// The module built with [Conv2DConfig]. See [Conv2DConfig] for usage.
-#[derive(Debug, Clone, UpdateParams, ZeroGrads, SaveSafeTensors, LoadSafeTensors)]
+#[derive(Debug, Clone, UpdateParams, ZeroGrads)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct Conv2D<InChan, OutChan, KernelSize, Stride, Padding, Dilation, Groups, Elem, Dev>
 where
     InChan: std::ops::Div<Groups>,
@@ -115,7 +116,7 @@ where
     Dev: Device<Elem>,
 {
     #[param]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     #[allow(clippy::type_complexity)]
     pub weight: Tensor<
         (
