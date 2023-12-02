@@ -169,3 +169,11 @@ __device__ __forceinline__ double atomicMinf(double * addr, double value) {
         return __longlong_as_double(atomicMin((long long int *)addr, __double_as_longlong(value)));
     }
 }
+
+#if __CUDA_ARCH__ < 530
+//On older GPU there are no hcos/hsin/hlog/hexp.
+__device__ __forceinline__ __half hcos(__half a) { return __float2half(cosf(__half2float(a))); }
+__device__ __forceinline__ __half hsin(__half a) { return __float2half(sinf(__half2float(a))); }
+__device__ __forceinline__ __half hlog(__half a) { return __float2half(logf(__half2float(a))); }
+__device__ __forceinline__ __half hexp(__half a) { return __float2half(expf(__half2float(a))); }
+#endif
