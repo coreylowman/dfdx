@@ -43,7 +43,7 @@ use crate::{shapes::*, tensor::*};
 /// assert_eq!(c, (Const::<2>, 6));
 /// ```
 pub trait TryConcatShapeAlong<Ax>: Sized {
-    type Output;
+    type Output: Shape;
 
     /// Concatenates self along the given axis.
     fn concat_shape_along(self, ax: Ax) -> Self::Output {
