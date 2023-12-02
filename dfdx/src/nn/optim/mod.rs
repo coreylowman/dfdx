@@ -32,12 +32,16 @@
 //! ```
 
 mod adam;
+mod prodigy;
 mod rmsprop;
 mod sgd;
 
 pub use adam::Adam;
+pub use prodigy::Prodigy;
 pub use rmsprop::RMSprop;
 pub use sgd::Sgd;
 // re-exports
 pub use super::Optimizer;
-pub use crate::tensor_ops::{AdamConfig, Momentum, RMSpropConfig, SgdConfig, WeightDecay};
+pub use crate::tensor_ops::{
+    AdamConfig, Momentum, ProdigyConfig, RMSpropConfig, SgdConfig, WeightDecay,
+};

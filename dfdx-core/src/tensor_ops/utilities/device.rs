@@ -23,6 +23,7 @@ pub trait Device<E: Dtype>:
 
     // optimizers
     + super::super::adam::AdamKernel<E>
+    + super::super::prodigy::ProdigyKernel<E>
     + super::super::sgd::SgdKernel<E>
     + super::super::rmsprop::RMSpropKernel<E>
 
