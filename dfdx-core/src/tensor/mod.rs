@@ -145,6 +145,8 @@ mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
+#[cfg(feature = "webgpu")]
+pub(crate) mod webgpu;
 #[cfg(feature = "numpy")]
 pub use numpy::NumpyDtype;
 mod error;
@@ -162,7 +164,7 @@ pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 pub use tensorlike::Tensorlike;
 
 pub use cpu::Cpu;
-#[cfg(not(feature = "cuda"))]
+#[cfg(not(any(feature = "cuda", feature = "webgpu")))]
 pub type AutoDevice = Cpu;
 
 #[cfg(feature = "cuda")]
@@ -171,6 +173,11 @@ pub(crate) use cuda::launch_cfg;
 pub use cuda::Cuda;
 #[cfg(feature = "cuda")]
 pub type AutoDevice = Cuda;
+
+#[cfg(feature = "webgpu")]
+pub use webgpu::Webgpu;
+#[cfg(feature = "webgpu")]
+pub type AutoDevice = Webgpu;
 
 pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec, TensorToArray};
 pub use storage_traits::{Cache, RandomU64, Storage, Synchronize};
