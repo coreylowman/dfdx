@@ -88,7 +88,6 @@ where
     A: Shape + HasAxes<Ax>,
     B: Shape<Concrete = A::Concrete> + HasAxes<Ax>,
     (A, B): TryConcatShapeAlong<Ax>,
-    <(A, B) as TryConcatShapeAlong<Ax>>::Output: Shape,
     T: Merge<R>,
 {
     type Output = Tensor<<(A, B) as TryConcatShapeAlong<Ax>>::Output, E, D, T>;
