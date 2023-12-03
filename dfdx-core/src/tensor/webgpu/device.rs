@@ -1,6 +1,7 @@
 use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
     Adapter, BufferDescriptor, BufferUsages, Device, Instance, InstanceDescriptor, Maintain, Queue,
-    RequestDeviceError,
+    RequestDeviceError, ShaderModule, ShaderModuleDescriptor,
 };
 
 use crate::{
@@ -14,10 +15,16 @@ use crate::{
 #[cfg(feature = "no-std")]
 use spin::Mutex;
 
+use core::any::TypeId;
 #[cfg(not(feature = "no-std"))]
 use std::sync::Mutex;
 
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{
+    collections::HashMap,
+    marker::PhantomData,
+    sync::{Arc, RwLock},
+    vec::Vec,
+};
 
 use super::allocate::round_to_buffer_alignment;
 
@@ -40,12 +47,16 @@ impl Buffer {
         self.size
     }
 
+    pub(crate) fn len<E: Unit>(&self) -> usize {
+        self.size / std::mem::size_of::<E>()
+    }
+
     #[allow(unused)]
     pub(crate) fn capacity(&self) -> usize {
         self.data.size() as usize
     }
 
-    pub(crate) fn copy_to_device<E: Unit>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
+    pub(crate) fn copy_to_device<E>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
         let slice = unsafe {
             std::slice::from_raw_parts(
                 slice.as_ptr() as *const u8,
@@ -102,6 +113,7 @@ pub struct Webgpu {
     pub(crate) queue: Arc<Queue>,
 
     pub(crate) cache: Arc<TensorCache<Buffer>>,
+    pub(crate) cs_cache: Arc<RwLock<HashMap<TypeId, Arc<ShaderModule>>>>,
 }
 
 impl From<RequestDeviceError> for Error {
@@ -147,18 +159,19 @@ impl Webgpu {
             queue,
 
             cache: Default::default(),
+            cs_cache: Default::default(),
         })
     }
 }
 
 impl Webgpu {
-    pub(crate) unsafe fn alloc_empty<E>(&self, len: usize) -> Result<Buffer, Error> {
+    pub(crate) fn alloc_empty<E>(&self, len: usize) -> Result<Buffer, Error> {
         let data = self.cache.try_pop::<E>(len).map_or_else(
             || Buffer {
                 data: self.dev.create_buffer(&BufferDescriptor {
                     label: None,
                     size: round_to_buffer_alignment((len * std::mem::size_of::<E>()) as u64),
-                    usage: BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+                    usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
                 size: len * std::mem::size_of::<E>(),
@@ -166,6 +179,50 @@ impl Webgpu {
             |bfr| bfr,
         );
         Ok(data)
+    }
+
+    pub(crate) fn alloc_init<E>(&self, init: &[E]) -> Result<Buffer, Error> {
+        let data = self.cache.try_pop::<E>(init.len()).map_or_else(
+            || {
+                let contents = unsafe {
+                    std::slice::from_raw_parts(
+                        init.as_ptr() as *const u8,
+                        init.len() * std::mem::size_of::<E>(),
+                    )
+                };
+                Buffer {
+                    data: self.dev.create_buffer_init(&BufferInitDescriptor {
+                        label: None,
+                        usage: BufferUsages::STORAGE
+                            | BufferUsages::COPY_SRC
+                            | BufferUsages::COPY_DST,
+                        contents,
+                    }),
+                    size: init.len() * std::mem::size_of::<E>(),
+                }
+            },
+            |bfr| {
+                bfr.copy_to_device::<E>(&self.dev, &self.queue, init);
+                bfr
+            },
+        );
+        Ok(data)
+    }
+
+    pub(crate) fn shader_module_loaded(&self, name: TypeId) -> bool {
+        self.cs_cache.read().unwrap().contains_key(&name)
+    }
+
+    pub(crate) fn load_shader_module(&self, name: TypeId, source: &str) {
+        let module = Arc::new(self.dev.create_shader_module(ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl(source.into()),
+        }));
+        self.cs_cache.write().unwrap().insert(name, module);
+    }
+
+    pub(crate) fn get_shader_module(&self, name: TypeId) -> Option<Arc<ShaderModule>> {
+        self.cs_cache.read().unwrap().get(&name).cloned()
     }
 
     // #[allow(unused)]

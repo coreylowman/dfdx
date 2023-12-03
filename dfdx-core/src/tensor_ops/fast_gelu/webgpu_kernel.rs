@@ -1,28 +1,5 @@
-use std::borrow::Cow;
+use crate::prelude::webgpu_kernels::webgpu_unary;
 
-use crate::prelude::{ops::UnaryKernel, Dtype, Webgpu};
+const WGSL: &str = "TODO";
 
-impl<E: Dtype> UnaryKernel<super::FastGeLUKernelOp, E> for Webgpu {
-    const BACKWARD_WITHOUT_INP: bool = false;
-
-    const BACKWARD_WITHOUT_DATA: bool = false;
-
-    fn forward<S: crate::prelude::Shape>(
-        &self,
-        op: super::FastGeLUKernelOp,
-        inp: Cow<crate::prelude::Tensor<S, E, Self>>,
-    ) -> Result<crate::prelude::Tensor<S, E, Self>, crate::prelude::Error> {
-        todo!()
-    }
-
-    fn backward<S: crate::prelude::Shape>(
-        &self,
-        op: super::FastGeLUKernelOp,
-        inp: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec,
-        out: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec,
-    ) -> Result<(), crate::prelude::Error> {
-        todo!()
-    }
-}
+webgpu_unary!(super::FastGeLUKernelOp, f32, WGSL, "sigmoid_fwd_f32", "sigmoid_bwd_f32");

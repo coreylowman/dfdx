@@ -1,28 +1,6 @@
-use std::borrow::Cow;
+use super::AbsKernelOp;
+use crate::tensor_ops::webgpu_kernels::webgpu_unary;
 
-use crate::prelude::{ops::UnaryKernel, Dtype, Webgpu};
+const WGSL: &str = include_str!("abs.wgsl");
 
-impl<E: Dtype> UnaryKernel<super::AbsKernelOp, E> for Webgpu {
-    const BACKWARD_WITHOUT_INP: bool = false;
-
-    const BACKWARD_WITHOUT_DATA: bool = false;
-
-    fn forward<S: crate::prelude::Shape>(
-        &self,
-        op: super::AbsKernelOp,
-        inp: Cow<crate::prelude::Tensor<S, E, Self>>,
-    ) -> Result<crate::prelude::Tensor<S, E, Self>, crate::prelude::Error> {
-        todo!()
-    }
-
-    fn backward<S: crate::prelude::Shape>(
-        &self,
-        op: super::AbsKernelOp,
-        inp: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec,
-        out: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec,
-    ) -> Result<(), crate::prelude::Error> {
-        todo!()
-    }
-}
+webgpu_unary!(AbsKernelOp, f32, WGSL, "abs_fwd_f32", "abs_bwd_f32");

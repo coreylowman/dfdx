@@ -137,5 +137,7 @@ impl Device<f16> for crate::tensor::Webgpu {}
 impl Device<AMP<f16>> for crate::tensor::Webgpu {}
 #[cfg(feature = "webgpu")]
 impl Device<f32> for crate::tensor::Webgpu {}
-#[cfg(feature = "webgpu")]
-impl Device<f64> for crate::tensor::Webgpu {}
+
+// TODO: How can we implement this for f64 when WGSL doesn't support f64 yet?
+// #[cfg(feature = "webgpu")]
+// impl Device<f64> for crate::tensor::Webgpu {}

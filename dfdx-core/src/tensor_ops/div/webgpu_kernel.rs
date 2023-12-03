@@ -1,34 +1,11 @@
+use super::{BinaryDivKernelOp as Binary, ScalarDivKernelOp as Scalar};
 use std::borrow::Cow;
 
-use crate::prelude::{
-    ops::{BinaryKernel, UnaryKernel},
-    Dtype, Webgpu,
-};
+use crate::prelude::{ops::BinaryKernel, webgpu_kernels::webgpu_unary, Dtype, Webgpu};
 
-impl<E: Dtype> UnaryKernel<super::ScalarDivKernelOp<E>, E> for Webgpu {
-    const BACKWARD_WITHOUT_INP: bool = false;
+const WGSL: &str = "TODO";
 
-    const BACKWARD_WITHOUT_DATA: bool = true;
-
-    fn forward<S: crate::prelude::Shape>(
-        &self,
-        op: super::ScalarDivKernelOp<E>,
-        inp: Cow<crate::prelude::Tensor<S, E, Self>>,
-    ) -> Result<crate::prelude::Tensor<S, E, Self>, crate::prelude::Error> {
-        todo!()
-    }
-
-    fn backward<S: crate::prelude::Shape>(
-        &self,
-        op: super::ScalarDivKernelOp<E>,
-        inp: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec,
-        out: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec,
-    ) -> Result<(), crate::prelude::Error> {
-        todo!()
-    }
-}
+webgpu_unary!(const_df() Scalar<f32>, f32, WGSL, "scalar_sub_fwd", "scalar_sub_bwd");
 
 impl<E: Dtype> BinaryKernel<super::BinaryDivKernelOp, E> for Webgpu {
     const BACKWARD_WITHOUT_DATA: bool = true;
