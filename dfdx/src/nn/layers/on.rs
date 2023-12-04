@@ -4,13 +4,12 @@ use std::marker::PhantomData;
 // TODO: try making a Call module, whih allows calling an arbitrary method on the input.
 
 /// Applies module `T` into an input field from a wrapper.
-#[derive(
-    Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams, LoadSafeTensors, SaveSafeTensors,
-)]
+#[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
+#[derive(Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams)]
 #[repr(transparent)]
 pub struct On<N, T> {
     #[module]
-    #[serialize]
+    #[cfg_attr(feature = "safetensors", serialize)]
     pub t: T,
 
     pub _n: PhantomData<N>,
