@@ -90,7 +90,7 @@ impl MatMulImpl<crate::dtypes::AMP<half::f16>> for Cpu {
                 false,
                 false,
                 false,
-                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+                gemm::Parallelism::None,
             )
         }
     }
@@ -138,7 +138,7 @@ impl MatMulImpl<half::f16> for Cpu {
                 false,
                 false,
                 false,
-                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+                gemm::Parallelism::None,
             )
         }
     }
@@ -180,7 +180,7 @@ impl MatMulImpl<f32> for Cpu {
                 false,
                 false,
                 false,
-                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+                gemm::Parallelism::None,
             )
         }
     }
@@ -222,7 +222,7 @@ impl MatMulImpl<f64> for Cpu {
                 false,
                 false,
                 false,
-                gemm::Parallelism::Rayon(rayon::current_num_threads()),
+                gemm::Parallelism::None,
             )
         }
     }
