@@ -9,3 +9,12 @@ memmap2 = { version = "0.9.0", default-features = false }
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false }
 libm = "0.2.8"
+
+[patch.crates-io]
+crossbeam = { git = "https://github.com/crossbeam-rs/crossbeam", rev = "a57e655eef415c21babddc4ba0217b6ca7acd0a2" }
+crossbeam-epoch = { git = "https://github.com/crossbeam-rs/crossbeam", rev = "a57e655eef415c21babddc4ba0217b6ca7acd0a2" }
+crossbeam-channel = { git = "https://github.com/crossbeam-rs/crossbeam", rev = "a57e655eef415c21babddc4ba0217b6ca7acd0a2" }
+crossbeam-deque = { git = "https://github.com/crossbeam-rs/crossbeam", rev = "a57e655eef415c21babddc4ba0217b6ca7acd0a2" }
+crossbeam-queue = { git = "https://github.com/crossbeam-rs/crossbeam", rev = "a57e655eef415c21babddc4ba0217b6ca7acd0a2" }
+crossbeam-skiplist = { git = "https://github.com/crossbeam-rs/crossbeam", rev = "a57e655eef415c21babddc4ba0217b6ca7acd0a2" }
+crossbeam-utils = { git = "https://github.com/crossbeam-rs/crossbeam", rev = "a57e655eef415c21babddc4ba0217b6ca7acd0a2" }
