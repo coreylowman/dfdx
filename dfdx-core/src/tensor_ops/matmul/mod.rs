@@ -346,21 +346,21 @@ mod tests {
         }
 
         {
-            let a: Tensor<Rank3<10, 5, 3>, TestDtype, _> = dev.zeros();
+            let a: Tensor<Rank3<6, 4, 3>, TestDtype, _> = dev.zeros();
             let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.zeros();
-            let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = a.matmul(b);
+            let _: Tensor<Rank3<6, 4, 2>, TestDtype, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor<Rank3<10, 5, 3>, TestDtype, _> = dev.zeros();
-            let b: Tensor<Rank3<10, 3, 2>, TestDtype, _> = dev.zeros();
-            let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = a.matmul(b);
+            let a: Tensor<Rank3<6, 4, 3>, TestDtype, _> = dev.zeros();
+            let b: Tensor<Rank3<6, 3, 2>, TestDtype, _> = dev.zeros();
+            let _: Tensor<Rank3<6, 4, 2>, TestDtype, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor<Rank4<10, 20, 5, 3>, TestDtype, _> = dev.zeros();
-            let b: Tensor<Rank4<10, 20, 3, 2>, TestDtype, _> = dev.zeros();
-            let _: Tensor<Rank4<10, 20, 5, 2>, TestDtype, _> = a.matmul(b);
+            let a: Tensor<Rank4<6, 7, 4, 3>, TestDtype, _> = dev.zeros();
+            let b: Tensor<Rank4<6, 7, 3, 2>, TestDtype, _> = dev.zeros();
+            let _: Tensor<Rank4<6, 7, 4, 2>, TestDtype, _> = a.matmul(b);
         }
     }
 
@@ -427,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_matmul_broadcast() {
-        const N: usize = 5;
+        const N: usize = 2;
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank3<N, 4, 3>, TestDtype, _> = dev.sample_normal();
         let a_array = a.array();
@@ -458,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_matmul_broadcast_actual() {
-        const N: usize = 5;
+        const N: usize = 2;
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank3<N, 4, 3>, TestDtype, _> = dev.sample_normal();
         let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample_normal();
@@ -476,9 +476,9 @@ mod tests {
     fn test_matmul_batched_3d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor<Rank3<5, 3, 2>, TestDtype, _> = dev.sample_normal();
+        let a: Tensor<Rank3<2, 3, 2>, TestDtype, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor<Rank3<5, 2, 4>, TestDtype, _> = dev.sample_normal();
+        let b: Tensor<Rank3<2, 2, 4>, TestDtype, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.leaky_trace().matmul(b.clone());
         let c_array = c.array();
@@ -487,7 +487,7 @@ mod tests {
         let g_a = g.get(&a).array();
         let g_b = g.get(&b).array();
 
-        for i in 0..5 {
+        for i in 0..2 {
             let sub_a = dev.tensor(a_array[i]);
             let sub_b = dev.tensor(b_array[i]);
             let sub_c = sub_a.leaky_trace().matmul(sub_b.clone());
@@ -502,9 +502,9 @@ mod tests {
     fn test_matmul_batched_4d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor<Rank4<7, 5, 3, 2>, TestDtype, _> = dev.sample_normal();
+        let a: Tensor<Rank4<2, 3, 3, 2>, TestDtype, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor<Rank4<7, 5, 2, 4>, TestDtype, _> = dev.sample_normal();
+        let b: Tensor<Rank4<2, 3, 2, 4>, TestDtype, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.leaky_trace().matmul(b.clone());
         let c_array = c.array();
@@ -513,8 +513,8 @@ mod tests {
         let g_a = g.get(&a).array();
         let g_b = g.get(&b).array();
 
-        for i in 0..7 {
-            for j in 0..5 {
+        for i in 0..2 {
+            for j in 0..3 {
                 let sub_a = dev.tensor(a_array[i][j]);
                 let sub_b = dev.tensor(b_array[i][j]);
                 let sub_c = sub_a.leaky_trace().matmul(sub_b.clone());

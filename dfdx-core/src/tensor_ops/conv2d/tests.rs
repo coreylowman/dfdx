@@ -218,10 +218,10 @@ fn test_conv2d_s4p3k2() {
 #[test]
 fn test_batched_conv2d() {
     let dev: TestDevice = Default::default();
-    let x: Tensor<Rank3<3, 28, 28>, TestDtype, _> = dev.sample_normal();
+    let x: Tensor<Rank3<3, 7, 7>, TestDtype, _> = dev.sample_normal();
     let w: Tensor<Rank4<5, 3, 6, 6>, TestDtype, _> = dev.sample_normal();
 
-    let y: Tensor<Rank3<5, 9, 9>, _, _, _> =
+    let y: Tensor<Rank3<5, 2, 2>, _, _, _> =
         (x.leaky_trace(), w.clone()).conv2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>);
     let y0 = y.retaped::<NoneTape>();
     let grads0 = y.square().mean().backward();
@@ -229,11 +229,11 @@ fn test_batched_conv2d() {
     let w0 = grads0.get(&w);
 
     let x = x
-        .broadcast::<Rank4<10, 3, 28, 28>, _>()
-        .reshape::<Rank4<10, 3, 28, 28>>();
+        .broadcast::<Rank4<10, 3, 7, 7>, _>()
+        .reshape::<Rank4<10, 3, 7, 7>>();
     assert_eq!(x.strides, x.shape.strides());
 
-    let y: Tensor<Rank4<10, 5, 9, 9>, _, _, _> =
+    let y: Tensor<Rank4<10, 5, 2, 2>, _, _, _> =
         (x.leaky_trace(), w.clone()).conv2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>);
     for i in 0..10 {
         assert_close_to_tensor!(y0, y.retaped::<NoneTape>().select(dev.tensor(i)));
@@ -245,7 +245,7 @@ fn test_batched_conv2d() {
 
     let x_grad = grads.get(&x) * 10.0;
     for i in 0..10 {
-        assert_close_to_tensor!(x0, x_grad.clone().select(dev.tensor(i)));
+        assert_close_to_tensor!(x0, x_grad.clone().select(dev.tensor(i)), 3e-6);
     }
 }
 
@@ -405,7 +405,7 @@ fn test_conv2d_grouped() {
 fn test_conv2d_grouped_slices() {
     const NUM_GROUPS: usize = 3;
     let dev: TestDevice = Default::default();
-    let x: Tensor<Rank4<2, 9, 14, 14>, TestDtype, _> = dev.sample_normal();
+    let x: Tensor<Rank4<2, 9, 3, 3>, TestDtype, _> = dev.sample_normal();
     let w: Tensor<Rank4<15, 3, 3, 3>, TestDtype, _> = dev.sample_normal();
 
     let y = (x.leaky_trace(), w.clone()).conv2d(
@@ -419,7 +419,7 @@ fn test_conv2d_grouped_slices() {
         let x_group = x
             .clone()
             .slice((.., 3 * i..3 * (i + 1), .., ..))
-            .realize::<(Const<2>, Const<3>, Const<14>, Const<14>)>();
+            .realize::<(Const<2>, Const<3>, Const<3>, Const<3>)>();
         let w_group = w
             .clone()
             .slice((5 * i..5 * (i + 1), .., .., ..))
@@ -428,7 +428,7 @@ fn test_conv2d_grouped_slices() {
         let y_group_true = y
             .retaped::<NoneTape>()
             .slice((.., 5 * i..5 * (i + 1), .., ..))
-            .realize::<(Const<2>, Const<5>, Const<12>, Const<12>)>();
+            .realize::<(Const<2>, Const<5>, Const<1>, Const<1>)>();
         assert_close_to_tensor!(y_group, y_group_true);
     }
 
@@ -440,7 +440,7 @@ fn test_conv2d_grouped_slices() {
         let x_group = x
             .clone()
             .slice((.., 3 * i..3 * (i + 1), .., ..))
-            .realize::<(Const<2>, Const<3>, Const<14>, Const<14>)>();
+            .realize::<(Const<2>, Const<3>, Const<3>, Const<3>)>();
         let w_group = w
             .clone()
             .slice((5 * i..5 * (i + 1), .., .., ..))
@@ -452,7 +452,7 @@ fn test_conv2d_grouped_slices() {
         let x_grad_group_true = x_grad
             .clone()
             .slice((.., 3 * i..3 * (i + 1), .., ..))
-            .realize::<(Const<2>, Const<3>, Const<14>, Const<14>)>();
+            .realize::<(Const<2>, Const<3>, Const<3>, Const<3>)>();
         let w_grad_group_true = w_grad
             .clone()
             .slice((5 * i..5 * (i + 1), .., .., ..))

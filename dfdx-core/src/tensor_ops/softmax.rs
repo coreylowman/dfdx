@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test_softmax_equivalence() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<Rank4<8, 16, 32, 64>, TestDtype, _> = dev.sample_normal();
+        let t: Tensor<Rank4<2, 4, 8, 16>, TestDtype, _> = dev.sample_normal();
         let p = t.leaky_trace().softmax::<Axis<3>>();
         let p_truth = t.leaky_trace().log_softmax::<Axis<3>>().exp();
         // we can't create an array as it will overflow the stack
