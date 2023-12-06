@@ -25,7 +25,7 @@ pub struct Cpu {
     /// A thread safe random number generator.
     pub(crate) rng: Arc<Mutex<StdRng>>,
     /// A thread safe cache of memory allocations that can be reused.
-    pub(crate) cache: Arc<TensorCache<BytesPtr>>,
+    pub(crate) cache: Arc<TensorCache<BytesPtr, CpuDevice>>,
 }
 
 impl Default for Cpu {
@@ -47,6 +47,45 @@ impl Cpu {
     }
 }
 
+/// Unit struct to represent information needed for managing allocations on the Cpu.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct CpuDevice;
+
+impl crate::tensor::cache::CachePtr<CpuDevice> for BytesPtr {
+    fn dealloc(self, key: &crate::tensor::cache::AllocationKey, _dev: &CpuDevice) {
+        assert!(key.num_bytes % key.size == 0);
+        assert!(key.num_bytes < isize::MAX as usize);
+        let len = key.num_bytes / key.size;
+        let cap = len;
+        // SAFETY:
+        // - "ptr must have been allocated using the global allocator, such as via the alloc::alloc function."
+        //    - ✅ cpu uses global allocator
+        // - "T needs to have the same alignment as what ptr was allocated with."
+        //    - ✅ we are matching on the alignment below
+        // - "The size of T times the capacity needs to be the same size as the pointer was allocated with."
+        //    - ✅ covered by `key.num_bytes / key.size` and the `key.num_bytes % key.size == 0` assertion above
+        // - "length needs to be less than or equal to capacity."
+        //    - ✅ they are equal
+        // - "The first length values must be properly initialized values of type T."
+        //    - ✅ any bit pattern is valid for unsigned ints used below
+        // - "capacity needs to be the capacity that the pointer was allocated with."
+        //    - ✅ handled by assertion above (key.num_bytes % key.size == 0)
+        // - "The allocated size in bytes must be no larger than isize::MAX. See the safety documentation of pointer::offset."
+        //    - ✅ handled by assertion above
+        debug_assert_eq!(std::alloc::Layout::new::<u8>().align(), 1);
+        debug_assert_eq!(std::alloc::Layout::new::<u16>().align(), 2);
+        debug_assert_eq!(std::alloc::Layout::new::<u32>().align(), 4);
+        debug_assert_eq!(std::alloc::Layout::new::<u64>().align(), 8);
+        match key.alignment {
+            1 => unsafe { drop(Vec::from_raw_parts(self.0, len, cap)) },
+            2 => unsafe { drop(Vec::from_raw_parts(self.0 as *mut u16, len, cap)) },
+            4 => unsafe { drop(Vec::from_raw_parts(self.0 as *mut u32, len, cap)) },
+            8 => unsafe { drop(Vec::from_raw_parts(self.0 as *mut u64, len, cap)) },
+            _ => unreachable!(),
+        };
+    }
+}
+
 /// A [Vec] that can be cloned without allocating new memory.
 /// When [Drop]ed it will insert it's data into the cache.
 #[derive(Debug)]
@@ -54,7 +93,7 @@ pub struct CachableVec<E> {
     /// The data stored in this vector.
     pub(crate) data: Vec<E>,
     /// A cache of memory allocations that can be reused.
-    pub(crate) cache: Arc<TensorCache<BytesPtr>>,
+    pub(crate) cache: Arc<TensorCache<BytesPtr, CpuDevice>>,
 }
 
 impl<E: Clone> Clone for CachableVec<E> {
@@ -166,45 +205,6 @@ impl Cache for Cpu {
     }
 
     fn try_empty_cache(&self) -> Result<(), Error> {
-        #[cfg(not(feature = "no-std"))]
-        let mut cache = self.cache.allocations.write().unwrap();
-        #[cfg(feature = "no-std")]
-        let mut cache = self.cache.allocations.write();
-        for (&key, allocations) in cache.iter_mut() {
-            assert!(key.num_bytes % key.size == 0);
-            assert!(key.num_bytes < isize::MAX as usize);
-            let len = key.num_bytes / key.size;
-            let cap = len;
-            for alloc in allocations.drain(..) {
-                // SAFETY:
-                // - "ptr must have been allocated using the global allocator, such as via the alloc::alloc function."
-                //    - ✅ cpu uses global allocator
-                // - "T needs to have the same alignment as what ptr was allocated with."
-                //    - ✅ we are matching on the alignment below
-                // - "The size of T times the capacity needs to be the same size as the pointer was allocated with."
-                //    - ✅ covered by `key.num_bytes / key.size` and the `key.num_bytes % key.size == 0` assertion above
-                // - "length needs to be less than or equal to capacity."
-                //    - ✅ they are equal
-                // - "The first length values must be properly initialized values of type T."
-                //    - ✅ any bit pattern is valid for unsigned ints used below
-                // - "capacity needs to be the capacity that the pointer was allocated with."
-                //    - ✅ handled by assertion above (key.num_bytes % key.size == 0)
-                // - "The allocated size in bytes must be no larger than isize::MAX. See the safety documentation of pointer::offset."
-                //    - ✅ handled by assertion above
-                debug_assert_eq!(std::alloc::Layout::new::<u8>().align(), 1);
-                debug_assert_eq!(std::alloc::Layout::new::<u16>().align(), 2);
-                debug_assert_eq!(std::alloc::Layout::new::<u32>().align(), 4);
-                debug_assert_eq!(std::alloc::Layout::new::<u64>().align(), 8);
-                match key.alignment {
-                    1 => unsafe { drop(Vec::from_raw_parts(alloc.0, len, cap)) },
-                    2 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u16, len, cap)) },
-                    4 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u32, len, cap)) },
-                    8 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u64, len, cap)) },
-                    _ => unreachable!(),
-                };
-            }
-        }
-        cache.clear();
-        Ok(())
+        self.cache.try_clear()
     }
 }

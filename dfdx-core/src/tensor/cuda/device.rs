@@ -29,7 +29,7 @@ pub struct Cuda {
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
-    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
+    pub(crate) cache: Arc<TensorCache<CudaBytesPtr, Arc<CudaDevice>>>,
 }
 
 impl From<CublasError> for Error {
@@ -77,6 +77,7 @@ impl Cuda {
         let cudnn = cudarc::cudnn::Cudnn::new(dev.clone())?;
         let par_stream = Arc::new(dev.fork_default_stream()?);
         let workspace = Arc::new(Mutex::new(dev.alloc_zeros::<u8>(1)?));
+        let cache = Arc::new(TensorCache::new(Arc::clone(&dev)));
         Ok(Self {
             cpu,
             dev,
@@ -85,7 +86,7 @@ impl Cuda {
             cudnn,
             par_stream,
             workspace,
-            cache: Default::default(),
+            cache,
         })
     }
 }
@@ -100,7 +101,7 @@ impl Cuda {
     ) -> Result<CudaSlice<E>, Error> {
         let data = self.cache.try_pop::<E>(len).map_or_else(
             || self.dev.alloc::<E>(len),
-            |ptr| Ok(self.dev.upgrade_device_ptr(ptr, len)),
+            |ptr| Ok(self.dev.upgrade_device_ptr(ptr.0, len)),
         )?;
         Ok(data)
     }
@@ -122,6 +123,18 @@ impl Cuda {
     }
 }
 
+/// A pointer to a bytes on the Cuda device. Used in conjunction with [TensorCache].
+#[repr(transparent)]
+#[derive(Clone, Debug)]
+pub struct CudaBytesPtr(pub(crate) CUdeviceptr);
+
+impl crate::tensor::cache::CachePtr<Arc<CudaDevice>> for CudaBytesPtr {
+    fn dealloc(self, key: &crate::tensor::cache::AllocationKey, dev: &Arc<CudaDevice>) {
+        let data = unsafe { dev.upgrade_device_ptr::<u8>(self.0, key.num_bytes) };
+        drop(data);
+    }
+}
+
 /// A [CudaSlice] that can be cloned without allocating new memory.
 /// When [Drop]ed it will insert it's data into the cache.
 #[derive(Debug)]
@@ -129,7 +142,7 @@ pub struct CachableCudaSlice<E> {
     /// The actual data.
     pub(crate) data: CudaSlice<E>,
     /// A cache of device pointers that can be reused.
-    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
+    pub(crate) cache: Arc<TensorCache<CudaBytesPtr, Arc<CudaDevice>>>,
 }
 
 impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
@@ -142,7 +155,7 @@ impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
                 // SAFETY:
                 // 1. we know that ptr is valid for `num_bytes` because it was registered for that.
                 // 2. we are about to set the memory with dtod_copy
-                let mut slice = unsafe { dev.upgrade_device_ptr(ptr, len) };
+                let mut slice = unsafe { dev.upgrade_device_ptr(ptr.0, len) };
                 dev.dtod_copy(&self.data, &mut slice).unwrap();
                 slice
             },
@@ -209,7 +222,7 @@ impl<E> Drop for CachableCudaSlice<E> {
             let numel = data.len();
             // Get access to the raw pointer without freeing it.
             let ptr = data.leak();
-            self.cache.insert::<E>(numel, ptr);
+            self.cache.insert::<E>(numel, CudaBytesPtr(ptr));
         }
     }
 }
@@ -232,18 +245,7 @@ impl Cache for Cuda {
     }
 
     fn try_empty_cache(&self) -> Result<(), Error> {
-        #[cfg(not(feature = "no-std"))]
-        let mut cache = self.cache.allocations.write().unwrap();
-        #[cfg(feature = "no-std")]
-        let mut cache = self.cache.allocations.write();
-        for (&key, allocations) in cache.iter_mut() {
-            for alloc in allocations.drain(..) {
-                let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, key.num_bytes) };
-                drop(data);
-            }
-        }
-        cache.clear();
-        Ok(())
+        self.cache.try_clear()
     }
 }
 

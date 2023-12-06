@@ -109,7 +109,7 @@ pub struct Webgpu {
     pub(crate) dev: Arc<Device>,
     pub(crate) queue: Arc<Queue>,
 
-    pub(crate) cache: Arc<TensorCache<Buffer>>,
+    pub(crate) cache: Arc<TensorCache<Buffer, WebGpuDevice>>,
     pub(crate) cs_cache: Arc<RwLock<HashMap<TypeId, Arc<ShaderModule>>>>,
 }
 
@@ -297,12 +297,22 @@ impl Webgpu {
     // }
 }
 
+/// Unit struct to represent information needed for managing allocations on the WebGpu.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct WebGpuDevice;
+
+impl crate::tensor::cache::CachePtr<WebGpuDevice> for Buffer {
+    fn dealloc(self, _key: &crate::tensor::cache::AllocationKey, _dev: &WebGpuDevice) {
+        drop(self)
+    }
+}
+
 #[derive(Debug)]
 pub struct CachableBuffer<E> {
     pub(crate) dev: Arc<Device>,
     pub(crate) queue: Arc<Queue>,
     pub(crate) data: Buffer,
-    pub(crate) cache: Arc<TensorCache<Buffer>>,
+    pub(crate) cache: Arc<TensorCache<Buffer, WebGpuDevice>>,
     pub(crate) _phantom: PhantomData<E>,
 }
 
@@ -397,17 +407,7 @@ impl Cache for Webgpu {
     }
 
     fn try_empty_cache(&self) -> Result<(), Error> {
-        #[cfg(not(feature = "no-std"))]
-        let mut cache = self.cache.allocations.write().unwrap();
-        #[cfg(feature = "no-std")]
-        let mut cache = self.cache.allocations.write();
-        for (&_key, allocations) in cache.iter_mut() {
-            for alloc in allocations.drain(..) {
-                drop(alloc);
-            }
-        }
-        cache.clear();
-        Ok(())
+        self.cache.try_clear()
     }
 }
 

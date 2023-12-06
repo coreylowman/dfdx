@@ -33,21 +33,35 @@ pub(crate) struct AllocationKey {
 /// valid allocation. When the last value is removed from the list, the key
 /// is removed.
 #[derive(Debug)]
-pub(crate) struct TensorCache<Ptr> {
+pub(crate) struct TensorCache<Ptr: CachePtr<DeviceDev>, DeviceDev = ()> {
     pub(crate) allocations: RwLock<BTreeMap<AllocationKey, Vec<Ptr>>>,
     pub(crate) enabled: RwLock<bool>,
+    device_dev: DeviceDev,
 }
 
-impl<Ptr> Default for TensorCache<Ptr> {
+impl<Ptr: CachePtr<DeviceDev>, DeviceDev: Default> Default for TensorCache<Ptr, DeviceDev> {
     fn default() -> Self {
         Self {
             allocations: Default::default(),
             enabled: RwLock::new(false),
+            device_dev: DeviceDev::default(),
         }
     }
 }
 
-impl<Ptr> TensorCache<Ptr> {
+#[allow(dead_code)]
+impl<Ptr: CachePtr<DeviceDev>, DeviceDev> TensorCache<Ptr, DeviceDev> {
+    /// Initiate an empty [TensorCache] with a given `device_dev`.
+    pub(crate) fn new(device_dev: DeviceDev) -> Self {
+        Self {
+            allocations: Default::default(),
+            enabled: RwLock::new(false),
+            device_dev,
+        }
+    }
+}
+
+impl<Ptr: CachePtr<DeviceDev>, DeviceDev> TensorCache<Ptr, DeviceDev> {
     /// Returns the number of allocations in the cache.
     #[allow(unused)]
     pub(crate) fn len(&self) -> usize {
@@ -182,6 +196,60 @@ impl<Ptr> TensorCache<Ptr> {
         }
     }
 }
+
+impl<Ptr: CachePtr<DeviceDev>, DeviceDev> TensorCache<Ptr, DeviceDev> {
+    /// Deallocates all cached memory on the device and empties the cache.
+    pub(crate) fn try_clear(&self) -> Result<(), crate::prelude::Error> {
+        let mut cache = {
+            #[cfg(not(feature = "no-std"))]
+            {
+                self.allocations.write().unwrap()
+            }
+            #[cfg(feature = "no-std")]
+            {
+                self.allocations.write()
+            }
+        };
+
+        for (&key, allocations) in cache.iter_mut() {
+            for alloc in allocations.drain(..) {
+                alloc.dealloc(&key, &self.device_dev);
+            }
+        }
+        cache.clear();
+        Ok(())
+    }
+}
+
+impl<Ptr: CachePtr<DeviceDev>, DeviceDev> Drop for TensorCache<Ptr, DeviceDev> {
+    fn drop(&mut self) {
+        self.try_clear().unwrap();
+    }
+}
+
+/// Functionality internalized by the pointer.
+pub(crate) trait CachePtr<Dev>: Sized {
+    // by default no deallocation is made for any cache ptr
+    // ie. they leak
+    /// Deallocates the memory referred by this pointer.
+    fn dealloc(self, _key: &AllocationKey, _dev: &Dev) {}
+}
+
+impl<Dev> CachePtr<Dev> for bool {}
+impl<Dev> CachePtr<Dev> for u8 {}
+impl<Dev> CachePtr<Dev> for u16 {}
+impl<Dev> CachePtr<Dev> for u32 {}
+impl<Dev> CachePtr<Dev> for u64 {}
+impl<Dev> CachePtr<Dev> for u128 {}
+impl<Dev> CachePtr<Dev> for usize {}
+impl<Dev> CachePtr<Dev> for i8 {}
+impl<Dev> CachePtr<Dev> for i16 {}
+impl<Dev> CachePtr<Dev> for i32 {}
+impl<Dev> CachePtr<Dev> for i64 {}
+impl<Dev> CachePtr<Dev> for i128 {}
+impl<Dev> CachePtr<Dev> for isize {}
+impl<Dev> CachePtr<Dev> for f32 {}
+impl<Dev> CachePtr<Dev> for f64 {}
 
 #[cfg(test)]
 mod test {
