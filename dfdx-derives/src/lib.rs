@@ -1109,11 +1109,11 @@ pub fn input_wrapper(
 
     let imports = if are_fields_named {
         quote! {
-            use super::#wrapper_ident;
+            use super::*;
         }
     } else {
         quote! {
-            use super::#wrapper_ident;
+            use super::*;
             // TODO: import tuple stuff
             use crate::prelude;
         }
@@ -1185,11 +1185,11 @@ pub fn input_wrapper(
         for (i, (_, ident, _, _span)) in wrapper_fields.iter().enumerate() {
             let i = syn::Index::from(i);
             if let Some(ident) = ident {
-                field_from_tuple.push(quote! {#ident: x.#i});
-                field_to_tuple.push(quote! {x.#ident});
+                field_from_tuple.push(quote! {#ident: __x.#i});
+                field_to_tuple.push(quote! {__x.#ident});
             } else {
-                field_from_tuple.push(quote! {x.#i});
-                field_to_tuple.push(quote! {x.#i});
+                field_from_tuple.push(quote! {__x.#i});
+                field_to_tuple.push(quote! {__x.#i});
             };
         }
 
@@ -1216,13 +1216,13 @@ pub fn input_wrapper(
         quote! {
             #[doc = #doc1]
             impl<#(#wrapper_generic_names), *> From<(#(#field_ty_names), *)> for #wrapper_ident<#(#wrapper_generic_names), *> {
-                fn from(x: (#(#field_ty_names), *)) -> Self {
+                fn from(__x: (#(#field_ty_names), *)) -> Self {
                     #from_tuple
                 }
             }
             #[doc = #doc2]
             impl<#(#wrapper_generic_names), *> From<#wrapper_ident<#(#wrapper_generic_names), *>> for (#(#field_ty_names), *) {
-                fn from(x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Self {
+                fn from(__x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Self {
                     #to_tuple
                 }
             }
@@ -1237,15 +1237,15 @@ pub fn input_wrapper(
             #[doc = #doc1]
             impl<#(#wrapper_generic_names), *> ::dfdx::prelude::Module<(#(#field_ty_names), *)> for FromTuple {
                 type Output = #wrapper_ident<#(#wrapper_generic_names), *>;
-                fn try_forward(&self, x: (#(#field_ty_names), *)) -> Result<Self::Output, ::dfdx::prelude::Error> {
-                    Ok(x.into())
+                fn try_forward(&self, __x: (#(#field_ty_names), *)) -> Result<Self::Output, ::dfdx::prelude::Error> {
+                    Ok(__x.into())
                 }
             }
             #[doc = #doc2]
             impl<#(#wrapper_generic_names), *> ::dfdx::prelude::Module<#wrapper_ident<#(#wrapper_generic_names), *>> for IntoTuple {
                 type Output = (#(#field_ty_names), *);
-                fn try_forward(&self, x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, ::dfdx::prelude::Error> {
-                    Ok(x.into())
+                fn try_forward(&self, __x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, ::dfdx::prelude::Error> {
+                    Ok(__x.into())
                 }
             }
         }
@@ -1272,7 +1272,7 @@ pub fn input_wrapper(
                 wrapper_ident, ident
             );
             let on_access = ident.clone();
-            let forward = syn::Ident::new(&format!("x{i}"), ident.span());
+            let forward = syn::Ident::new(&format!("__x{i}"), ident.span());
             (doc, on_access, forward)
         } else {
             let doc = format!(
@@ -1281,7 +1281,7 @@ pub fn input_wrapper(
                 wrapper_ident,
             );
             let on_access = syn::Ident::new(&format!("_{}", i), *span);
-            let forward = syn::Ident::new(&format!("x{i}"), *span);
+            let forward = syn::Ident::new(&format!("__x{i}"), *span);
             (doc, on_access, forward)
         };
 
@@ -1307,14 +1307,14 @@ pub fn input_wrapper(
         for (i, (_, _ident, _, span)) in wrapper_fields.iter().enumerate() {
             let ii = syn::Index::from(i);
             if let Some(_ident) = _ident {
-                let xident = syn::Ident::new(&format!("x{i}"), _ident.span());
+                let xident = syn::Ident::new(&format!("__x{i}"), _ident.span());
                 field_extraction_idents.push(xident.clone());
-                field_extraction.push(quote! {let #xident = x.#_ident;});
+                field_extraction.push(quote! {let #xident = __x.#_ident;});
                 field_construction.push(quote! {#_ident: #xident,});
             } else {
-                let xident = syn::Ident::new(&format!("x{i}"), *span);
+                let xident = syn::Ident::new(&format!("__x{i}"), *span);
                 field_extraction_idents.push(xident.clone());
-                field_extraction.push(quote! {let #xident = x.#ii;});
+                field_extraction.push(quote! {let #xident = __x.#ii;});
                 field_construction.push(quote! {#xident,});
             };
         }
@@ -1336,17 +1336,17 @@ pub fn input_wrapper(
             #[doc = #doc]
             impl<M: ::dfdx::prelude::Module<#ty>, #(#wrapper_generic_names), *> ::dfdx::prelude::Module<#wrapper_ident<#(#wrapper_generic_names), *>> for ::dfdx::prelude::On<#on_acccess, M> {
                 type Output = #wrapper_ident<#(#output_generics), *>;
-                fn try_forward(&self, x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, ::dfdx::prelude::Error> {
+                fn try_forward(&self, __x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, ::dfdx::prelude::Error> {
                     #(#field_extraction)*
                     let #forward = self.t.try_forward(#forward)?;
-                    let x = #field_replacement;
-                    Ok(x)
+                    let __x = #field_replacement;
+                    Ok(__x)
                 }
-                fn try_forward_mut(&mut self, x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, ::dfdx::prelude::Error> {
+                fn try_forward_mut(&mut self, __x: #wrapper_ident<#(#wrapper_generic_names), *>) -> Result<Self::Output, ::dfdx::prelude::Error> {
                     #(#field_extraction)*
                     let #forward = self.t.try_forward_mut(#forward)?;
-                    let x = #field_replacement;
-                    Ok(x)
+                    let __x = #field_replacement;
+                    Ok(__x)
                 }
             }
         };
