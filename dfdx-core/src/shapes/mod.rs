@@ -1,4 +1,4 @@
-//! Shape related traits/structes like [Shape], [Dtype], [Dim], [Axis], and [Const]
+//! Shape related traits/structs like [Shape], [Dtype], [Dim], [Axis], and [Const]
 //!
 //! Example shapes:
 //! ```rust
