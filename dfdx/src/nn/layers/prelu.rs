@@ -19,7 +19,7 @@ impl<E: Dtype, D: Device<E>> BuildOnDevice<E, D> for PReLUConfig {
 }
 
 /// See [PReLUConfig].
-#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct PReLU<Elem: Dtype, Dev: Device<Elem>> {
     #[param]

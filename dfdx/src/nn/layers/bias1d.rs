@@ -36,7 +36,7 @@ impl<I: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for Bias1DConfig<I> {
 }
 
 /// See [Bias1DConfig]
-#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct Bias1D<I: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

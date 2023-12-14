@@ -57,7 +57,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> crate::nn::BuildOnDevice<E, D> for BatchNor
 }
 
 /// See [BatchNorm2DConfig]
-#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct BatchNorm2D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

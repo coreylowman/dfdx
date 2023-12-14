@@ -160,7 +160,7 @@ mod tensor_impls;
 
 pub use error::Error;
 pub(crate) use ghost::GhostTensor;
-pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
+pub(crate) use storage_traits::{OneFillStorage, WithStorage, ZeroFillStorage};
 pub use tensorlike::Tensorlike;
 
 pub use cpu::Cpu;

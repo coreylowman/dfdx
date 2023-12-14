@@ -58,6 +58,51 @@ impl<E: Dtype, D: Device<E>, T: crate::nn_traits::ZeroGrads<E, D>> crate::nn_tra
     }
 }
 
+impl<E: Dtype, D: Device<E>, T: crate::nn_traits::WithGrads<E, D>> crate::nn_traits::WithGrads<E, D>
+    for Vec<T>
+{
+    fn try_grads_element_view<F: FnMut(&E)>(
+        &self,
+        grads: &crate::tensor::Gradients<E, D>,
+        mut f: F,
+    ) -> Result<(), crate::tensor::Error> {
+        for m_i in self.iter() {
+            m_i.try_grads_element_view(grads, &mut f)?;
+        }
+        Ok(())
+    }
+    fn try_grads_view<F: FnMut(&[E])>(
+        &self,
+        grads: &crate::tensor::Gradients<E, D>,
+        mut f: F,
+    ) -> Result<(), crate::tensor::Error> {
+        for m_i in self.iter() {
+            m_i.try_grads_view(grads, &mut f)?;
+        }
+        Ok(())
+    }
+    fn try_grads_element_map<F: FnMut(E) -> E>(
+        &self,
+        grads: &mut crate::tensor::Gradients<E, D>,
+        mut f: F,
+    ) -> Result<(), crate::tensor::Error> {
+        for m_i in self.iter() {
+            m_i.try_grads_element_map(grads, &mut f)?;
+        }
+        Ok(())
+    }
+    fn try_grads_map<F: FnMut(Vec<E>) -> Option<Vec<E>>>(
+        &self,
+        grads: &mut crate::tensor::Gradients<E, D>,
+        mut f: F,
+    ) -> Result<(), crate::tensor::Error> {
+        for m_i in self.iter() {
+            m_i.try_grads_map(grads, &mut f)?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(feature = "safetensors")]
 impl<T: crate::nn_traits::SaveSafeTensors> crate::nn_traits::SaveSafeTensors for Vec<T> {
     fn write_safetensors(

@@ -60,6 +60,53 @@ impl<E: Unit> ZeroFillStorage<E> for Cuda {
     }
 }
 
+impl<E: Unit> WithStorage<E> for Cuda {
+    /// View a copy of the values by each element (not in-place).
+    fn try_element_view<F: FnMut(&E)>(&self, storage: &Self::Vec, mut f: F) -> Result<(), Error> {
+        let v = self.dev.dtoh_sync_copy(storage)?;
+        for e in v.iter() {
+            f(e);
+        }
+        Ok(())
+    }
+    /// View a copy of the values by a [Vec] (not in-place).
+    fn try_view<F: FnMut(&[E])>(&self, storage: &Self::Vec, mut f: F) -> Result<(), Error> {
+        let v = self.dev.dtoh_sync_copy(storage)?;
+        f(v.as_slice());
+        Ok(())
+    }
+    /// Mutates a copy of the values by each element (not in-place).
+    /// Then the values in Cuda memory are replaced by the changed values.
+    fn try_element_map<F: FnMut(E) -> E>(
+        &self,
+        storage: &mut Self::Vec,
+        mut f: F,
+    ) -> Result<(), Error> {
+        let mut v = self.dev.dtoh_sync_copy(storage)?;
+        for e in v.iter_mut() {
+            let fe = (&mut f)(*e);
+            *e = fe;
+        }
+        self.dev.htod_copy_into(v, storage)?;
+        Ok(())
+    }
+    /// Mutates a copy of the values (not in-place).
+    ///
+    /// If `Some` is returned, the values in Cuda memory are replaced by the changed values.  
+    /// Otherwise if `None` is returned, the values in Cuda memory are left intact.
+    fn try_map<F: FnMut(Vec<E>) -> Option<Vec<E>>>(
+        &self,
+        storage: &mut Self::Vec,
+        mut f: F,
+    ) -> Result<(), Error> {
+        let v = self.dev.dtoh_sync_copy(storage)?;
+        if let Some(fv) = (&mut f)(v) {
+            self.dev.htod_copy_into(fv, storage)?;
+        }
+        Ok(())
+    }
+}
+
 impl<E: Unit> OnesTensor<E> for Cuda
 where
     Cpu: OnesTensor<E>,

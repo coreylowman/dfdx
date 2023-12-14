@@ -19,7 +19,7 @@ use crate::prelude::*;
 /// let b: Tensor<Rank1<3>, f32, _> = dev.zeros();
 /// let _: Tensor<Rank1<5>, f32, _> = model.forward((a, b));
 /// ```
-#[derive(Debug, Default, Clone, ResetParams, ZeroGrads, UpdateParams)]
+#[derive(Debug, Default, Clone, ResetParams, ZeroGrads, WithGrads, UpdateParams)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 #[repr(transparent)]
 pub struct AddInto<T>(

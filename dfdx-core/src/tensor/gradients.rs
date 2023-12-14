@@ -86,14 +86,14 @@ impl<E, D: Storage<E>> Gradients<E, D> {
     /// Returns a mutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_mut<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &mut D::Vec {
+    pub fn get_mut<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &mut D::Vec {
         self.gradient_by_id.get_mut(&t.id()).unwrap()
     }
 
     /// Returns an immutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_ref<S: Shape>(&mut self, t: &impl Tensorlike<S, E, D>) -> &D::Vec {
+    pub fn get_ref<S: Shape>(&self, t: &impl Tensorlike<S, E, D>) -> &D::Vec {
         self.gradient_by_id.get(&t.id()).unwrap()
     }
 

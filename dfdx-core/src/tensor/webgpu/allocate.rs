@@ -71,6 +71,29 @@ impl<E: Unit + SafeZeros> ZeroFillStorage<E> for Webgpu {
     }
 }
 
+impl<E: Unit> WithStorage<E> for Webgpu {
+    fn try_element_view<F: FnMut(&E)>(&self, storage: &Self::Vec, mut f: F) -> Result<(), Error> {
+        todo!()
+    }
+    fn try_view<F: FnMut(&[E])>(&self, storage: &Self::Vec, mut f: F) -> Result<(), Error> {
+        todo!()
+    }
+    fn try_element_map<F: FnMut(E) -> E>(
+        &self,
+        storage: &mut Self::Vec,
+        mut f: F,
+    ) -> Result<(), Error> {
+        todo!()
+    }
+    fn try_map<F: FnMut(Vec<E>) -> Option<Vec<E>>>(
+        &self,
+        storage: &mut Self::Vec,
+        mut f: F,
+    ) -> Result<(), Error> {
+        todo!()
+    }
+}
+
 impl<E: Unit> OnesTensor<E> for Webgpu {
     fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();

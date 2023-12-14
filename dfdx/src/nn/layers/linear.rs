@@ -47,7 +47,7 @@ impl<I: Dim, O: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LinearConfi
 }
 
 /// See [LinearConfig].
-#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct Linear<I: Dim, O: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

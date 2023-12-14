@@ -55,7 +55,7 @@ impl<C: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for BatchNorm1DConfig<C
 }
 
 /// See [BatchNorm1DConfig].
-#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct BatchNorm1D<C: Dim, Elem: Dtype, Dev: Device<Elem>> {
     /// Scale for affine transform. Defaults to 1.0

@@ -78,6 +78,48 @@ impl<E: Unit> ZeroFillStorage<E> for Cpu {
     }
 }
 
+impl<E: Unit> WithStorage<E> for Cpu {
+    /// View the values by each element (in-place).
+    fn try_element_view<F: FnMut(&E)>(&self, storage: &Self::Vec, mut f: F) -> Result<(), Error> {
+        for e in storage.iter() {
+            f(e);
+        }
+        Ok(())
+    }
+    /// View the values by a [Vec] (in-place).
+    fn try_view<F: FnMut(&[E])>(&self, storage: &Self::Vec, mut f: F) -> Result<(), Error> {
+        f(storage.data.as_slice());
+        Ok(())
+    }
+    /// Mutates the values by each element (in-place).
+    fn try_element_map<F: FnMut(E) -> E>(
+        &self,
+        storage: &mut Self::Vec,
+        mut f: F,
+    ) -> Result<(), Error> {
+        for e in storage.iter_mut() {
+            let fe = f(*e);
+            *e = fe;
+        }
+        Ok(())
+    }
+    /// Mutates a clone of the values (not in-place).
+    ///
+    /// If `Some` is returned, replaces the changed values back into the object.  
+    /// Otherwise if `None` is returned, the changed values are discarded and the object stays intact.
+    fn try_map<F: FnMut(Vec<E>) -> Option<Vec<E>>>(
+        &self,
+        storage: &mut Self::Vec,
+        mut f: F,
+    ) -> Result<(), Error> {
+        let storage_copy = storage.data.clone();
+        if let Some(fstorage) = f(storage_copy) {
+            storage.data.copy_from_slice(&fstorage);
+        }
+        Ok(())
+    }
+}
+
 impl<E: Unit> OnesTensor<E> for Cpu {
     fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();

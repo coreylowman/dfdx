@@ -262,7 +262,7 @@ pub use dfdx_core::*;
 #[cfg(feature = "safetensors")]
 pub use safetensors;
 
-pub use dfdx_derives::{CustomModule, ResetParams, Sequential, UpdateParams, ZeroGrads};
+pub use dfdx_derives::{CustomModule, ResetParams, Sequential, UpdateParams, WithGrads, ZeroGrads};
 #[cfg(feature = "safetensors")]
 pub use dfdx_derives::{LoadSafeTensors, SaveSafeTensors};
 

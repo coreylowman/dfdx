@@ -67,6 +67,25 @@ macro_rules! tuple_impls {
             }
         }
 
+        impl<Dev: Device<Elem>, Elem: Dtype, $($name: crate::nn_traits::WithGrads<Elem, Dev>),+> crate::nn_traits::WithGrads<Elem, Dev> for ($($name,)+) {
+            fn try_grads_element_view<F: FnMut(&Elem)>(&self, grads: &crate::prelude::Gradients<Elem, Dev>, mut f: F) -> Result<(), Error> {
+                $(self.$idx.try_grads_element_view(grads, &mut f)?;)+
+                Ok(())
+            }
+            fn try_grads_view<F: FnMut(&[Elem])>(&self, grads: &crate::prelude::Gradients<Elem, Dev>, mut f: F) -> Result<(), Error> {
+                $(self.$idx.try_grads_view(grads, &mut f)?;)+
+                Ok(())
+            }
+            fn try_grads_element_map<F: FnMut(Elem) -> Elem>(&self, grads: &mut crate::prelude::Gradients<Elem, Dev>, mut f: F) -> Result<(), Error> {
+                $(self.$idx.try_grads_element_map(grads, &mut f)?;)+
+                Ok(())
+            }
+            fn try_grads_map<F: FnMut(Vec<Elem>) -> Option<Vec<Elem>>>(&self, grads: &mut crate::prelude::Gradients<Elem, Dev>, mut f: F) -> Result<(), Error> {
+                $(self.$idx.try_grads_map(grads, &mut f)?;)+
+                Ok(())
+            }
+        }
+
         /*This macro expands like this for a 4-tuple:
 
         impl<
