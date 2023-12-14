@@ -1,8 +1,11 @@
-struct AbsKernelOp {};
+// TODO: We need to figure out how to represent empty structs in wgsl
+// struct AbsKernelOp {
+//     empty: u32,
+// }
 
 @group(0)
 @binding(0)
-var<storage, read> op: AbsKernelOp;
+var<storage, read> op: array<f32>;
 
 @group(0)
 @binding(1)
@@ -23,8 +26,13 @@ var<storage, read_write> out_grad: array<f32>;
 @compute 
 @workgroup_size(1)
 fn abs_fwd_f32(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    var<private> x = if arrayLength(inp) > 0 { &inp[global_id] } else { &out[global_id] };
-    *x = abs(*x);
+    // let length: u32 = arrayLength(&inp);
+    // if (length > 1) {
+    //     out[global_id.x] = abs(inp[global_id.x]);
+    // } else {
+    //     out[global_id.x] = abs(out[global_id.x]);
+    // }
+    out[global_id.x] = abs(inp[global_id.x]);
 }
 
 @compute
@@ -33,8 +41,8 @@ fn abs_bwd_f32(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Not needed for Abs, but if we can figure out a template system, we can leave it all in.
     // let x = if arrayLength(inp) > 0 { inp[global_id] } else { 0.0 };
     // let y = if arrayLength(out) > 0 { out[global_id] } else { 0.0 };
-    var<private> dx: f32;
-    dx = sign(inp[global_id]);
+    var dx: f32;
+    dx = sign(inp[global_id.x]);
 
-    inp_grad[global_id] += dx * out_grad[global_id];
+    inp_grad[global_id.x] += dx * out_grad[global_id.x];
 }
