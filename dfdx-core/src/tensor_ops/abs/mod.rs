@@ -62,8 +62,7 @@ mod tests {
     #[test]
     fn test_webgpu_abs() {
         let dev: Webgpu = Default::default();
-        let x = dev
-            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.leaky_trace().abs();
         assert_close_to_literal!(r, [2.0, 1.0, 0.0, 1.0, 2.0]);
         // TODO: Add mean back in
