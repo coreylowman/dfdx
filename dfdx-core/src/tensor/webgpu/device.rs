@@ -1,10 +1,12 @@
 use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt},
-    Adapter, BufferDescriptor, BufferUsages, Device, Instance, InstanceDescriptor, Maintain, Queue,
-    RequestDeviceError, ShaderModule, ShaderModuleDescriptor,
+    util::{make_spirv, make_spirv_raw, BufferInitDescriptor, DeviceExt},
+    Adapter, BufferDescriptor, BufferUsages, Device, DeviceDescriptor, Features, Instance,
+    InstanceDescriptor, Maintain, Queue, RequestDeviceError, ShaderModule, ShaderModuleDescriptor,
+    ShaderModuleDescriptorSpirV,
 };
 
 use crate::{
+    prelude::webgpu_kernels::HasGlslType,
     shapes::{Shape, Unit},
     tensor::{
         cache::TensorCache, cpu::Cpu, Cache, Error, NoneTape, RandomU64, Storage, Synchronize,
@@ -141,8 +143,13 @@ impl Webgpu {
         let adapter = futures_lite::future::block_on(instance.request_adapter(&Default::default()))
             .ok_or(Error::WebgpuAdapterNotFound)?;
         let adapter = Arc::new(adapter);
+        let descriptor = DeviceDescriptor {
+            label: None,
+            features: Features::default() | Features::SPIRV_SHADER_PASSTHROUGH,
+            limits: Default::default(),
+        };
         let (dev, queue) =
-            futures_lite::future::block_on(adapter.request_device(&Default::default(), None))?;
+            futures_lite::future::block_on(adapter.request_device(&descriptor, None))?;
         let dev = Arc::new(dev);
         let queue = Arc::new(queue);
 
@@ -214,10 +221,22 @@ impl Webgpu {
         self.cs_cache.read().contains_key(&name)
     }
 
-    pub(crate) fn load_shader_module(&self, name: TypeId, source: &str) {
+    pub(crate) fn load_shader_module<E>(&self, name: TypeId, source: &[u8])
+    where
+        E: HasGlslType,
+    {
+        // TODO: Get raw SpirV working. I am guessing that is how we are going
+        // to have to implement atomic stuff with `wgpu`.
+        //
+        // let module = Arc::new(unsafe {
+        //     self.dev.create_shader_module_spirv(&ShaderModuleDescriptorSpirV {
+        //         label: None,
+        //         source: make_spirv_raw(source),
+        //     })
+        // });
         let module = Arc::new(self.dev.create_shader_module(ShaderModuleDescriptor {
             label: None,
-            source: wgpu::ShaderSource::Wgsl(source.into()),
+            source: make_spirv(source),
         }));
         #[cfg(not(feature = "no-std"))]
         self.cs_cache.write().unwrap().insert(name, module);

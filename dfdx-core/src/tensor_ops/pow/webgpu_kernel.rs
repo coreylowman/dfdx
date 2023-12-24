@@ -2,15 +2,9 @@ use std::borrow::Cow;
 
 use crate::prelude::{ops::UnaryKernel, webgpu_kernels::webgpu_unary, Dtype, Webgpu};
 
-const WGSL: &str = "TODO";
+const WGSL: &[u8] = b"TODO";
 
-webgpu_unary!(
-    super::PowfKernelOp<f32>,
-    f32,
-    WGSL,
-    "powf_fwd_f32",
-    "powf_bwd_f32"
-);
+webgpu_unary!(super::PowfKernelOp<f32>, f32, WGSL, WGSL);
 
 // TODO: Conflicting implementations of trait `UnaryKernel` for type `Webgpu`:
 impl UnaryKernel<super::PowiKernelOp, f32> for Webgpu

@@ -46,7 +46,7 @@ pub(crate) fn index_for_reductions<S: Shape, Ax: Axes>(
 /// Moves all axes in Ax to the end of dims and strides and removes broadcasted dimensions
 /// so that a cuda kernel called for each physical element of the input tensor will place elements
 /// to be reduced with each other next to each other in memory.
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "cuda", feature = "webgpu"))]
 pub(crate) fn permute_for_reductions<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
 where
     I: IntoIterator<Item = usize>,
@@ -74,7 +74,7 @@ where
 
 /// Returns the physical number of elements and strides of dst so that broadcasted dimensions in
 /// src are also broadcasted in dst
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "cuda", feature = "webgpu"))]
 #[inline(always)]
 pub(crate) fn reduction_output_strides<Ax: Axes, Src: Shape, Dst: Shape>(
     src_strides: Src::Concrete,
@@ -101,7 +101,7 @@ pub(crate) fn reduction_output_strides<Ax: Axes, Src: Shape, Dst: Shape>(
 }
 
 /// Gives the product of all dimensions that are being reduced and are broadcasted.
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "cuda", feature = "webgpu"))]
 #[inline(always)]
 pub(crate) fn reduction_elems_per_thread<Ax: IntoIterator<Item = isize>, S: Shape>(
     dims: S::Concrete,

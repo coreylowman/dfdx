@@ -22,7 +22,7 @@ impl Webgpu {
         shape: S,
         buf: Vec<E>,
     ) -> Result<Tensor<S, E, Self>, Error> {
-        let buffer = unsafe { self.alloc_empty::<E>(buf.len()) }?;
+        let buffer = self.alloc_empty::<E>(buf.len())?;
         buffer.copy_to_device::<E>(&self.dev, &self.queue, &buf);
 
         Ok(self.build_tensor(shape, shape.strides(), buffer))
@@ -56,7 +56,7 @@ impl<E: Unit + SafeZeros> ZerosTensor<E> for Webgpu {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Error> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
+        let data = self.alloc_empty::<E>(shape.num_elements())?;
         data.copy_to_device(&self.dev, &self.queue, &vec![0u8; data.size()]);
 
         Ok(self.build_tensor(shape, strides, data))

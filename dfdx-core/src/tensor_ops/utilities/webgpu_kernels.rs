@@ -4,64 +4,80 @@ use crate::{
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
 use core::any::TypeId;
-use std::{borrow::Cow, sync::Arc, vec::Vec};
+use std::{borrow::Cow, marker::PhantomData, sync::Arc, vec::Vec};
 
 pub(crate) trait UnaryOpWebgpuKernel<E> {
     const DF_USES_FX: bool;
     const HAS_CONST_DF: bool;
 
-    /// Compiled by build.rs
-    const WGSL_SRC: &'static str;
+    // /// Unique name for the kernel
+    // const MODULE_NAME: &'static str;
 
-    /// Unique name for the kernel
-    const MODULE_NAME: &'static str;
+    /// Glsl source code for the forward pass
+    const GLSL_FWD_SPV: &'static [u8];
 
-    /// Name of function in the .wgsl file
-    const FWD_FN_NAME: &'static str;
-
-    /// Name of function in the .wgsl file
-    const BWD_FN_NAME: &'static str;
-
-    const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
+    /// Glsl source code for the backward pass
+    const GLSL_BWD_SPV: &'static [u8];
 }
 
 macro_rules! webgpu_unary {
-    ($Op:path, $TypeName:ty, $Wgsl:tt, $Fwd:tt, $Bwd:tt) => {
+    ($Op:path, $TypeName:ty, $Fwd:tt, $Bwd:tt) => {
         impl crate::tensor_ops::webgpu_kernels::UnaryOpWebgpuKernel<$TypeName> for $Op {
             const DF_USES_FX: bool = false;
             const HAS_CONST_DF: bool = false;
-            const WGSL_SRC: &'static str = $Wgsl;
-            const MODULE_NAME: &'static str = stringify!($Op);
-            const FWD_FN_NAME: &'static str = $Fwd;
-            const BWD_FN_NAME: &'static str = $Bwd;
+            // const MODULE_NAME: &'static str = stringify!($Op);
+            const GLSL_FWD_SPV: &'static [u8] = $Fwd;
+            const GLSL_BWD_SPV: &'static [u8] = $Bwd;
         }
     };
-    (df(f(x)) $Op:path, $TypeName:ty, $Wgsl:tt, $Fwd:tt, $Bwd:tt) => {
+    (df(f(x)) $Op:path, $TypeName:ty, $Fwd:tt, $Bwd:tt) => {
         impl crate::tensor_ops::webgpu_kernels::UnaryOpWebgpuKernel<$TypeName> for $Op {
             const DF_USES_FX: bool = true;
             const HAS_CONST_DF: bool = false;
-            const WGSL_SRC: &'static str = $Wgsl;
-            const MODULE_NAME: &'static str = $Fwd;
-            const FWD_FN_NAME: &'static str = $Fwd;
-            const BWD_FN_NAME: &'static str = $Bwd;
+            // const MODULE_NAME: &'static str = $Fwd;
+            const GLSL_FWD_SPV: &'static [u8] = $Fwd;
+            const GLSL_BWD_SPV: &'static [u8] = $Bwd;
         }
     };
-    (const_df() $Op:path, $TypeName:ty, $Wgsl:tt, $Fwd:tt, $Bwd:tt) => {
+    (const_df() $Op:path, $TypeName:ty, $Fwd:tt, $Bwd:tt) => {
         impl crate::tensor_ops::webgpu_kernels::UnaryOpWebgpuKernel<$TypeName> for $Op {
             const DF_USES_FX: bool = false;
             const HAS_CONST_DF: bool = true;
-            const WGSL_SRC: &'static str = $Wgsl;
-            const MODULE_NAME: &'static str = $Fwd;
-            const FWD_FN_NAME: &'static str = $Fwd;
-            const BWD_FN_NAME: &'static str = $Bwd;
+            // const MODULE_NAME: &'static str = $Fwd;
+            const GLSL_FWD_SPV: &'static [u8] = $Fwd;
+            const GLSL_BWD_SPV: &'static [u8] = $Bwd;
         }
     };
+}
+
+/// Zero-sized marker type for forward pass TypeId
+#[derive(Debug, Default)]
+pub(crate) struct Forward<E: Dtype, K> {
+    _phantom: PhantomData<(E, K)>,
+}
+
+/// Zero-sized marker type for backward pass TypeId
+#[derive(Debug, Default)]
+pub(crate) struct Backward<E: Dtype, K> {
+    _phantom: PhantomData<(E, K)>,
+}
+
+pub(crate) trait HasGlslType {
+    const TYPE: &'static str;
+}
+
+impl HasGlslType for f32 {
+    const TYPE: &'static str = "float";
+}
+
+impl HasGlslType for f64 {
+    const TYPE: &'static str = "double";
 }
 
 pub(crate) use webgpu_unary;
 use wgpu::ComputePipelineDescriptor;
 
-impl<E: Dtype, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu {
+impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu {
     const BACKWARD_WITHOUT_INP: bool = K::DF_USES_FX;
     const BACKWARD_WITHOUT_DATA: bool = K::HAS_CONST_DF;
 
@@ -70,27 +86,28 @@ impl<E: Dtype, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu
         op: K,
         inp: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Error> {
-        if !self.shader_module_loaded(TypeId::of::<K>()) {
-            self.load_shader_module(TypeId::of::<K>(), K::WGSL_SRC);
+        if !self.shader_module_loaded(TypeId::of::<Forward<E, K>>()) {
+            self.load_shader_module::<E>(TypeId::of::<Forward<E, K>>(), K::GLSL_FWD_SPV);
         }
 
         let cs_module = self
-            .get_shader_module(TypeId::of::<K>())
-            .expect("shader module not loaded");
+            .get_shader_module(TypeId::of::<Forward<E, K>>())
+            .ok_or(Error::WebgpuSourceLoadError)?;
         let pipeline = self
             .dev
             .create_compute_pipeline(&ComputePipelineDescriptor {
                 label: None,
                 layout: None,
                 module: &cs_module,
-                entry_point: K::FWD_FN_NAME,
+                entry_point: "main",
             });
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let op_storage = self.alloc_init::<K>(&[op])?;
         let numel = inp.data.len::<E>();
+        let num_blocks = (numel + 128 - 1) / 128;
         let storage = self.alloc_empty::<E>(numel)?;
         let empty = self.alloc_empty::<E>(0)?;
-        let mut entries = vec![];
+        let mut entries = Vec::new();
         // WGSL doesn't support empty structs, so don't bind the empty buffer
         if std::mem::size_of::<K>() > 0 {
             entries.push(wgpu::BindGroupEntry {
@@ -124,7 +141,7 @@ impl<E: Dtype, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu
                     });
                     cpass.set_pipeline(&pipeline);
                     cpass.set_bind_group(0, &binding_group, &[]);
-                    cpass.dispatch_workgroups(numel as u32, 1, 1);
+                    cpass.dispatch_workgroups(num_blocks as u32, 1, 1);
                 }
                 self.queue.submit(Some(encoder.finish()));
                 Ok(self.build_tensor(inp.shape, inp.strides, storage))
@@ -155,7 +172,7 @@ impl<E: Dtype, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu
                     });
                     cpass.set_pipeline(&pipeline);
                     cpass.set_bind_group(0, &binding_group, &[]);
-                    cpass.dispatch_workgroups(numel as u32, 1, 1);
+                    cpass.dispatch_workgroups(num_blocks as u32, 1, 1);
                 }
                 self.queue.submit(Some(encoder.finish()));
                 Ok(inp)
@@ -171,28 +188,27 @@ impl<E: Dtype, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu
         out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec,
     ) -> Result<(), Error> {
-        if !self.shader_module_loaded(TypeId::of::<K>()) {
-            self.load_shader_module(TypeId::of::<K>(), K::WGSL_SRC);
+        if !self.shader_module_loaded(TypeId::of::<Backward<E, K>>()) {
+            self.load_shader_module::<E>(TypeId::of::<Backward<E, K>>(), K::GLSL_BWD_SPV);
         }
 
         let cs_module = self
-            .get_shader_module(TypeId::of::<K>())
-            .expect("shader module not loaded");
+            .get_shader_module(TypeId::of::<Backward<E, K>>())
+            .ok_or(Error::WebgpuSourceLoadError)?;
         let pipeline = self
             .dev
             .create_compute_pipeline(&ComputePipelineDescriptor {
                 label: None,
                 layout: None,
                 module: &cs_module,
-                entry_point: K::BWD_FN_NAME,
+                entry_point: "main",
             });
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let op_storage = self.alloc_init::<K>(&[op])?;
         let numel = inp.len();
-        let storage = self.alloc_empty::<E>(numel)?;
         let empty_inp = self.alloc_empty::<E>(0)?;
         let empty_out = self.alloc_empty::<E>(0)?;
-        let mut entries = vec![];
+        let mut entries = Vec::new();
         // WGSL doesn't support empty structs, so don't bind the empty buffer
         if std::mem::size_of::<K>() > 0 {
             entries.push(wgpu::BindGroupEntry {

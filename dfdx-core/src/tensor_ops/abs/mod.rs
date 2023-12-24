@@ -57,16 +57,4 @@ mod tests {
         let g = r.mean().backward();
         assert_close_to_literal!(g.get(&x), [-0.2, -0.2, 0.0, 0.2, 0.2]);
     }
-
-    #[cfg(feature = "webgpu")]
-    #[test]
-    fn test_webgpu_abs() {
-        let dev: Webgpu = Default::default();
-        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.leaky_trace().abs();
-        assert_close_to_literal!(r, [2.0, 1.0, 0.0, 1.0, 2.0]);
-        // TODO: Add mean back in
-        // let g = r.mean().backward();
-        // assert_close_to_literal!(g.get(&x), [-0.2, -0.2, 0.0, 0.2, 0.2]);
-    }
 }

@@ -22,6 +22,9 @@ pub enum Error {
 
     #[cfg(feature = "webgpu")]
     WebgpuRequestDeviceError(wgpu::RequestDeviceError),
+
+    #[cfg(feature = "webgpu")]
+    WebgpuSourceLoadError,
 }
 
 impl std::fmt::Display for Error {

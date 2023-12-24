@@ -1,6 +1,6 @@
 use super::TanhKernelOp;
 use crate::prelude::webgpu_kernels::webgpu_unary;
 
-const WGSL: &str = "TODO";
+const WGSL: &[u8] = b"TODO";
 
-webgpu_unary!(TanhKernelOp, f32, WGSL, "tanh_fwd_f32", "tanh_bwd_f32");
+webgpu_unary!(TanhKernelOp, f32, WGSL, WGSL);
