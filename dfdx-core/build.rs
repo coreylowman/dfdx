@@ -233,32 +233,35 @@ mod webgpu {
         let children = kernel_paths
                 .iter()
                 .map(|p| {
-                    // TODO: we need to build this for both float and double
-                    let out_path: std::path::PathBuf = out_dir.clone().into();
-                    let base = p.file_stem().unwrap();
-                    let new_name = format!("{}.float.spv", base.to_str().unwrap());
-                    let out_file = &out_path.join(new_name);
-                    eprintln!("out_file: {:?}", out_file);
-                    std::process::Command::new("glslc")
-                        .args(["-std=460core"])
-                        .args(["-fshader-stage=compute"])
-                        .args(["-DTYPENAME=float"])
-                        .args(["-o", &out_file.as_os_str().to_str().unwrap()])
-                        .arg(p)
-                        .stdout(std::process::Stdio::piped())
-                        .stderr(std::process::Stdio::piped())
-                        .spawn()
-                        .expect("glslc failed to start. Ensure that you have shaderc installed and that `glslc` is in your PATH.")
+                    ["float", "double"].iter().map(|ty| {
+                        // TODO: we need to build this for both float and double
+                        let out_path: std::path::PathBuf = out_dir.clone().into();
+                        let base = p.file_stem().unwrap();
+                        let new_name = format!("{}.{ty}.spv", base.to_str().unwrap());
+                        let out_file = &out_path.join(new_name);
+                        std::process::Command::new("glslc")
+                            .args(["-std=460core"])
+                            .args(["-fshader-stage=compute"])
+                            .args([format!("-DTYPENAME={ty}")])
+                            .args(["-o", &out_file.as_os_str().to_str().unwrap()])
+                            .arg(p)
+                            .stdout(std::process::Stdio::piped())
+                            .stderr(std::process::Stdio::piped())
+                            .spawn()
+                            .expect("glslc failed to start. Ensure that you have shaderc installed and that `glslc` is in your PATH.")
+                    }).collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
-        for (kernel_path, child) in kernel_paths.iter().zip(children.into_iter()) {
-            let output = child.wait_with_output().expect("glslc failed to run. Ensure that you have shaderc installed and that `glslc` is in your PATH.");
-            assert!(
-                output.status.success(),
-                "glslc error while compiling {kernel_path:?}:\n\n# stdout\n{:#}\n\n# stderr\n{:#}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
-            );
+        for (kernel_path, childs) in kernel_paths.iter().zip(children.into_iter()) {
+            for child in childs {
+                let output = child.wait_with_output().expect("glslc failed to run. Ensure that you have shaderc installed and that `glslc` is in your PATH.");
+                assert!(
+                    output.status.success(),
+                    "glslc error while compiling {kernel_path:?}:\n\n# stdout\n{:#}\n\n# stderr\n{:#}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
         }
     }
 }

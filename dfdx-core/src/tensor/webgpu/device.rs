@@ -225,19 +225,13 @@ impl Webgpu {
     where
         E: HasGlslType,
     {
-        // TODO: Get raw SpirV working. I am guessing that is how we are going
-        // to have to implement atomic stuff with `wgpu`.
-        //
-        // let module = Arc::new(unsafe {
-        //     self.dev.create_shader_module_spirv(&ShaderModuleDescriptorSpirV {
-        //         label: None,
-        //         source: make_spirv_raw(source),
-        //     })
-        // });
-        let module = Arc::new(self.dev.create_shader_module(ShaderModuleDescriptor {
-            label: None,
-            source: make_spirv(source),
-        }));
+        let module = Arc::new(unsafe {
+            self.dev
+                .create_shader_module_spirv(&ShaderModuleDescriptorSpirV {
+                    label: None,
+                    source: make_spirv_raw(source),
+                })
+        });
         #[cfg(not(feature = "no-std"))]
         self.cs_cache.write().unwrap().insert(name, module);
         #[cfg(feature = "no-std")]

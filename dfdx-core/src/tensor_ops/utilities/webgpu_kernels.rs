@@ -75,7 +75,7 @@ impl HasGlslType for f64 {
 }
 
 pub(crate) use webgpu_unary;
-use wgpu::ComputePipelineDescriptor;
+use wgpu::{BufferBindingType, ComputePipelineDescriptor, Device, PipelineLayout, ShaderStages, BindingType};
 
 impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu {
     const BACKWARD_WITHOUT_INP: bool = K::DF_USES_FX;
@@ -93,11 +93,12 @@ impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K,
         let cs_module = self
             .get_shader_module(TypeId::of::<Forward<E, K>>())
             .ok_or(Error::WebgpuSourceLoadError)?;
+        let pipeline_layout = create_pipeline_layout_fwd::<E, K>(&self.dev);
         let pipeline = self
             .dev
             .create_compute_pipeline(&ComputePipelineDescriptor {
                 label: None,
-                layout: None,
+                layout: Some(&pipeline_layout),
                 module: &cs_module,
                 entry_point: "main",
             });
@@ -195,11 +196,12 @@ impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K,
         let cs_module = self
             .get_shader_module(TypeId::of::<Backward<E, K>>())
             .ok_or(Error::WebgpuSourceLoadError)?;
+        let pipeline_layout = create_pipeline_layout_bwd::<E, K>(&self.dev);
         let pipeline = self
             .dev
             .create_compute_pipeline(&ComputePipelineDescriptor {
                 label: None,
-                layout: None,
+                layout: Some(&pipeline_layout),
                 module: &cs_module,
                 entry_point: "main",
             });
@@ -293,4 +295,123 @@ impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K,
         self.queue.submit(Some(encoder.finish()));
         Ok(())
     }
+}
+
+fn create_pipeline_layout_bwd<E: Dtype, K>(dev: &Device) -> PipelineLayout {
+    let mut entries = Vec::new();
+    // op
+    if std::mem::size_of::<K>() > 0 {
+        entries.push(wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        });
+    }
+    // input
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 1,
+        visibility: ShaderStages::COMPUTE,
+        ty: BindingType::Buffer {
+            ty: BufferBindingType::Storage { read_only: true },
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    });
+    // output
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 2,
+        visibility: ShaderStages::COMPUTE,
+        ty: BindingType::Buffer {
+            ty: BufferBindingType::Storage { read_only: true },
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    });
+    // grad_input
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 3,
+        visibility: ShaderStages::COMPUTE,
+        ty: BindingType::Buffer {
+            ty: BufferBindingType::Storage { read_only: false },
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    });
+    //grad_output
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 3,
+        visibility: ShaderStages::COMPUTE,
+        ty: BindingType::Buffer {
+            ty: BufferBindingType::Storage { read_only: true },
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    });
+
+    let binding_group_layout = dev.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &entries,
+    });
+
+    dev.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[&binding_group_layout],
+        push_constant_ranges: &[],
+    })
+}
+
+fn create_pipeline_layout_fwd<E: Dtype, K>(dev: &Device) -> PipelineLayout {
+    let mut entries = Vec::new();
+    if std::mem::size_of::<K>() > 0 {
+        entries.push(wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        });
+    }
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 1,
+        visibility: ShaderStages::COMPUTE,
+        ty: BindingType::Buffer {
+            ty: BufferBindingType::Storage { read_only: true },
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    });
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 2,
+        visibility: ShaderStages::COMPUTE,
+        ty: BindingType::Buffer {
+            ty: BufferBindingType::Storage { read_only: false },
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    });
+
+    let binding_group_layout = dev.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &entries,
+    });
+
+    dev.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[&binding_group_layout],
+        push_constant_ranges: &[],
+    })
 }

@@ -1,6 +1,9 @@
 use core::any::TypeId;
+use std::{sync::Arc, vec::Vec};
 
-use wgpu::ComputePipelineDescriptor;
+use wgpu::{
+    BindingType, BufferBindingType, ComputePipelineDescriptor, Device, PipelineLayout, ShaderStages,
+};
 
 use crate::{
     prelude::{
@@ -14,12 +17,32 @@ struct WebgpuSumKernel;
 
 trait HasWebgpuKernel<E> {
     const MOD: &'static str;
-    const FNS: &'static [&'static str];
+
+    const FWD_SOURCE: Aligned;
+    const BWD_SOURCE: Aligned;
 }
+
+#[repr(align(32))]
+struct Aligned(&'static [u8]);
 
 impl HasWebgpuKernel<f32> for Webgpu {
     const MOD: &'static str = "sum_f32";
-    const FNS: &'static [&'static str] = &["sum_to_fwd_f32", "sum_to_bwd_f32"];
+
+    const FWD_SOURCE: Aligned = Aligned(include_bytes!(concat!(
+        env!("OUT_DIR"),
+        "/sum_to.fwd.float.spv"
+    )));
+    const BWD_SOURCE: Aligned = Aligned(b"TODO");
+}
+
+impl HasWebgpuKernel<f64> for Webgpu {
+    const MOD: &'static str = "sum_f32";
+
+    const FWD_SOURCE: Aligned = Aligned(include_bytes!(concat!(
+        env!("OUT_DIR"),
+        "/sum_to.fwd.double.spv"
+    )));
+    const BWD_SOURCE: Aligned = Aligned(b"TODO");
 }
 
 impl<E: Dtype + HasGlslType> super::SumKernel<E> for Webgpu
@@ -34,21 +57,33 @@ where
     where
         Src: crate::prelude::ReduceShapeTo<Dst, Ax>,
     {
+        todo!("Sum kernel has weird magic number problem");
+        // TODO: Remove this, make it work with magic number
+        println!(
+            "{:0x}",
+            u32::from_le_bytes([
+                Self::FWD_SOURCE.0[0],
+                Self::FWD_SOURCE.0[1],
+                Self::FWD_SOURCE.0[2],
+                Self::FWD_SOURCE.0[3],
+            ])
+        );
         if !self.shader_module_loaded(TypeId::of::<Forward<E, WebgpuSumKernel>>()) {
             self.load_shader_module::<E>(
                 TypeId::of::<Forward<E, WebgpuSumKernel>>(),
-                include_bytes!(concat!(env!("OUT_DIR"), "/sum_to.fwd.float.spv")),
+                Self::FWD_SOURCE.0,
             );
         }
 
         let cs_module = self
             .get_shader_module(TypeId::of::<Forward<E, WebgpuSumKernel>>())
             .expect("shader module not loaded");
+        let pipeline_layout = create_pipeline_layout_fwd(&self.dev);
         let pipeline = self
             .dev
             .create_compute_pipeline(&ComputePipelineDescriptor {
                 label: None,
-                layout: None,
+                layout: Some(&pipeline_layout),
                 module: &cs_module,
                 entry_point: "main",
             });
@@ -56,11 +91,13 @@ where
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
 
-        let mut info = Vec::with_capacity(num_dims * 2);
-        info.extend(dims);
-        info.extend(strides);
-        let info_buffer = self.alloc_empty::<u32>(num_dims * 2)?;
-        info_buffer.copy_to_device(&self.dev, &self.queue, &info);
+        let mut info = Vec::with_capacity(num_dims);
+        info.extend(dims.into_iter().map(|d| d as u32));
+        let dims_buffer = self.alloc_init::<u32>(&info)?;
+
+        let mut info = Vec::with_capacity(num_dims);
+        info.extend(strides.into_iter().map(|d| d as u32));
+        let strides_buffer = self.alloc_init::<u32>(&info)?;
 
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
             inp.shape.concrete(),
@@ -75,11 +112,32 @@ where
             reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
+        let params_buffer = self.alloc_init::<(u32, E)>(&[(chunk_len as u32, elems_per_thread)])?;
+
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let storage = self.alloc_empty::<E>(dst_physical_numel)?;
         let mut entries = Vec::new();
 
-        todo!("add buffers to entries, but we need to get atomic operations working");
+        entries.push(wgpu::BindGroupEntry {
+            binding: 1,
+            resource: wgpu::BindingResource::Buffer(inp.data.as_entire_buffer_binding()),
+        });
+        entries.push(wgpu::BindGroupEntry {
+            binding: 2,
+            resource: wgpu::BindingResource::Buffer(storage.as_entire_buffer_binding()),
+        });
+        entries.push(wgpu::BindGroupEntry {
+            binding: 3,
+            resource: wgpu::BindingResource::Buffer(params_buffer.as_entire_buffer_binding()),
+        });
+        entries.push(wgpu::BindGroupEntry {
+            binding: 4,
+            resource: wgpu::BindingResource::Buffer(dims_buffer.as_entire_buffer_binding()),
+        });
+        entries.push(wgpu::BindGroupEntry {
+            binding: 5,
+            resource: wgpu::BindingResource::Buffer(strides_buffer.as_entire_buffer_binding()),
+        });
 
         let binding_group = self.dev.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
@@ -114,6 +172,76 @@ where
     {
         todo!()
     }
+}
+
+fn create_pipeline_layout_fwd(dev: &Device) -> PipelineLayout {
+    let entries = vec![
+        // input
+        wgpu::BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        // output
+        wgpu::BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        // params
+        wgpu::BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        // dims
+        wgpu::BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        // strides
+        wgpu::BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ];
+
+    let binding_group_layout = dev.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &entries,
+    });
+    dev.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[&binding_group_layout],
+        push_constant_ranges: &[],
+    })
 }
 
 #[cfg(test)]

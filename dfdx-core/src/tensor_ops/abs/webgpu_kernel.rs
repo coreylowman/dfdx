@@ -1,12 +1,13 @@
 use super::AbsKernelOp;
 use crate::tensor_ops::webgpu_kernels::webgpu_unary;
 
-const GLSL_FWD: &str = include_str!("abs.fwd.glsl");
-const GLSL_BWD: &str = include_str!("abs.bwd.glsl");
-const SPV_FWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.fwd.float.spv"));
-const SPV_BWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.bwd.float.spv"));
+const F32_SPV_FWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.fwd.float.spv"));
+const F32_SPV_BWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.bwd.float.spv"));
+const F64_SPV_FWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.fwd.double.spv"));
+const F64_SPV_BWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.bwd.double.spv"));
 
-webgpu_unary!(AbsKernelOp, f32, SPV_FWD, SPV_BWD);
+webgpu_unary!(AbsKernelOp, f32, F32_SPV_FWD, F32_SPV_BWD);
+webgpu_unary!(AbsKernelOp, f64, F64_SPV_FWD, F64_SPV_BWD);
 
 #[cfg(test)]
 mod tests {
@@ -15,7 +16,7 @@ mod tests {
     #[test]
     fn test_webgpu_abs() {
         let dev: Webgpu = Default::default();
-        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = dev.tensor([-2.0f32, -1.0, 0.0, 1.0, 2.0]);
         let r = x.leaky_trace().abs();
         assert_close_to_literal!(r, [2.0, 1.0, 0.0, 1.0, 2.0]);
         // TODO: Add mean back in
