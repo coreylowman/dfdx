@@ -75,7 +75,9 @@ impl HasGlslType for f64 {
 }
 
 pub(crate) use webgpu_unary;
-use wgpu::{BufferBindingType, ComputePipelineDescriptor, Device, PipelineLayout, ShaderStages, BindingType};
+use wgpu::{
+    BindingType, BufferBindingType, ComputePipelineDescriptor, Device, PipelineLayout, ShaderStages,
+};
 
 impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu {
     const BACKWARD_WITHOUT_INP: bool = K::DF_USES_FX;
