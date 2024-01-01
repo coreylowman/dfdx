@@ -3,8 +3,8 @@ mod cpu_kernels;
 #[cfg(feature = "cuda")]
 mod cuda_kernels;
 
-#[cfg(feature = "webgpu")]
-mod webgpu_kernels;
+// #[cfg(feature = "webgpu")]
+// mod webgpu_kernels;
 
 use crate::{
     prelude::{OnesTensor, Tensor, ZerosTensor},

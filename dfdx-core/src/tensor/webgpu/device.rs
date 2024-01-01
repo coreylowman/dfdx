@@ -10,6 +10,7 @@ use crate::{
         Tensor,
     },
 };
+use super::resources::{unary_op_layout_desc, binary_op_layout_desc};
 
 #[cfg(feature = "no-std")]
 use spin::Mutex;
@@ -102,6 +103,12 @@ pub struct Webgpu {
     pub(crate) queue: Arc<Queue>,
 
     pub(crate) cache: Arc<TensorCache<Buffer>>,
+
+    // pipeline resources
+    /// `[unary, binary]` pipeline layouts
+    /// 
+    /// storing them for re-use reduces resource allocation pressure on the GPU
+    pub(super) layouts: [Arc<wgpu::BindGroupLayout>; 2]
 }
 
 impl From<RequestDeviceError> for Error {
@@ -139,6 +146,11 @@ impl Webgpu {
         let dev = Arc::new(dev);
         let queue = Arc::new(queue);
 
+        let layouts = [
+            Arc::new(dev.create_bind_group_layout(&unary_op_layout_desc())),
+            Arc::new(dev.create_bind_group_layout(&binary_op_layout_desc()))
+        ];
+
         Ok(Self {
             cpu,
             instance,
@@ -147,6 +159,41 @@ impl Webgpu {
             queue,
 
             cache: Default::default(),
+
+            layouts
+        })
+    }
+
+    pub(crate) fn submit_commands<F>(&self, command_builder: F) -> wgpu::SubmissionIndex
+    where
+        F: FnOnce(&mut wgpu::CommandEncoder),
+    {
+        let mut encoder = self
+            .dev
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("submit_commands"),
+            });
+        command_builder(&mut encoder);
+        let cmd = [encoder.finish()];
+        return self.queue.submit(cmd);
+    }
+
+    /// Convienence function for submitting single-stage compute operations.
+    /// 
+    /// see: [`submit_commands`]
+    pub(crate) fn submit_basic_op(
+        &self,
+        pipeline: &wgpu::ComputePipeline,
+        params: &wgpu::BindGroup,
+        label: Option<&str>,
+        work_groups: &(u32, u32, u32),
+    ) -> wgpu::SubmissionIndex {
+        return self.submit_commands(|encoder| {
+            let (x, y, z) = *work_groups;
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label, ..Default::default() });
+            pass.set_pipeline(pipeline);
+            pass.set_bind_group(0, params, &[]);
+            pass.dispatch_workgroups(x, y, z);
         })
     }
 }
@@ -158,7 +205,7 @@ impl Webgpu {
                 data: self.dev.create_buffer(&BufferDescriptor {
                     label: None,
                     size: round_to_buffer_alignment((len * std::mem::size_of::<E>()) as u64),
-                    usage: BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+                    usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
                 size: len * std::mem::size_of::<E>(),

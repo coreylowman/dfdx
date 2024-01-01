@@ -146,7 +146,7 @@ mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 #[cfg(feature = "webgpu")]
-pub(crate) mod webgpu;
+pub mod webgpu;
 #[cfg(feature = "numpy")]
 pub use numpy::NumpyDtype;
 mod error;
@@ -177,7 +177,7 @@ pub type AutoDevice = Cuda;
 #[cfg(feature = "webgpu")]
 pub use webgpu::Webgpu;
 #[cfg(feature = "webgpu")]
-pub type AutoDevice = Webgpu;
+pub type AutoDevice = Cpu; // todo
 
 pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec, TensorToArray};
 pub use storage_traits::{Cache, RandomU64, Storage, Synchronize};

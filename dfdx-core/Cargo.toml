@@ -25,22 +25,24 @@ keywords = [
 features = ["nightly", "numpy", "safetensors", "cuda", "ci-check"]
 
 [dependencies]
+bytemuck = { version = "1.7.0", optional = true }
+cudarc = { version = "0.9.15", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc"] }
+futures-lite = { version = "2.0.1", optional = true }
+gemm = { version = "0.16.14", default-features = false, optional = true, features = ["rayon"] }
+half = { version = "2.3.1", optional = true, features = ["num-traits", "rand_distr"] }
+libm = { workspace = true }
+memmap2 = { workspace = true, optional = true }
 no-std-compat = { version = "0.4.1", default-features = false, features = [ "alloc", "compat_hash" ], optional = true }
-spin = { version = "0.9.8", default-features = false, features = ["spin_mutex", "rwlock", "portable_atomic"], optional = true }
+num-traits = { workspace = true }
 rand = { workspace = true }
 rand_distr = { workspace = true }
-zip = { version = "0.6.6", default-features = false, optional = true }
-cudarc = { version = "0.9.15", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc"] }
-num-traits = { workspace = true }
-safetensors = { workspace = true, optional = true }
-memmap2 = { workspace = true, optional = true }
-half = { version = "2.3.1", optional = true, features = ["num-traits", "rand_distr"] }
-gemm = { version = "0.16.14", default-features = false, optional = true, features = ["rayon"] }
 rayon = { version = "1.7.0", optional = true }
-libm = { workspace = true }
-wgpu = { version = "0.18.0", optional = true }
-futures-lite = { version = "2.0.1", optional = true }
+safetensors = { workspace = true, optional = true }
+spin = { version = "0.9.8", default-features = false, features = ["spin_mutex", "rwlock", "portable_atomic"], optional = true }
+static_assertions = { version = "1.1.0", optional = true }
 thingbuf = { version = "0.1.4", optional = true }
+wgpu = { version = "0.18.0", optional = true }
+zip = { version = "0.6.6", default-features = false, optional = true }
 
 [dev-dependencies]
 tempfile = "3.3.0"
@@ -62,7 +64,7 @@ fast-alloc = ["std"]
 
 cuda = ["dep:cudarc", "dep:glob"]
 cudnn = ["cuda", "cudarc?/cudnn"]
-webgpu = ["dep:wgpu", "dep:futures-lite", "dep:thingbuf", "wgpu/expose-ids"]
+webgpu = ["dep:wgpu", "dep:futures-lite", "dep:thingbuf", "dep:bytemuck", "dep:static_assertions", "wgpu/expose-ids"]
 
 f16 = ["dep:half", "cudarc?/f16", "gemm?/f16"]
 

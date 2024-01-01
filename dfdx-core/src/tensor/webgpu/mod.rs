@@ -1,8 +1,11 @@
 mod allocate;
 mod device;
+mod resources;
+mod types;
 
 pub use device::Buffer;
 pub use device::Webgpu;
+pub(crate) use types::WebgpuNativeType;
 
 #[cfg(test)]
 mod tests {

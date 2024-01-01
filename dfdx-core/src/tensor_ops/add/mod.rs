@@ -98,12 +98,13 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
+    // use crate::tensor::webgpu::Webgpu;
 
     #[test]
     fn test_add_0d() {
-        let dev: TestDevice = Default::default();
-        let a = dev.tensor(1.0f64).to_dtype::<TestDtype>();
-        let b = dev.tensor(1.0f64).to_dtype::<TestDtype>();
+        let dev: Webgpu = Default::default();
+        let a = dev.tensor(1.0f32).to_dtype::<TestDtype>();
+        let b = dev.tensor(1.0f32).to_dtype::<TestDtype>();
 
         let r = a.leaky_trace() + b.clone();
         assert_close_to_literal!(r, 2.0);
