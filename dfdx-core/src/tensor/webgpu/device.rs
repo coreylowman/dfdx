@@ -20,6 +20,8 @@ use std::sync::Mutex;
 
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
+use futures_lite::future::block_on;
+
 use super::allocate::round_to_buffer_alignment;
 
 #[derive(Debug)]
@@ -136,15 +138,36 @@ impl Webgpu {
         #[cfg(not(feature = "no-std"))]
         let _lock = { CONSTRUCTOR_MUTEX.lock().unwrap() };
 
-        let cpu = Cpu::seed_from_u64(seed);
+        #[cfg(not(feature = "f16"))]
+        let features: wgpu::Features = Default::default();
+        #[cfg(feature = "f16")]
+        let features: wgpu::Features = wgpu::Features::default() | wgpu::Features::SHADER_F16;
+
+        let limits: wgpu::Limits = Default::default();
+        let device_desc = wgpu::DeviceDescriptor {
+            label: Some("dfdx"),
+            features,
+            limits
+        };
+        let adapter_desc = wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            ..Default::default()
+        };
+
+        // request adapter
         let instance = Arc::new(Instance::new(InstanceDescriptor::default()));
-        let adapter = futures_lite::future::block_on(instance.request_adapter(&Default::default()))
+        // note: may also fail b/c adapter doesn't support requested features/limits
+        let adapter = block_on(instance.request_adapter(&adapter_desc))
             .ok_or(Error::WebgpuAdapterNotFound)?;
         let adapter = Arc::new(adapter);
+
+        // request device from adapter
         let (dev, queue) =
-            futures_lite::future::block_on(adapter.request_device(&Default::default(), None))?;
+            block_on(adapter.request_device(&device_desc, None))?;
         let dev = Arc::new(dev);
         let queue = Arc::new(queue);
+
+        let cpu = Cpu::seed_from_u64(seed);
 
         let layouts = [
             Arc::new(dev.create_bind_group_layout(&unary_op_layout_desc())),
@@ -199,6 +222,7 @@ impl Webgpu {
 }
 
 impl Webgpu {
+    // todo: support configuration of usage flags
     pub(crate) unsafe fn alloc_empty<E>(&self, len: usize) -> Result<Buffer, Error> {
         let data = self.cache.try_pop::<E>(len).map_or_else(
             || Buffer {
