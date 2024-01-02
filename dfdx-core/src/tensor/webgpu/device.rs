@@ -10,6 +10,7 @@ use crate::{
         Tensor,
     },
 };
+use super::resources::{unary_op_layout_desc, binary_op_layout_desc};
 
 #[cfg(feature = "no-std")]
 use spin::Mutex;
@@ -18,6 +19,8 @@ use spin::Mutex;
 use std::sync::Mutex;
 
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
+
+use futures_lite::future::block_on;
 
 use super::allocate::round_to_buffer_alignment;
 
@@ -102,6 +105,12 @@ pub struct Webgpu {
     pub(crate) queue: Arc<Queue>,
 
     pub(crate) cache: Arc<TensorCache<Buffer>>,
+
+    // pipeline resources
+    /// `[unary, binary]` pipeline layouts
+    /// 
+    /// storing them for re-use reduces resource allocation pressure on the GPU
+    pub(super) layouts: [Arc<wgpu::BindGroupLayout>; 2]
 }
 
 impl From<RequestDeviceError> for Error {
@@ -129,15 +138,41 @@ impl Webgpu {
         #[cfg(not(feature = "no-std"))]
         let _lock = { CONSTRUCTOR_MUTEX.lock().unwrap() };
 
-        let cpu = Cpu::seed_from_u64(seed);
+        #[cfg(not(feature = "f16"))]
+        let features: wgpu::Features = Default::default();
+        #[cfg(feature = "f16")]
+        let features: wgpu::Features = wgpu::Features::default() | wgpu::Features::SHADER_F16;
+
+        let limits: wgpu::Limits = Default::default();
+        let device_desc = wgpu::DeviceDescriptor {
+            label: Some("dfdx"),
+            features,
+            limits
+        };
+        let adapter_desc = wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            ..Default::default()
+        };
+
+        // request adapter
         let instance = Arc::new(Instance::new(InstanceDescriptor::default()));
-        let adapter = futures_lite::future::block_on(instance.request_adapter(&Default::default()))
+        // note: may also fail b/c adapter doesn't support requested features/limits
+        let adapter = block_on(instance.request_adapter(&adapter_desc))
             .ok_or(Error::WebgpuAdapterNotFound)?;
         let adapter = Arc::new(adapter);
+
+        // request device from adapter
         let (dev, queue) =
-            futures_lite::future::block_on(adapter.request_device(&Default::default(), None))?;
+            block_on(adapter.request_device(&device_desc, None))?;
         let dev = Arc::new(dev);
         let queue = Arc::new(queue);
+
+        let cpu = Cpu::seed_from_u64(seed);
+
+        let layouts = [
+            Arc::new(dev.create_bind_group_layout(&unary_op_layout_desc())),
+            Arc::new(dev.create_bind_group_layout(&binary_op_layout_desc()))
+        ];
 
         Ok(Self {
             cpu,
@@ -147,18 +182,54 @@ impl Webgpu {
             queue,
 
             cache: Default::default(),
+
+            layouts
+        })
+    }
+
+    pub(crate) fn submit_commands<F>(&self, command_builder: F) -> wgpu::SubmissionIndex
+    where
+        F: FnOnce(&mut wgpu::CommandEncoder),
+    {
+        let mut encoder = self
+            .dev
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("submit_commands"),
+            });
+        command_builder(&mut encoder);
+        let cmd = [encoder.finish()];
+        return self.queue.submit(cmd);
+    }
+
+    /// Convienence function for submitting single-stage compute operations.
+    /// 
+    /// see: [`submit_commands`]
+    pub(crate) fn submit_basic_op(
+        &self,
+        pipeline: &wgpu::ComputePipeline,
+        params: &wgpu::BindGroup,
+        label: Option<&str>,
+        work_groups: &(u32, u32, u32),
+    ) -> wgpu::SubmissionIndex {
+        return self.submit_commands(|encoder| {
+            let (x, y, z) = *work_groups;
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label, ..Default::default() });
+            pass.set_pipeline(pipeline);
+            pass.set_bind_group(0, params, &[]);
+            pass.dispatch_workgroups(x, y, z);
         })
     }
 }
 
 impl Webgpu {
+    // todo: support configuration of usage flags
     pub(crate) unsafe fn alloc_empty<E>(&self, len: usize) -> Result<Buffer, Error> {
         let data = self.cache.try_pop::<E>(len).map_or_else(
             || Buffer {
                 data: self.dev.create_buffer(&BufferDescriptor {
                     label: None,
                     size: round_to_buffer_alignment((len * std::mem::size_of::<E>()) as u64),
-                    usage: BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+                    usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
                 size: len * std::mem::size_of::<E>(),

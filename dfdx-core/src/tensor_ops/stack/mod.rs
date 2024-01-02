@@ -6,8 +6,8 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-#[cfg(feature = "webgpu")]
-mod webgpu_kernel;
+// #[cfg(feature = "webgpu")]
+// mod webgpu_kernel;
 
 /// Stack an array or vec of tensors together along a new dimension.
 ///

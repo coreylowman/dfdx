@@ -74,7 +74,7 @@ impl<Ptr> TensorCache<Ptr> {
         }
     }
 
-    /// Disables the cache.
+    /// Enables the cache.
     pub(crate) fn enable(&self) {
         #[cfg(not(feature = "no-std"))]
         {
