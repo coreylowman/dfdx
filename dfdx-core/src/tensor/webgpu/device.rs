@@ -1,9 +1,12 @@
 use wgpu::{
-    Adapter, BufferDescriptor, BufferUsages, Device, Instance, InstanceDescriptor, Maintain, Queue,
-    RequestDeviceError,
+    util::{make_spirv, make_spirv_raw, BufferInitDescriptor, DeviceExt},
+    Adapter, BufferDescriptor, BufferUsages, Device, DeviceDescriptor, Features, Instance,
+    InstanceDescriptor, Maintain, Queue, RequestDeviceError, ShaderModule, ShaderModuleDescriptor,
+    ShaderModuleDescriptorSpirV,
 };
 
 use crate::{
+    prelude::webgpu_kernels::HasGlslType,
     shapes::{Shape, Unit},
     tensor::{
         cache::TensorCache, cpu::Cpu, Cache, Error, NoneTape, RandomU64, Storage, Synchronize,
@@ -12,12 +15,13 @@ use crate::{
 };
 
 #[cfg(feature = "no-std")]
-use spin::Mutex;
+use spin::{Mutex, RwLock};
 
+use core::any::TypeId;
 #[cfg(not(feature = "no-std"))]
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{collections::HashMap, marker::PhantomData, sync::Arc, vec::Vec};
 
 use super::allocate::round_to_buffer_alignment;
 
@@ -40,12 +44,16 @@ impl Buffer {
         self.size
     }
 
+    pub(crate) fn len<E: Unit>(&self) -> usize {
+        self.size / std::mem::size_of::<E>()
+    }
+
     #[allow(unused)]
     pub(crate) fn capacity(&self) -> usize {
         self.data.size() as usize
     }
 
-    pub(crate) fn copy_to_device<E: Unit>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
+    pub(crate) fn copy_to_device<E>(&self, dev: &Device, queue: &Queue, slice: &[E]) {
         let slice = unsafe {
             std::slice::from_raw_parts(
                 slice.as_ptr() as *const u8,
@@ -102,6 +110,7 @@ pub struct Webgpu {
     pub(crate) queue: Arc<Queue>,
 
     pub(crate) cache: Arc<TensorCache<Buffer>>,
+    pub(crate) cs_cache: Arc<RwLock<HashMap<TypeId, Arc<ShaderModule>>>>,
 }
 
 impl From<RequestDeviceError> for Error {
@@ -134,8 +143,13 @@ impl Webgpu {
         let adapter = futures_lite::future::block_on(instance.request_adapter(&Default::default()))
             .ok_or(Error::WebgpuAdapterNotFound)?;
         let adapter = Arc::new(adapter);
+        let descriptor = DeviceDescriptor {
+            label: None,
+            features: Features::default() | Features::SPIRV_SHADER_PASSTHROUGH,
+            limits: Default::default(),
+        };
         let (dev, queue) =
-            futures_lite::future::block_on(adapter.request_device(&Default::default(), None))?;
+            futures_lite::future::block_on(adapter.request_device(&descriptor, None))?;
         let dev = Arc::new(dev);
         let queue = Arc::new(queue);
 
@@ -147,18 +161,19 @@ impl Webgpu {
             queue,
 
             cache: Default::default(),
+            cs_cache: Default::default(),
         })
     }
 }
 
 impl Webgpu {
-    pub(crate) unsafe fn alloc_empty<E>(&self, len: usize) -> Result<Buffer, Error> {
+    pub(crate) fn alloc_empty<E>(&self, len: usize) -> Result<Buffer, Error> {
         let data = self.cache.try_pop::<E>(len).map_or_else(
             || Buffer {
                 data: self.dev.create_buffer(&BufferDescriptor {
                     label: None,
                     size: round_to_buffer_alignment((len * std::mem::size_of::<E>()) as u64),
-                    usage: BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+                    usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
                 size: len * std::mem::size_of::<E>(),
@@ -166,6 +181,71 @@ impl Webgpu {
             |bfr| bfr,
         );
         Ok(data)
+    }
+
+    pub(crate) fn alloc_init<E>(&self, init: &[E]) -> Result<Buffer, Error> {
+        let data = self.cache.try_pop::<E>(init.len()).map_or_else(
+            || {
+                let contents = unsafe {
+                    std::slice::from_raw_parts(
+                        init.as_ptr() as *const u8,
+                        init.len() * std::mem::size_of::<E>(),
+                    )
+                };
+                Buffer {
+                    data: self.dev.create_buffer_init(&BufferInitDescriptor {
+                        label: None,
+                        usage: BufferUsages::STORAGE
+                            | BufferUsages::COPY_SRC
+                            | BufferUsages::COPY_DST,
+                        contents,
+                    }),
+                    size: init.len() * std::mem::size_of::<E>(),
+                }
+            },
+            |bfr| {
+                bfr.copy_to_device::<E>(&self.dev, &self.queue, init);
+                bfr
+            },
+        );
+        Ok(data)
+    }
+
+    #[cfg(not(feature = "no-std"))]
+    pub(crate) fn shader_module_loaded(&self, name: TypeId) -> bool {
+        self.cs_cache.read().unwrap().contains_key(&name)
+    }
+
+    #[cfg(feature = "no-std")]
+    pub(crate) fn shader_module_loaded(&self, name: TypeId) -> bool {
+        self.cs_cache.read().contains_key(&name)
+    }
+
+    pub(crate) fn load_shader_module<E>(&self, name: TypeId, source: &[u8])
+    where
+        E: HasGlslType,
+    {
+        let module = Arc::new(unsafe {
+            self.dev
+                .create_shader_module_spirv(&ShaderModuleDescriptorSpirV {
+                    label: None,
+                    source: make_spirv_raw(source),
+                })
+        });
+        #[cfg(not(feature = "no-std"))]
+        self.cs_cache.write().unwrap().insert(name, module);
+        #[cfg(feature = "no-std")]
+        self.cs_cache.write().insert(name, module);
+    }
+
+    #[cfg(not(feature = "no-std"))]
+    pub(crate) fn get_shader_module(&self, name: TypeId) -> Option<Arc<ShaderModule>> {
+        self.cs_cache.read().unwrap().get(&name).cloned()
+    }
+
+    #[cfg(feature = "no-std")]
+    pub(crate) fn get_shader_module(&self, name: TypeId) -> Option<Arc<ShaderModule>> {
+        self.cs_cache.read().get(&name).cloned()
     }
 
     // #[allow(unused)]
@@ -312,7 +392,7 @@ impl<E: Unit> Storage<E> for Webgpu {
     type Vec = CachableBuffer<E>;
 
     fn try_alloc_len(&self, len: usize) -> Result<Self::Vec, Error> {
-        let data = unsafe { self.alloc_empty::<E>(len) }?;
+        let data = self.alloc_empty::<E>(len)?;
         Ok(CachableBuffer {
             dev: self.dev.clone(),
             queue: self.queue.clone(),

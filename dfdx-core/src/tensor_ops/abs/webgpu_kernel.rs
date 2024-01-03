@@ -1,28 +1,26 @@
-use std::borrow::Cow;
+use super::AbsKernelOp;
+use crate::tensor_ops::webgpu_kernels::webgpu_unary;
 
-use crate::prelude::{ops::UnaryKernel, Dtype, Webgpu};
+const F32_SPV_FWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.fwd.float.spv"));
+const F32_SPV_BWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.bwd.float.spv"));
+const F64_SPV_FWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.fwd.double.spv"));
+const F64_SPV_BWD: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/abs.bwd.double.spv"));
 
-impl<E: Dtype> UnaryKernel<super::AbsKernelOp, E> for Webgpu {
-    const BACKWARD_WITHOUT_INP: bool = false;
+webgpu_unary!(AbsKernelOp, f32, F32_SPV_FWD, F32_SPV_BWD);
+webgpu_unary!(AbsKernelOp, f64, F64_SPV_FWD, F64_SPV_BWD);
 
-    const BACKWARD_WITHOUT_DATA: bool = false;
+#[cfg(test)]
+mod tests {
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
-    fn forward<S: crate::prelude::Shape>(
-        &self,
-        op: super::AbsKernelOp,
-        inp: Cow<crate::prelude::Tensor<S, E, Self>>,
-    ) -> Result<crate::prelude::Tensor<S, E, Self>, crate::prelude::Error> {
-        todo!()
-    }
-
-    fn backward<S: crate::prelude::Shape>(
-        &self,
-        op: super::AbsKernelOp,
-        inp: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_inp: &mut Self::Vec,
-        out: &impl crate::prelude::Tensorlike<S, E, Self>,
-        grad_out: &Self::Vec,
-    ) -> Result<(), crate::prelude::Error> {
-        todo!()
+    #[test]
+    fn test_webgpu_abs() {
+        let dev: Webgpu = Default::default();
+        let x = dev.tensor([-2.0f32, -1.0, 0.0, 1.0, 2.0]);
+        let r = x.leaky_trace().abs();
+        assert_close_to_literal!(r, [2.0, 1.0, 0.0, 1.0, 2.0]);
+        // TODO: Add mean back in
+        // let g = r.mean().backward();
+        // assert_close_to_literal!(g.get(&x), [-0.2, -0.2, 0.0, 0.2, 0.2]);
     }
 }
