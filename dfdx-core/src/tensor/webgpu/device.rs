@@ -247,6 +247,36 @@ impl Webgpu {
     pub(crate) fn get_shader_module(&self, name: TypeId) -> Option<Arc<ShaderModule>> {
         self.cs_cache.read().get(&name).cloned()
     }
+    /// Submit a command buffer to the GPU.
+    ///
+    /// Note: Does not block until completion. If you need this, use
+    /// `self.dev.poll(Maintain::WaitForSubmissionIndex(idx))` using the
+    /// returned [`wgpu::SubmissionIndex`]
+    pub(crate) fn submit_commands<F>(
+        &self,
+        label: Option<&str>,
+        command_builder: F,
+    ) -> wgpu::SubmissionIndex
+    where
+        F: FnOnce(&mut wgpu::CommandEncoder),
+    {
+        let mut encoder = self
+            .dev
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: label.clone(),
+            });
+
+        if let Some(label) = label {
+            encoder.push_debug_group(label);
+        }
+        command_builder(&mut encoder);
+        if labe.is_some() {
+            encoder.pop_debug_group();
+        }
+
+        let cmd = [encoder.finish()];
+        self.queue.submit(cmd)
+    }
 
     // #[allow(unused)]
     // pub(crate) unsafe fn get_workspace<E>(&self, len: usize) -> Result<MutexGuard<Buffer>, Error> {

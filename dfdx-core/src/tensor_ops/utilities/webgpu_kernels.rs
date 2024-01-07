@@ -6,6 +6,29 @@ use crate::{
 use core::any::TypeId;
 use std::{borrow::Cow, marker::PhantomData, sync::Arc, vec::Vec};
 
+/// Creates a [`BindGroup`] for a pipeline from a set of [`wgpu::BindingResource`]s.
+macro_rules! webgpu_params {
+    ($self:expr, $pipeline:expr; $($x:expr),+ $(,)? ) => {
+        {
+            let bindings = [$($x.as_entire_binding()),+];
+            let entries: Vec<_> = bindings
+                .into_iter()
+                .enumerate()
+                .map(|(i, binding)| wgpu::BindGroupEntry {
+                    binding: i as u32,
+                    resource: binding,
+                })
+                .collect();
+            $self.dev.create_bind_group(&::wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &($pipeline).get_bind_group_layout(0),
+                entries: &entries
+            })
+        }
+    }
+}
+pub(crate) use webgpu_params;
+
 pub(crate) trait UnaryOpWebgpuKernel<E> {
     const DF_USES_FX: bool;
     const HAS_CONST_DF: bool;
