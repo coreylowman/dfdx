@@ -3,8 +3,10 @@ extern crate alloc;
 use crate::{
     shapes::{Dtype, Shape},
     tensor::{webgpu::Webgpu, Error, Tensor},
-    tensor_ops::ops::{UnaryKernel, BinaryKernel},
+    tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
+// FIXME: nostd support
+use std::ops::Range;
 
 use alloc::{borrow::Cow, sync::Arc};
 
@@ -48,6 +50,11 @@ pub trait UnaryOpWebgpuKernel<E> {
     const BWD_FN_NAME: &'static str;
 
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
+
+    /// Extra parameters to pass to the kernel.
+    fn params(&self) -> Option<&[Range<u32>]> {
+        None
+    }
 }
 
 macro_rules! webgpu_unary {
@@ -92,6 +99,15 @@ impl<E: Dtype, K: UnaryOpWebgpuKernel<E>> UnaryKernel<K, E> for Webgpu {
         op: K,
         inp: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Error> {
+        let shape = match &inp {
+            Cow::Borrowed(lhs) => inp.shape,
+            Cow::Owned(lhs) => inp.shape,
+        };
+        let strides = shape.strides();
+        let numel = shape.num_elements();
+        // todo: dream about memory64
+        // https://github.com/WebAssembly/memory64
+        let work_groups: (u32, u32, u32) = (numel as u32, 1, 1);
         todo!("Webgpu unary forwards")
     }
 
@@ -106,7 +122,6 @@ impl<E: Dtype, K: UnaryOpWebgpuKernel<E>> UnaryKernel<K, E> for Webgpu {
         todo!("Wgpu unary backwards")
     }
 }
-
 
 pub trait BinaryOpWebgpuKernel<E> {
     const HAS_CONST_DF: bool;
@@ -131,6 +146,11 @@ pub trait BinaryOpWebgpuKernel<E> {
         Self::BWD_LHS_FN_NAME,
         Self::BWD_RHS_FN_NAME,
     ];
+
+    /// Extra parameters to pass to the kernel.
+    fn params(&self) -> Option<&[Range<u32>]> {
+        None
+    }
 }
 macro_rules! wgpu_binary {
     ($Op:path, $TypeName:ty, $Wgsl:tt, $Mod:tt, $Fwd:tt, $Bwd_Lhs:tt, $Bwd_Rhs:tt) => {
@@ -175,9 +195,10 @@ impl<E: Dtype, K: BinaryOpWebgpuKernel<E> + Clone> BinaryKernel<K, E> for Webgpu
         // https://github.com/WebAssembly/memory64
         let work_groups: (u32, u32, u32) = (numel as u32, 1, 1);
 
+        let push_constants = op.params().unwrap_or(&[]);
         // todo: pipeline caching
-        let fwd_pipeline = self.load_binary_pipeline(K::MODULE_NAME, K::WGSL_SRC, K::FWD_FN_NAME);
-
+        let fwd_pipeline =
+            self.load_binary_pipeline(K::MODULE_NAME, K::WGSL_SRC, K::FWD_FN_NAME, push_constants);
 
         let output = unsafe { self.alloc_empty::<E>(numel) }?;
 
@@ -187,8 +208,10 @@ impl<E: Dtype, K: BinaryOpWebgpuKernel<E> + Clone> BinaryKernel<K, E> for Webgpu
             // let (lhs, rhs) = (&lhs, &rhs);
             let lhs: &Tensor<S, E, Self> = lhs.as_ref();
             let rhs: &Tensor<S, E, Self> = rhs.as_ref();
-            let params: wgpu::BindGroup = webgpu_params!(self, fwd_pipeline; lhs.data, rhs.data, output);
-            let _idx = self.submit_basic_op(&fwd_pipeline, &params, Some(K::FWD_FN_NAME), &work_groups);
+            let params: wgpu::BindGroup =
+                webgpu_params!(self, fwd_pipeline; lhs.data, rhs.data, output);
+            let _idx =
+                self.submit_basic_op(&fwd_pipeline, &params, Some(K::FWD_FN_NAME), &work_groups);
         }
         Ok(self.build_tensor(shape, strides, output))
     }

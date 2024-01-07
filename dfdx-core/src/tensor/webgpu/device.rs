@@ -3,6 +3,7 @@ use wgpu::{
     RequestDeviceError,
 };
 
+use super::resources::{binary_op_layout_desc, unary_op_layout_desc};
 use crate::{
     shapes::{Shape, Unit},
     tensor::{
@@ -10,7 +11,6 @@ use crate::{
         Tensor,
     },
 };
-use super::resources::{unary_op_layout_desc, binary_op_layout_desc};
 
 #[cfg(feature = "no-std")]
 use spin::Mutex;
@@ -108,9 +108,9 @@ pub struct Webgpu {
 
     // pipeline resources
     /// `[unary, binary]` pipeline layouts
-    /// 
+    ///
     /// storing them for re-use reduces resource allocation pressure on the GPU
-    pub(super) layouts: [Arc<wgpu::BindGroupLayout>; 2]
+    pub(super) layouts: [Arc<wgpu::BindGroupLayout>; 2],
 }
 
 impl From<RequestDeviceError> for Error {
@@ -139,15 +139,16 @@ impl Webgpu {
         let _lock = { CONSTRUCTOR_MUTEX.lock().unwrap() };
 
         #[cfg(not(feature = "f16"))]
-        let features: wgpu::Features = Default::default();
+        let features: wgpu::Features = Default::default() | wgpu::Features::PUSH_CONSTANTS;
         #[cfg(feature = "f16")]
-        let features: wgpu::Features = wgpu::Features::default() | wgpu::Features::SHADER_F16;
+        let features: wgpu::Features =
+            wgpu::Features::default() | wgpu::Features::PUSH_CONSTANTS | wgpu::Features::SHADER_F16;
 
         let limits: wgpu::Limits = Default::default();
         let device_desc = wgpu::DeviceDescriptor {
             label: Some("dfdx"),
             features,
-            limits
+            limits,
         };
         let adapter_desc = wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
@@ -162,8 +163,7 @@ impl Webgpu {
         let adapter = Arc::new(adapter);
 
         // request device from adapter
-        let (dev, queue) =
-            block_on(adapter.request_device(&device_desc, None))?;
+        let (dev, queue) = block_on(adapter.request_device(&device_desc, None))?;
         let dev = Arc::new(dev);
         let queue = Arc::new(queue);
 
@@ -171,7 +171,7 @@ impl Webgpu {
 
         let layouts = [
             Arc::new(dev.create_bind_group_layout(&unary_op_layout_desc())),
-            Arc::new(dev.create_bind_group_layout(&binary_op_layout_desc()))
+            Arc::new(dev.create_bind_group_layout(&binary_op_layout_desc())),
         ];
 
         Ok(Self {
@@ -183,10 +183,15 @@ impl Webgpu {
 
             cache: Default::default(),
 
-            layouts
+            layouts,
         })
     }
 
+    /// Submit a command buffer to the GPU.
+    ///
+    /// Note: Does not block until completion. If you need this, use
+    /// `self.dev.poll(Maintain::WaitForSubmissionIndex(idx))` using the
+    /// returned [`wgpu::SubmissionIndex`]
     pub(crate) fn submit_commands<F>(&self, command_builder: F) -> wgpu::SubmissionIndex
     where
         F: FnOnce(&mut wgpu::CommandEncoder),
@@ -198,11 +203,11 @@ impl Webgpu {
             });
         command_builder(&mut encoder);
         let cmd = [encoder.finish()];
-        return self.queue.submit(cmd);
+        self.queue.submit(cmd)
     }
 
     /// Convienence function for submitting single-stage compute operations.
-    /// 
+    ///
     /// see: [`submit_commands`]
     pub(crate) fn submit_basic_op(
         &self,
@@ -213,11 +218,20 @@ impl Webgpu {
     ) -> wgpu::SubmissionIndex {
         return self.submit_commands(|encoder| {
             let (x, y, z) = *work_groups;
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label, ..Default::default() });
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label,
+                ..Default::default()
+            });
+            if let Some(label) = label {
+                pass.push_debug_group(label);
+            }
             pass.set_pipeline(pipeline);
             pass.set_bind_group(0, params, &[]);
             pass.dispatch_workgroups(x, y, z);
-        })
+            if label.is_some() {
+                pass.pop_debug_group();
+            }
+        });
     }
 }
 
@@ -269,7 +283,7 @@ pub struct CachableBuffer<E> {
 
 impl<E> Clone for CachableBuffer<E> {
     fn clone(&self) -> Self {
-        let len = self.data.size() as usize / std::mem::size_of::<E>();
+        let len = self.data.size() / std::mem::size_of::<E>();
         let (encoder, data) = self.cache.try_pop::<E>(len).map_or_else(
             || {
                 let mut encoder = self.dev.create_command_encoder(&Default::default());
@@ -284,7 +298,7 @@ impl<E> Clone for CachableBuffer<E> {
                     encoder,
                     Buffer {
                         data: bfr,
-                        size: self.data.size as usize,
+                        size: self.data.size,
                     },
                 )
             },

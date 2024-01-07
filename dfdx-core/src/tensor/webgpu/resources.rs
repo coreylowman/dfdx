@@ -1,22 +1,24 @@
 use super::Webgpu;
+// FIXME: nostd support
+use std::ops::Range;
 use wgpu;
 
-const UNARY_OP_LAYOUT_NAME: &'static str = "unary";
-const BINARY_OP_LAYOUT_NAME: &'static str = "binary";
+const UNARY_OP_LAYOUT_NAME: &str = "unary";
+const BINARY_OP_LAYOUT_NAME: &str = "binary";
 
 impl Webgpu {
     #[inline]
     pub(crate) fn unary_op_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.layouts[0]
+        self.layouts[0].as_ref()
     }
 
     #[inline]
     pub(crate) fn binary_op_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.layouts[1]
+        self.layouts[1].as_ref()
     }
 
     /// Creates a [`wgpu::ComputePipeline`] for a binary operation.
-    /// 
+    ///
     /// todo: implement pipeline caching
     ///
     /// shader_name: the name of the shader module
@@ -27,12 +29,14 @@ impl Webgpu {
         shader_name: &str,
         shader_source: &str,
         fn_name: &str,
+        push_constant_ranges: &[Range<u32>]
     ) -> wgpu::ComputePipeline {
         self.load_pipeline(
             shader_name,
             shader_source,
             fn_name,
             &[self.binary_op_layout()],
+            push_constant_ranges
         )
     }
 
@@ -41,12 +45,14 @@ impl Webgpu {
         shader_name: &str,
         shader_source: &str,
         fn_name: &str,
+        push_constant_ranges: &[Range<u32>]
     ) -> wgpu::ComputePipeline {
         self.load_pipeline(
             shader_name,
             shader_source,
             fn_name,
             &[self.unary_op_layout()],
+            push_constant_ranges
         )
     }
 
@@ -56,12 +62,14 @@ impl Webgpu {
     /// - `shader_source`: the module's WGSL source code
     /// - `fn_name`: The name of the entry point function
     /// - `layouts`: bind group layouts
+    /// - `push_constant_ranges`: push constant ranges. Leave empty if unused.
     pub(crate) fn load_pipeline(
         &self,
         shader_name: &str,
         shader_source: &str,
         fn_name: &str,
         layouts: &[&wgpu::BindGroupLayout],
+        push_constant_ranges: &[Range<u32>],
     ) -> wgpu::ComputePipeline {
         // todo: cache these
         let source = wgpu::ShaderSource::Wgsl(shader_source.into());
@@ -70,13 +78,21 @@ impl Webgpu {
             source,
         });
 
+        let push_constant_ranges = push_constant_ranges
+            .iter()
+            .map(|range| wgpu::PushConstantRange {
+                stages: wgpu::ShaderStages::COMPUTE,
+                range: range.clone()
+            })
+            .collect::<Vec<_>>();
+
         let pipeline_layout = self
             .dev
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some(fn_name),
                 bind_group_layouts: layouts,
                 // todo: these are useful and we should use them if the adapter supports them
-                push_constant_ranges: &[],
+                push_constant_ranges: &push_constant_ranges
             });
 
         self.dev

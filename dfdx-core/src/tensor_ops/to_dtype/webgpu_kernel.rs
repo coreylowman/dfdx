@@ -53,6 +53,7 @@ impl<E1: WebgpuNativeType + AsPrimitive<E2>, E2: WebgpuNativeType> super::ToDtyp
             shader_source.as_str(),
             "main",
             &[&layout],
+            &[]
         );
 
         let numel = inp.shape.num_elements();

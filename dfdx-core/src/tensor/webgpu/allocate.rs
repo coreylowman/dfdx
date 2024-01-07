@@ -112,7 +112,7 @@ where
 
 impl<E: Unit> OneFillStorage<E> for Webgpu {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec) -> Result<(), Error> {
-        let len = storage.size() as usize / std::mem::size_of::<E>();
+        let len = storage.size() / std::mem::size_of::<E>();
         let buf = vec![E::ONE; len];
         storage
             .data
@@ -171,7 +171,7 @@ where
 impl<E: Unit> CopySlice<E> for Webgpu {
     fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]) {
         assert_eq!(
-            dst.data.size() as usize,
+            dst.data.size() ,
             src.len() * std::mem::size_of::<E>(),
             "Slices must have same number of elements as *physical* Storage<E> of tensors."
         );
@@ -182,7 +182,7 @@ impl<E: Unit> CopySlice<E> for Webgpu {
 
     fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]) {
         assert_eq!(
-            src.data.size() as usize,
+            src.data.size(),
             dst.len() * std::mem::size_of::<E>(),
             "Slices must have same number of elements as *physical* Storage<E> of tensors."
         );
