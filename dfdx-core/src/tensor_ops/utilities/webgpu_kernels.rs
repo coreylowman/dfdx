@@ -6,6 +6,11 @@ use crate::{
 use core::any::TypeId;
 use std::{borrow::Cow, marker::PhantomData, sync::Arc, vec::Vec};
 
+use wgpu::{
+    BindingType, BufferBindingType, ComputePipelineDescriptor, Device, PipelineLayout, ShaderStages,
+};
+
+
 /// Creates a [`BindGroup`] for a pipeline from a set of [`wgpu::BindingResource`]s.
 macro_rules! webgpu_params {
     ($self:expr, $pipeline:expr; $($x:expr),+ $(,)? ) => {
@@ -72,6 +77,7 @@ macro_rules! webgpu_unary {
         }
     };
 }
+pub(crate) use webgpu_unary;
 
 /// Zero-sized marker type for forward pass TypeId
 #[derive(Debug, Default)]
@@ -85,22 +91,6 @@ pub(crate) struct Backward<E: Dtype, K> {
     _phantom: PhantomData<(E, K)>,
 }
 
-pub(crate) trait HasGlslType {
-    const TYPE: &'static str;
-}
-
-impl HasGlslType for f32 {
-    const TYPE: &'static str = "float";
-}
-
-impl HasGlslType for f64 {
-    const TYPE: &'static str = "double";
-}
-
-pub(crate) use webgpu_unary;
-use wgpu::{
-    BindingType, BufferBindingType, ComputePipelineDescriptor, Device, PipelineLayout, ShaderStages,
-};
 
 impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu {
     const BACKWARD_WITHOUT_INP: bool = K::DF_USES_FX;

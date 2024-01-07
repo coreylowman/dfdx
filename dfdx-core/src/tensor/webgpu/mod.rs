@@ -1,8 +1,10 @@
 mod allocate;
 mod device;
+mod types;
 
 pub use device::Buffer;
 pub use device::Webgpu;
+pub use types::*;
 
 #[cfg(test)]
 mod tests {
