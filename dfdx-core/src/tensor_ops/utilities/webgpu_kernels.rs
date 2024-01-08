@@ -10,7 +10,6 @@ use wgpu::{
     BindingType, BufferBindingType, ComputePipelineDescriptor, Device, PipelineLayout, ShaderStages,
 };
 
-
 /// Creates a [`BindGroup`] for a pipeline from a set of [`wgpu::BindingResource`]s.
 macro_rules! webgpu_params {
     ($self:expr, $pipeline:expr; $($x:expr),+ $(,)? ) => {
@@ -90,7 +89,6 @@ pub(crate) struct Forward<E: Dtype, K> {
 pub(crate) struct Backward<E: Dtype, K> {
     _phantom: PhantomData<(E, K)>,
 }
-
 
 impl<E: Dtype + HasGlslType, K: UnaryOpWebgpuKernel<E> + 'static> UnaryKernel<K, E> for Webgpu {
     const BACKWARD_WITHOUT_INP: bool = K::DF_USES_FX;

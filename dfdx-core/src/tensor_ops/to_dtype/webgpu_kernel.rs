@@ -52,10 +52,12 @@ impl<E1: WebgpuNativeType + AsPrimitive<E2>, E2: WebgpuNativeType> super::ToDtyp
 
         // TODO: support WGSL shaders in device shader cache
         let source = wgpu::ShaderSource::Wgsl(shader_source.into());
-        let shader_module = device.dev.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(shader_name),
-            source,
-        });
+        let shader_module = device
+            .dev
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some(shader_name),
+                source,
+            });
         let pipeline_layout = device
             .dev
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -75,7 +77,6 @@ impl<E1: WebgpuNativeType + AsPrimitive<E2>, E2: WebgpuNativeType> super::ToDtyp
             });
 
         let numel = inp.shape.num_elements();
-        let work_groups: (u32, u32, u32) = (numel as u32, 1, 1);
         let shape = inp.shape;
         let strides = shape.strides();
         let output = unsafe { device.alloc_empty::<E2>(numel) }?;

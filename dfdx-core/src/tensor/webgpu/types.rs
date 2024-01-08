@@ -1,11 +1,11 @@
 use crate::shapes::Unit;
 
 /// A primitive data type natively supported by WebGPU.
-/// 
+///
 /// See: https://www.w3.org/TR/WGSL/#types
-/// 
+///
 /// todo: support packed types
-pub trait WebgpuNativeType : Unit {
+pub trait WebgpuNativeType: Unit {
     /// Name of the data type in WGSL.
     const NAME: &'static str;
 }
