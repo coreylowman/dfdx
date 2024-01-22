@@ -108,6 +108,7 @@ pub trait TryConv1D<Stride, Padding, Dilation, Groups>: Sized {
     ) -> Result<Self::Convolved, Error>;
 }
 
+#[cfg(feature = "nightly")]
 impl<
         const KERNEL: usize,
         const STRIDE: usize,
