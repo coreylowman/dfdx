@@ -9,7 +9,7 @@ mod tests;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub(super) struct Conv1DOp {
+pub struct Conv1DOp {
     pub kernel: usize,
     pub stride: usize,
     pub padding: usize,
@@ -22,7 +22,7 @@ pub(super) struct Conv1DOp {
     pub l_out: usize,
 }
 
-pub(super) trait Conv1DKernel<E: Dtype>: Storage<E> {
+pub trait Conv1DKernel<E: Dtype>: Storage<E> {
     fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Error>;
 
     fn forward<L: Shape, R: Shape, O: Shape>(
@@ -108,6 +108,7 @@ pub trait TryConv1D<Stride, Padding, Dilation, Groups>: Sized {
     ) -> Result<Self::Convolved, Error>;
 }
 
+#[cfg(feature = "nightly")]
 impl<
         const KERNEL: usize,
         const STRIDE: usize,

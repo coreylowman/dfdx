@@ -112,6 +112,9 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::maximum::MaximumKernelOp, E>
     + BinaryKernel<super::super::minimum::MinimumKernelOp, E>
     + crate::tensor_ops::axpy::AxpyKernel<E>
+
+    // conv1d
+    + super::super::conv1d::Conv1DKernel<E>
 {
 }
 
