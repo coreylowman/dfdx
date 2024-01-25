@@ -224,7 +224,7 @@
 //! | Optimizer | dfdx | pytorch |
 //! | --- | --- | --- |
 //! | SGD | [nn::optim::Sgd] | `torch.optim.SGD` |
-//! | Adam | [nn::optim::Adam] | torch.optim.Adam` |
+//! | Adam | [nn::optim::Adam] | `torch.optim.Adam` |
 //! | AdamW | [nn::optim::Adam] with [nn::optim::WeightDecay::Decoupled] | `torch.optim.AdamW` |
 //! | RMSprop | [nn::optim::RMSprop] | `torch.optim.RMSprop` |
 //!
