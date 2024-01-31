@@ -69,6 +69,30 @@ where
     }
 }
 
+impl<const N: usize> core::ops::Sub<Const<N>> for usize {
+    type Output = usize;
+    fn sub(self, _: Const<N>) -> Self::Output {
+        self.size() - N
+    }
+}
+impl<const N: usize> core::ops::Sub<usize> for Const<N> {
+    type Output = usize;
+    fn sub(self, rhs: usize) -> Self::Output {
+        N - rhs.size()
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<const N: usize, const M: usize> core::ops::Sub<Const<N>> for Const<M>
+where
+    Const<{ M - N }>: Sized,
+{
+    type Output = Const<{ M - N }>;
+    fn sub(self, _: Const<N>) -> Self::Output {
+        Const
+    }
+}
+
 impl<const N: usize> core::ops::Mul<Const<N>> for usize {
     type Output = usize;
     fn mul(self, _: Const<N>) -> Self::Output {
