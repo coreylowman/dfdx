@@ -66,7 +66,7 @@ impl<T: crate::nn_traits::SaveSafeTensors> crate::nn_traits::SaveSafeTensors for
         tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
     ) {
         for (i, t) in self.iter().enumerate() {
-            t.write_safetensors(&format!("{location}{i}."), tensors);
+            t.write_safetensors(&format!("{location}.{i}"), tensors);
         }
     }
 }
@@ -79,7 +79,7 @@ impl<T: crate::nn_traits::LoadSafeTensors> crate::nn_traits::LoadSafeTensors for
         tensors: &safetensors::SafeTensors,
     ) -> Result<(), safetensors::SafeTensorError> {
         for (i, t) in self.iter_mut().enumerate() {
-            t.read_safetensors(&format!("{location}{i}."), tensors)?;
+            t.read_safetensors(&format!("{location}.{i}"), tensors)?;
         }
         Ok(())
     }
