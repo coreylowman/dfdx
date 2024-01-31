@@ -92,6 +92,7 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::fast_gelu::FastGeLUKernelOp, E>
     + UnaryKernel<super::super::accurate_gelu::AccurateGeLUKernelOp, E>
     + UnaryKernel<super::super::sigmoid::SigmoidKernelOp, E>
+    + UnaryKernel<super::super::silu::SiLUKernelOp, E>
     + UnaryKernel<super::super::sin::SinKernelOp, E>
     + UnaryKernel<super::super::sqrt::SqrtKernelOp, E>
     + UnaryKernel<super::super::square::SquareKernelOp, E>
