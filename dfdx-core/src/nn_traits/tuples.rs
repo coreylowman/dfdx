@@ -25,7 +25,7 @@ macro_rules! tuple_impls {
                 location: &str,
                 tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
             ) {
-                $(self.$idx.write_safetensors(&format!("{location}{}.", $idx), tensors);)+
+                $(self.$idx.write_safetensors(&format!("{location}.{}", $idx), tensors);)+
             }
         }
 
@@ -36,7 +36,7 @@ macro_rules! tuple_impls {
                 location: &str,
                 tensors: &safetensors::SafeTensors,
             ) -> Result<(), safetensors::SafeTensorError> {
-                $(self.$idx.read_safetensors(&format!("{location}{}.", $idx), tensors)?;)+
+                $(self.$idx.read_safetensors(&format!("{location}.{}", $idx), tensors)?;)+
                 Ok(())
             }
         }
