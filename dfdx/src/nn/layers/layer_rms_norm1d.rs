@@ -38,7 +38,7 @@ impl<M: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LayerRMSNorm1DConfi
 }
 
 /// See [LayerRMSNorm1DConfig]
-#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct LayerRMSNorm1D<M: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]
