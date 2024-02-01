@@ -19,7 +19,7 @@ mod webgpu_kernel;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-/// let _: Tensor<Rank2<6, 4>, f32, _> = (a, b).concat_along(Axis::<0>);
+/// let _: Tensor<Rank2<6, 4>, f32, _> = (a, b).concat_tensor_along(Axis::<0>);
 /// ```
 ///
 /// Along Axis 1:
@@ -28,7 +28,7 @@ mod webgpu_kernel;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-/// let _: Tensor<Rank2<3, 8>, f32, _> = (a, b).concat_along(Axis::<1>);
+/// let _: Tensor<Rank2<3, 8>, f32, _> = (a, b).concat_tensor_along(Axis::<1>);
 /// ```
 ///
 /// # [usize] dims
@@ -38,7 +38,7 @@ mod webgpu_kernel;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
 /// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));
-/// let _: Tensor<Rank2<6, 3>, f32, _> = (a, b).concat_along(Axis::<0>).realize();
+/// let _: Tensor<Rank2<6, 3>, f32, _> = (a, b).concat_tensor_along(Axis::<0>).realize();
 /// ```
 ///
 /// Along Axis 1:
@@ -47,7 +47,7 @@ mod webgpu_kernel;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<(Const<2>, usize), f32, _> = dev.zeros_like(&(Const, 2));
 /// let b: Tensor<(Const<2>, usize), f32, _> = dev.zeros_like(&(Const, 4));
-/// let _: Tensor<Rank2<2, 6>, f32, _> = (a, b).concat_along(Axis::<1>).realize();
+/// let _: Tensor<Rank2<2, 6>, f32, _> = (a, b).concat_tensor_along(Axis::<1>).realize();
 /// ```
 pub trait TryConcatTensorAlong<Ax>: Sized {
     type Output;

@@ -26,11 +26,11 @@ impl<E: Dtype> super::ConcatAlongKernel<E> for Cpu {
         let buf = std::sync::Arc::get_mut(&mut c.data).unwrap();
         while i < n {
             for _ in 0..a_n {
-                buf[i] = a.data[a_idx.next().unwrap()];
+                (*buf)[i] = a.data[a_idx.next().unwrap()];
                 i += 1;
             }
             for _ in 0..b_n {
-                buf[i] = b.data[b_idx.next().unwrap()];
+                (*buf)[i] = b.data[b_idx.next().unwrap()];
                 i += 1;
             }
         }
@@ -59,11 +59,11 @@ impl<E: Dtype> super::ConcatAlongKernel<E> for Cpu {
         let n = grad_out.len();
         while i < n {
             for _ in 0..a_n {
-                grad_a[a_idx.next().unwrap()] += grad_out[i];
+                (*grad_a)[a_idx.next().unwrap()] += grad_out[i];
                 i += 1;
             }
             for _ in 0..b_n {
-                grad_b[b_idx.next().unwrap()] += grad_out[i];
+                (*grad_b)[b_idx.next().unwrap()] += grad_out[i];
                 i += 1;
             }
         }
