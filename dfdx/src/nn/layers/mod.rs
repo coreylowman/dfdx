@@ -25,6 +25,7 @@ mod leaky_relu;
 mod linear;
 mod ln;
 mod log_softmax;
+mod mamba_minimal;
 mod matmul;
 mod multi_head_attention;
 #[cfg(feature = "nightly")]
@@ -79,6 +80,10 @@ pub use leaky_relu::LeakyReLU;
 pub use linear::{Linear, LinearConfig, LinearConstConfig};
 pub use ln::Ln;
 pub use log_softmax::LogSoftmax;
+pub use mamba_minimal::{
+    stateful::{MambaStateCache, MambaStateCacheConfig},
+    MambaBlock, MambaBlockConfig, MambaBlockConstConfig,
+};
 pub use matmul::{MatMul, MatMulConfig, MatMulConstConfig};
 pub use multi_head_attention::{MultiHeadAttention, MultiHeadAttentionConfig};
 #[cfg(feature = "nightly")]
