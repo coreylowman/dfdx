@@ -5,12 +5,21 @@ use std::vec::Vec;
 
 impl<S: Shape, E: Dtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Loads data from the [SafeTensors] `Storage<E>` with the given `key`
-    pub fn load_safetensor(
+    pub fn load_safetensor<F: FnMut(String) -> String>(
         &mut self,
         tensors: &SafeTensors,
         key: &str,
+        skip_missing: bool,
+        key_map: &mut F,
     ) -> Result<(), SafeTensorError> {
-        let tensor_view = tensors.tensor(key)?;
+        let key = key_map(key.to_string());
+        let tensor_view = match tensors.tensor(&key) {
+            Ok(ok) => ok,
+            Err(safetensors::SafeTensorError::TensorNotFound(_name)) if skip_missing => {
+                return Ok(());
+            }
+            Err(e) => return Err(e),
+        };
         let v = tensor_view.data();
         let num_bytes = std::mem::size_of::<E>();
         assert_eq!(
