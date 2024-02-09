@@ -1,4 +1,5 @@
 use crate::{shapes::*, tensor::*};
+use std::vec::Vec;
 
 mod cpu_kernel;
 #[cfg(feature = "cuda")]
@@ -21,15 +22,15 @@ mod webgpu_kernel;
 /// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let stack: Tensor<Rank3<2, 3, 4>, f32, _> = dev.zeros();
-/// let [a, b]: [Tensor<Rank2<3, 4>, f32, _>; 2] = stack.unstack();
+/// let ([a, b], _tape): ([Tensor<Rank2<3, 4>, f32, _>; 2], _) = stack.unstack();
 /// ```
 ///
 /// Unstacking to a vec:
 /// ```rust
 /// # use dfdx_core::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let stack: Tensor<(usize, Const::<3>, Const::<4>>, f32, _> = dev.zeros_like(&(2, Const, Const));
-/// let unstack: Vec<Tensor<Rank2<3, 4>, f32, _>> = stack.unstack();
+/// let stack: Tensor<(usize, Const::<3>, Const::<4>), f32, _> = dev.zeros_like(&(2, Const, Const));
+/// let (unstack, _tape): (Vec<Tensor<Rank2<3, 4>, f32, _>>, _) = stack.unstack();
 /// ```
 pub trait TryUnstack<Head: Dim>: Sized {
     type Unstacked;
