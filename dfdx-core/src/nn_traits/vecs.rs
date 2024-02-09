@@ -60,26 +60,31 @@ impl<E: Dtype, D: Device<E>, T: crate::nn_traits::ZeroGrads<E, D>> crate::nn_tra
 
 #[cfg(feature = "safetensors")]
 impl<T: crate::nn_traits::SaveSafeTensors> crate::nn_traits::SaveSafeTensors for Vec<T> {
-    fn write_safetensors(
+    fn write_safetensors_with<F: FnMut(String) -> String>(
         &self,
         location: &str,
         tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+        key_map: &mut F,
     ) {
         for (i, t) in self.iter().enumerate() {
-            t.write_safetensors(&format!("{location}{i}."), tensors);
+            let name = &format!("{location}.{i}");
+            t.write_safetensors_with(name, tensors, key_map);
         }
     }
 }
 
 #[cfg(feature = "safetensors")]
 impl<T: crate::nn_traits::LoadSafeTensors> crate::nn_traits::LoadSafeTensors for Vec<T> {
-    fn read_safetensors(
+    fn read_safetensors_with<F: FnMut(String) -> String>(
         &mut self,
         location: &str,
         tensors: &safetensors::SafeTensors,
+        skip_missing: bool,
+        key_map: &mut F,
     ) -> Result<(), safetensors::SafeTensorError> {
         for (i, t) in self.iter_mut().enumerate() {
-            t.read_safetensors(&format!("{location}{i}."), tensors)?;
+            let name = &format!("{location}.{i}");
+            t.read_safetensors_with(name, tensors, skip_missing, key_map)?;
         }
         Ok(())
     }
