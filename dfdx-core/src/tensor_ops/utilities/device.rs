@@ -22,6 +22,8 @@ pub trait Device<E: Dtype>:
     + super::super::concat_tensor_along::ConcatAlongKernel<usize>
 
     // splits
+    + super::super::unstack::UnstackKernel<E>
+    + super::super::unstack::UnstackKernel<usize>
     + super::super::split_tensor_along::SplitAlongKernel<E>
 
     // optimizers

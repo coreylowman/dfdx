@@ -145,17 +145,32 @@ where
 pub trait Array<T>: IntoIterator<Item = T> {
     type Dim: Dim;
     fn dim(&self) -> Self::Dim;
+    fn from_fn<F>(cb: F, len: Self::Dim) -> Self
+    where
+        F: FnMut(usize) -> T;
 }
 impl<T, const N: usize> Array<T> for [T; N] {
     type Dim = Const<N>;
     fn dim(&self) -> Self::Dim {
         Const
     }
+    fn from_fn<F>(cb: F, _len: Self::Dim) -> Self
+    where
+        F: FnMut(usize) -> T,
+    {
+        std::array::from_fn(cb)
+    }
 }
 impl<T> Array<T> for std::vec::Vec<T> {
     type Dim = usize;
     fn dim(&self) -> Self::Dim {
         self.len()
+    }
+    fn from_fn<F>(cb: F, len: Self::Dim) -> Self
+    where
+        F: FnMut(usize) -> T,
+    {
+        (0..len).map(cb).collect()
     }
 }
 
