@@ -196,18 +196,21 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
             let safetensors_impls = if cfg!(feature = "safetensors") {
                 quote! {
                     impl #built_impl ::dfdx::nn_traits::SaveSafeTensors for #builder_name #built_ty #built_where {
-                        fn write_safetensors(
+                        fn write_safetensors_with<KeyMap: FnMut(String) -> String>(
                             &self,
                             location: &str,
                             tensors: &mut Vec<(String, ::dfdx::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                            key_map: &mut KeyMap,
                         ) {}
                     }
 
                     impl #built_impl ::dfdx::nn_traits::LoadSafeTensors for #builder_name #built_ty #built_where {
-                        fn read_safetensors<'a>(
+                        fn read_safetensors_with<'a, KeyMap: FnMut(String) -> String>(
                             &mut self,
                             location: &str,
                             tensors: &::dfdx::safetensors::SafeTensors<'a>,
+                            skip_missing: bool,
+                            key_map: &mut KeyMap,
                         ) -> Result<(), ::dfdx::safetensors::SafeTensorError> {
                             Ok(())
                         }
@@ -850,9 +853,10 @@ pub fn save_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         where_clause
                             .predicates
                             .push(parse_quote!(#ty: ::dfdx::nn_traits::SaveSafeTensors));
-                        quote_spanned!(f.span()=>self.#name.write_safetensors(
+                        quote_spanned!(f.span()=>self.#name.write_safetensors_with(
                             &format!("{location}{}{}", if location.is_empty() { "" } else { "." },  #name_str), 
-                            tensors
+                            tensors,
+                            key_map
                         );)
                     } else {
                         Default::default()
@@ -869,9 +873,10 @@ pub fn save_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         where_clause
                             .predicates
                             .push(parse_quote!(#ty: ::dfdx::nn_traits::SaveSafeTensors));
-                        quote_spanned!(f.span()=>self.#index.write_safetensors(
+                        quote_spanned!(f.span()=>self.#index.write_safetensors_with(
                             &format!("{location}{}{}", if location.is_empty() { "" } else { "." }, #index), 
-                            tensors
+                            tensors,
+                            key_map
                         );)
                     } else {
                         Default::default()
@@ -890,10 +895,11 @@ pub fn save_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     proc_macro::TokenStream::from(quote! {
         // note: SaveSafeTensors definition is already gated by the safetensors feature
         impl #impl_generics ::dfdx::nn_traits::SaveSafeTensors for #name #ty_generics #where_clause {
-            fn write_safetensors(
+            fn write_safetensors_with<KeyMap: FnMut(String) -> String>(
                 &self,
                 location: &str,
                 tensors: &mut Vec<(String, ::dfdx::safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                key_map: &mut KeyMap,
             ) {
                 #save_fields
             }
@@ -919,9 +925,11 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         where_clause
                             .predicates
                             .push(parse_quote!(#ty: ::dfdx::nn_traits::LoadSafeTensors));
-                        quote_spanned!(f.span()=>self.#name.read_safetensors(
+                        quote_spanned!(f.span()=>self.#name.read_safetensors_with(
                             &format!("{location}{}{}", if location.is_empty() { "" } else { "." }, #name_str),
-                            tensors
+                            tensors,
+                            skip_missing,
+                            key_map
                         )?;)
                     } else {
                         Default::default()
@@ -937,9 +945,11 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         where_clause
                             .predicates
                             .push(parse_quote!(#ty: ::dfdx::nn_traits::LoadSafeTensors));
-                        quote_spanned!(f.span()=>self.#index.read_safetensors(
+                        quote_spanned!(f.span()=>self.#index.read_safetensors_with(
                             &format!("{location}{}{}", if location.is_empty() { "" } else { "." }, #index),
-                            tensors
+                            tensors,
+                            skip_missing,
+                            key_map
                         )?;)
                     } else {
                         Default::default()
@@ -958,10 +968,12 @@ pub fn load_safetensors(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     proc_macro::TokenStream::from(quote! {
         // note: LoadSafeTensors definition is already gated by the safetensors feature
         impl #impl_generics ::dfdx::nn_traits::LoadSafeTensors for #name #ty_generics #where_clause {
-            fn read_safetensors<'a>(
+            fn read_safetensors_with<'a, KeyMap: FnMut(String) -> String>(
                 &mut self,
                 location: &str,
                 tensors: &::dfdx::safetensors::SafeTensors<'a>,
+                skip_missing: bool,
+                key_map: &mut KeyMap,
             ) -> Result<(), ::dfdx::safetensors::SafeTensorError> {
                 #load_fields
                 Ok(())
