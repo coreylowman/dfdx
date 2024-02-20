@@ -15,6 +15,6 @@ impl<F: num_traits::Float> UnaryDerivative<F> for super::SiLUKernelOp {
     #[inline(always)]
     fn df(&self, x: &F) -> F {
         let exp_nx = x.neg().exp();
-        F::one() + exp_nx + *x * exp_nx / (F::one() + exp_nx).powi(2)
+        (F::one() + exp_nx + *x * exp_nx) / (F::one() + exp_nx).powi(2)
     }
 }
