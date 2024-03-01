@@ -153,7 +153,7 @@ impl<E, D: Storage<E>> Gradients<E, D> {
     #[inline]
     pub(crate) fn many_and_ref<L: Shape, R: Shape>(
         &mut self,
-        ls: &Vec<impl Tensorlike<L, E, D>>,
+        ls: &[impl Tensorlike<L, E, D>],
         r: &impl Tensorlike<R, E, D>,
     ) -> (Vec<&mut D::Vec>, &D::Vec) {
         for i in 0..ls.len() {
