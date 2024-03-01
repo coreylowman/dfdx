@@ -33,8 +33,8 @@ fn test_convtrans2d_default() {
             ],
         ])
         .to_dtype::<TestDtype>();
-    let y =
-        (x.leaky_trace(), w.clone()).convtrans2d(Const::<1>, Const::<0>, Const::<1>, Const::<1>);
+    let y = (x.leaky_trace(), w.clone())
+        .convtrans2d(Const::<1>, Const::<0>, Const::<1>, Const::<1>, Const::<0>);
     #[rustfmt::skip]
     assert_close_to_literal!(
         y,
@@ -125,8 +125,8 @@ fn test_convtrans2d_stride_2() {
             ],
         ])
         .to_dtype::<TestDtype>();
-    let y =
-        (x.leaky_trace(), w.clone()).convtrans2d(Const::<2>, Const::<0>, Const::<1>, Const::<1>);
+    let y = (x.leaky_trace(), w.clone())
+        .convtrans2d(Const::<2>, Const::<0>, Const::<1>, Const::<1>, Const::<0>);
     #[rustfmt::skip]
     assert_close_to_literal!(
         y,
@@ -223,8 +223,8 @@ fn test_convtrans2d_padded() {
             ],
         ])
         .to_dtype::<TestDtype>();
-    let y =
-        (x.leaky_trace(), w.clone()).convtrans2d(Const::<1>, Const::<1>, Const::<1>, Const::<1>);
+    let y = (x.leaky_trace(), w.clone())
+        .convtrans2d(Const::<1>, Const::<1>, Const::<1>, Const::<1>, Const::<0>);
     assert_close_to_literal!(
         y,
         [
@@ -283,8 +283,8 @@ fn test_convtrans2d_batched() {
     let x: Tensor<Rank3<3, 28, 28>, TestDtype, _> = dev.sample_normal();
     let w: Tensor<Rank4<3, 5, 6, 6>, TestDtype, _> = dev.sample_normal();
 
-    let y: Tensor<Rank3<5, 83, 83>, _, _, _> =
-        (x.leaky_trace(), w.clone()).convtrans2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>);
+    let y: Tensor<Rank3<5, 83, 83>, _, _, _> = (x.leaky_trace(), w.clone())
+        .convtrans2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>, Const::<0>);
     let y0 = y.retaped::<NoneTape>();
     let grads0 = y.square().mean().backward();
     let x0 = grads0.get(&x);
@@ -294,8 +294,8 @@ fn test_convtrans2d_batched() {
         .broadcast::<Rank4<10, 3, 28, 28>, _>()
         .reshape::<Rank4<10, 3, 28, 28>>();
 
-    let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> =
-        (x.leaky_trace(), w.clone()).convtrans2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>);
+    let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> = (x.leaky_trace(), w.clone())
+        .convtrans2d(Const::<3>, Const::<2>, Const::<1>, Const::<1>, Const::<0>);
     for i in 0..10 {
         assert_close_to_tensor!(y0, y.retaped::<NoneTape>().select(dev.tensor(i)), 1e-5);
     }
@@ -341,8 +341,8 @@ fn test_convtrans2d_grouped() {
             ],
         ])
         .to_dtype::<TestDtype>();
-    let y =
-        (x.leaky_trace(), w.clone()).convtrans2d(Const::<1>, Const::<0>, Const::<1>, Const::<2>);
+    let y = (x.leaky_trace(), w.clone())
+        .convtrans2d(Const::<1>, Const::<0>, Const::<1>, Const::<2>, Const::<0>);
     #[rustfmt::skip]
     assert_close_to_literal!(
         y,
@@ -451,8 +451,8 @@ fn test_convtrans2d_dilated() {
             ],
         ])
         .to_dtype::<TestDtype>();
-    let y =
-        (x.leaky_trace(), w.clone()).convtrans2d(Const::<1>, Const::<0>, Const::<2>, Const::<1>);
+    let y = (x.leaky_trace(), w.clone())
+        .convtrans2d(Const::<1>, Const::<0>, Const::<2>, Const::<1>, Const::<0>);
     #[rustfmt::skip]
     assert_close_to_literal!(
         y,

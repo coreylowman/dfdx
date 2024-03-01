@@ -15,6 +15,7 @@ use crate::prelude::*;
 /// - `Dilation`: Controls the spacing between kernel points. Defaults to `Const<1>`.
 /// - `Groups`: Controls the connections between inputs and outputs. Defaults to `Const<1>`.
 ///     `InChan` and `OutChan` must both be divisible by `Groups`.
+/// - `OutputPadding`: Controls the additional size added to one side of the output shape. Defaults to `Const<0>`.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ConvTrans2DConfig<
     InChan: Dim,
@@ -24,6 +25,7 @@ pub struct ConvTrans2DConfig<
     Padding: Dim = Const<0>,
     Dilation: Dim = Const<1>,
     Groups: Dim = Const<1>,
+    OutputPadding: Dim = Const<0>,
 > {
     pub in_chan: InChan,
     pub out_chan: OutChan,
@@ -32,6 +34,7 @@ pub struct ConvTrans2DConfig<
     pub padding: Padding,
     pub dilation: Dilation,
     pub groups: Groups,
+    pub output_padding: OutputPadding,
 }
 
 /// Compile time sugar alias around [ConvTrans2DConfig].
@@ -43,6 +46,7 @@ pub type ConvTrans2DConstConfig<
     const PADDING: usize = 0,
     const DILATION: usize = 1,
     const GROUPS: usize = 1,
+    const OUTPUT_PADDING: usize = 0,
 > = ConvTrans2DConfig<
     Const<IN_CHAN>,
     Const<OUT_CHAN>,
@@ -51,18 +55,20 @@ pub type ConvTrans2DConstConfig<
     Const<PADDING>,
     Const<DILATION>,
     Const<GROUPS>,
+    Const<OUTPUT_PADDING>,
 >;
 
-impl<I: Dim, O: Dim, K: Dim, S: Dim, P: Dim, L: Dim, G: Dim, E: Dtype, D: Device<E>>
-    BuildOnDevice<E, D> for ConvTrans2DConfig<I, O, K, S, P, L, G>
+impl<I: Dim, O: Dim, K: Dim, S: Dim, P: Dim, L: Dim, G: Dim, OP: Dim, E: Dtype, D: Device<E>>
+    BuildOnDevice<E, D> for ConvTrans2DConfig<I, O, K, S, P, L, G, OP>
 where
     O: std::ops::Div<G>,
     <O as std::ops::Div<G>>::Output: Dim,
 {
-    type Built = ConvTrans2D<I, O, K, S, P, L, G, E, D>;
+    type Built = ConvTrans2D<I, O, K, S, P, L, G, OP, E, D>;
     fn try_build_on_device(&self, device: &D) -> Result<Self::Built, crate::tensor::Error> {
         assert_eq!(self.in_chan.size() % self.groups.size(), 0);
         assert_eq!(self.out_chan.size() % self.groups.size(), 0);
+        assert!(self.output_padding.size() < self.stride.size());
         let o_over_g = self.out_chan / self.groups;
         let weight =
             device.try_zeros_like(&(self.in_chan, o_over_g, self.kernel_size, self.kernel_size))?;
@@ -72,6 +78,7 @@ where
             padding: self.padding,
             dilation: self.dilation,
             groups: self.groups,
+            output_padding: self.output_padding,
         })
     }
 }
@@ -79,8 +86,18 @@ where
 /// See [ConvTrans2DConfig].
 #[derive(Debug, Clone, UpdateParams, ZeroGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
-pub struct ConvTrans2D<InChan, OutChan, KernelSize, Stride, Padding, Dilation, Groups, Elem, Dev>
-where
+pub struct ConvTrans2D<
+    InChan,
+    OutChan,
+    KernelSize,
+    Stride,
+    Padding,
+    Dilation,
+    Groups,
+    OutputPadding,
+    Elem,
+    Dev,
+> where
     OutChan: std::ops::Div<Groups>,
     <OutChan as std::ops::Div<Groups>>::Output: Dim,
     InChan: Dim,
@@ -90,6 +107,7 @@ where
     Padding: Dim,
     Dilation: Dim,
     Groups: Dim,
+    OutputPadding: Dim,
     Elem: Dtype,
     Dev: Device<Elem>,
 {
@@ -110,10 +128,11 @@ where
     pub padding: Padding,
     pub dilation: Dilation,
     pub groups: Groups,
+    pub output_padding: OutputPadding,
 }
 
-impl<I: Dim, O: Dim, K: Dim, S: Dim, P: Dim, L: Dim, G: Dim, E, D> ResetParams<E, D>
-    for ConvTrans2D<I, O, K, S, P, L, G, E, D>
+impl<I: Dim, O: Dim, K: Dim, S: Dim, P: Dim, L: Dim, G: Dim, OP: Dim, E, D> ResetParams<E, D>
+    for ConvTrans2D<I, O, K, S, P, L, G, OP, E, D>
 where
     O: std::ops::Div<G>,
     <O as std::ops::Div<G>>::Output: Dim,
@@ -129,8 +148,8 @@ where
     }
 }
 
-impl<I: Dim, O: Dim, K: Dim, S: Dim, P: Dim, L: Dim, G: Dim, E, D, Img> Module<Img>
-    for ConvTrans2D<I, O, K, S, P, L, G, E, D>
+impl<I: Dim, O: Dim, K: Dim, S: Dim, P: Dim, L: Dim, G: Dim, OP: Dim, E, D, Img> Module<Img>
+    for ConvTrans2D<I, O, K, S, P, L, G, OP, E, D>
 where
     O: std::ops::Div<G>,
     <O as std::ops::Div<G>>::Output: Dim,
@@ -139,18 +158,19 @@ where
     (
         Img,
         Tensor<(I, <O as std::ops::Div<G>>::Output, K, K), E, D>,
-    ): TryConvTrans2D<S, P, L, G>,
+    ): TryConvTrans2D<S, P, L, G, OP>,
 {
     type Output = <(
         Img,
         Tensor<(I, <O as std::ops::Div<G>>::Output, K, K), E, D>,
-    ) as TryConvTrans2D<S, P, L, G>>::Convolved;
+    ) as TryConvTrans2D<S, P, L, G, OP>>::Convolved;
     fn try_forward(&self, x: Img) -> Result<Self::Output, Error> {
         (x, self.weight.clone()).try_convtrans2d(
             self.stride,
             self.padding,
             self.dilation,
             self.groups,
+            self.output_padding,
         )
     }
 }
@@ -236,5 +256,31 @@ mod tests {
         opt.update(&mut m, &g).expect("unused params");
 
         assert_ne!(weight_init.array(), m.weight.array());
+    }
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_forward_output_padding() {
+        let dev: TestDevice = Default::default();
+        let x = dev.tensor([[[[0.1, 0.7], [0.3, 0.4]]]]);
+        let w = dev.tensor([[[[-0.1, -0.3, 0.7], [0.8, -0.2, 0.1], [0.3, 0.4, -0.5]]]]);
+        let mut m = dev
+            .build_module::<TestDtype>(<ConvTrans2DConstConfig<1, 1, 3, 2, 1, 1, 1, 0>>::default());
+        m.weight = w.clone();
+        let y: Tensor<Rank4<1, 1, 3, 3>, _, _, _> = m.forward(x.clone());
+        assert_close_to_literal!(y,[[[[-0.02, 0.57, -0.14], [-0.05, 0.33, 0.16,], [-0.06, 0.35000002, -0.08000001]]]]);
+
+        let mut m = dev
+            .build_module::<TestDtype>(<ConvTrans2DConstConfig<1, 1, 3, 2, 1, 1, 1, 1>>::default());
+        m.weight = w.clone();
+        let y: Tensor<Rank4<1, 1, 4, 4>, _, _, _> = m.forward(x.clone());
+        assert_close_to_literal!(
+            y, [[[
+                [-0.0200, 0.5700, -0.1400, 0.0700],
+                [-0.0500, 0.3300, 0.1600, -0.0700],
+                [-0.0600, 0.3500, -0.0800, 0.0400],
+                [0.1200, -0.0300, 0.1600, -0.2000],
+            ]]]
+        );
     }
 }
