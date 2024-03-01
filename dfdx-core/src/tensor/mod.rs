@@ -151,7 +151,7 @@ pub(crate) mod webgpu;
 pub use numpy::NumpyDtype;
 mod error;
 #[cfg(feature = "safetensors")]
-pub mod safetensors;
+mod safetensors;
 mod tensorlike;
 mod unique_id;
 

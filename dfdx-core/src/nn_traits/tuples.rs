@@ -20,23 +20,32 @@ macro_rules! tuple_impls {
 
         #[cfg(feature = "safetensors")]
         impl<$($name: crate::nn_traits::SaveSafeTensors, )+> crate::nn_traits::SaveSafeTensors for ($($name,)+) {
-            fn write_safetensors(
+            fn write_safetensors_with<F: FnMut(String) -> String>(
                 &self,
                 location: &str,
                 tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                key_map: &mut F,
             ) {
-                $(self.$idx.write_safetensors(&format!("{location}{}.", $idx), tensors);)+
+                $(
+                    let name = &format!("{location}.{}", $idx);
+                    self.$idx.write_safetensors_with(name, tensors, key_map);
+                )+
             }
         }
 
         #[cfg(feature = "safetensors")]
         impl<$($name: crate::nn_traits::LoadSafeTensors, )+> crate::nn_traits::LoadSafeTensors for ($($name,)+) {
-            fn read_safetensors(
+            fn read_safetensors_with<F: FnMut(String) -> String>(
                 &mut self,
                 location: &str,
                 tensors: &safetensors::SafeTensors,
+                skip_missing: bool,
+                key_map: &mut F,
             ) -> Result<(), safetensors::SafeTensorError> {
-                $(self.$idx.read_safetensors(&format!("{location}{}.", $idx), tensors)?;)+
+                $(
+                    let name = &format!("{location}.{}", $idx);
+                    self.$idx.read_safetensors_with(name, tensors, skip_missing, key_map)?;
+                )+
                 Ok(())
             }
         }

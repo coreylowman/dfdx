@@ -116,12 +116,13 @@ pub trait ZeroGrads<E: Dtype, D: Device<E>> {
 #[cfg(feature = "safetensors")]
 /// Something that can be saved to a .safetensors file.
 pub trait SaveSafeTensors {
-    fn save_safetensors<P: AsRef<std::path::Path>>(
+    fn save_safetensors_with<P: AsRef<std::path::Path>, F: FnMut(String) -> String>(
         &self,
         path: P,
+        key_map: &mut F,
     ) -> Result<(), safetensors::SafeTensorError> {
         let mut tensors = Vec::new();
-        self.write_safetensors("", &mut tensors);
+        self.write_safetensors_with("", &mut tensors, key_map);
         let data = tensors.iter().map(|(k, dtype, shape, data)| {
             (
                 k.clone(),
@@ -131,53 +132,103 @@ pub trait SaveSafeTensors {
 
         safetensors::serialize_to_file(data, &None, path.as_ref())
     }
-    fn write_safetensors(
+    fn save_safetensors<P: AsRef<std::path::Path>>(
+        &self,
+        path: P,
+    ) -> Result<(), safetensors::SafeTensorError> {
+        self.save_safetensors_with(path, &mut core::convert::identity)
+    }
+    fn write_safetensors_with<F: FnMut(String) -> String>(
         &self,
         location: &str,
         tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+        key_map: &mut F,
     );
-}
-
-#[cfg(feature = "safetensors")]
-/// Something that can be loaded from a .safetensors file.
-pub trait LoadSafeTensors {
-    fn load_safetensors<P: AsRef<std::path::Path>>(
-        &mut self,
-        path: P,
-    ) -> Result<(), safetensors::SafeTensorError> {
-        let f = std::fs::File::open(path)?;
-        let buffer = unsafe { memmap2::MmapOptions::new().map(&f)? };
-        let tensors = safetensors::SafeTensors::deserialize(&buffer)?;
-        self.read_safetensors("", &tensors)
-    }
-
-    fn read_safetensors(
-        &mut self,
-        location: &str,
-        tensors: &safetensors::SafeTensors,
-    ) -> Result<(), safetensors::SafeTensorError>;
-}
-
-#[cfg(feature = "safetensors")]
-impl<S: Shape, E: Dtype, D: Device<E>, T> LoadSafeTensors for Tensor<S, E, D, T> {
-    fn read_safetensors(
-        &mut self,
-        location: &str,
-        tensors: &safetensors::SafeTensors,
-    ) -> Result<(), safetensors::SafeTensorError> {
-        self.load_safetensor(tensors, location)
-    }
-}
-
-#[cfg(feature = "safetensors")]
-impl<S: Shape, E: Dtype, D: Device<E>, T> SaveSafeTensors for Tensor<S, E, D, T> {
     fn write_safetensors(
         &self,
         location: &str,
         tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
     ) {
+        self.write_safetensors_with(location, tensors, &mut core::convert::identity)
+    }
+}
+
+#[cfg(feature = "safetensors")]
+/// Something that can be loaded from a .safetensors file.
+pub trait LoadSafeTensors {
+    fn load_safetensors_with<P: AsRef<std::path::Path>, F: FnMut(String) -> String>(
+        &mut self,
+        path: P,
+        skip_missing: bool,
+        key_map: &mut F,
+    ) -> Result<(), safetensors::SafeTensorError> {
+        let f = std::fs::File::open(path)?;
+        let buffer = unsafe { memmap2::MmapOptions::new().map(&f)? };
+        let tensors = safetensors::SafeTensors::deserialize(&buffer)?;
+        self.read_safetensors_with("", &tensors, skip_missing, key_map)
+    }
+    fn load_safetensors<P: AsRef<std::path::Path>>(
+        &mut self,
+        path: P,
+    ) -> Result<(), safetensors::SafeTensorError> {
+        self.load_safetensors_with(path, false, &mut core::convert::identity)
+    }
+    fn load_safetensors_from_bytes_with<F: FnMut(String) -> String>(
+        &mut self,
+        bytes: &[u8],
+        skip_missing: bool,
+        key_map: &mut F,
+    ) -> Result<(), safetensors::SafeTensorError> {
+        let tensors = safetensors::SafeTensors::deserialize(&bytes)?;
+        self.read_safetensors_with("", &tensors, skip_missing, key_map)
+    }
+    fn load_safetensors_from_bytes(
+        &mut self,
+        bytes: &[u8],
+    ) -> Result<(), safetensors::SafeTensorError> {
+        self.load_safetensors_from_bytes_with(bytes, false, &mut core::convert::identity)
+    }
+
+    fn read_safetensors_with<F: FnMut(String) -> String>(
+        &mut self,
+        location: &str,
+        tensors: &safetensors::SafeTensors,
+        skip_missing: bool,
+        key_map: &mut F,
+    ) -> Result<(), safetensors::SafeTensorError>;
+    fn read_safetensors(
+        &mut self,
+        location: &str,
+        tensors: &safetensors::SafeTensors,
+    ) -> Result<(), safetensors::SafeTensorError> {
+        self.read_safetensors_with(location, tensors, false, &mut core::convert::identity)
+    }
+}
+
+#[cfg(feature = "safetensors")]
+impl<S: Shape, E: Dtype, D: Device<E>, T> LoadSafeTensors for Tensor<S, E, D, T> {
+    fn read_safetensors_with<F: FnMut(String) -> String>(
+        &mut self,
+        location: &str,
+        tensors: &safetensors::SafeTensors,
+        skip_missing: bool,
+        key_map: &mut F,
+    ) -> Result<(), safetensors::SafeTensorError> {
+        self.load_safetensor(tensors, location, skip_missing, key_map)
+    }
+}
+
+#[cfg(feature = "safetensors")]
+impl<S: Shape, E: Dtype, D: Device<E>, T> SaveSafeTensors for Tensor<S, E, D, T> {
+    fn write_safetensors_with<F: FnMut(String) -> String>(
+        &self,
+        location: &str,
+        tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+        key_map: &mut F,
+    ) {
+        let location = key_map(location.to_string());
         tensors.push((
-            location.to_string(),
+            location,
             <E as crate::dtypes::SafeTensorsDtype>::DTYPE,
             self.shape.concrete().into(),
             self.as_vec().iter().flat_map(|e| e.to_le_bytes()).collect(),
@@ -189,15 +240,17 @@ macro_rules! unit_safetensors {
     ($Ty:ty) => {
         #[cfg(feature = "safetensors")]
         impl SaveSafeTensors for $Ty {
-            fn write_safetensors(
+            fn write_safetensors_with<F: FnMut(String) -> String>(
                 &self,
                 location: &str,
                 tensors: &mut Vec<(String, safetensors::Dtype, Vec<usize>, Vec<u8>)>,
+                key_map: &mut F,
             ) {
+                let location = key_map(location.to_string());
                 #[allow(unused_imports)]
                 use crate::dtypes::ToLeBytes;
                 tensors.push((
-                    location.to_string(),
+                    location,
                     <$Ty as crate::dtypes::SafeTensorsDtype>::DTYPE,
                     Vec::new(),
                     self.to_le_bytes().to_vec(),
@@ -207,14 +260,23 @@ macro_rules! unit_safetensors {
 
         #[cfg(feature = "safetensors")]
         impl LoadSafeTensors for $Ty {
-            fn read_safetensors(
+            fn read_safetensors_with<F: FnMut(String) -> String>(
                 &mut self,
                 location: &str,
                 tensors: &safetensors::SafeTensors,
+                skip_missing: bool,
+                key_map: &mut F,
             ) -> Result<(), safetensors::SafeTensorError> {
+                let location = key_map(location.to_string());
                 #[allow(unused_imports)]
                 use crate::dtypes::FromLeBytes;
-                let view = tensors.tensor(location)?;
+                let view = match tensors.tensor(&location) {
+                    Ok(ok) => ok,
+                    Err(safetensors::SafeTensorError::TensorNotFound(_name)) if skip_missing => {
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                };
                 *self = Self::from_le_bytes(view.data().try_into().unwrap());
                 Ok(())
             }
