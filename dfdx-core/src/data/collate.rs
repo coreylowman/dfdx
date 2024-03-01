@@ -55,6 +55,7 @@ impl<A, B> Collate for Vec<(A, B)> {
 impl<'a, A, B> Collate for Vec<&'a (A, B)> {
     type Collated = (Vec<&'a A>, Vec<&'a B>);
     fn collated(self) -> Self::Collated {
+        #[allow(clippy::map_identity)]
         self.into_iter().map(|(a, b)| (a, b)).unzip()
     }
 }
