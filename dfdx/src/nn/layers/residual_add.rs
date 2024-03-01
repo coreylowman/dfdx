@@ -17,7 +17,7 @@ use crate::prelude::*;
 /// let y = model.forward(x);
 /// assert_eq!(y.array(), [-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
-#[derive(Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams)]
+#[derive(Default, Clone, Debug, ResetParams, ZeroGrads, WithGrads, UpdateParams)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 #[repr(transparent)]
 pub struct ResidualAdd<T>(

@@ -17,7 +17,7 @@ use crate::prelude::*;
 /// let y = model.forward(x);
 /// assert_eq!(y.array(), [0.0, 0.0, 0.0, 1.0, 8.0]);
 /// ```
-#[derive(Default, Clone, Debug, ResetParams, ZeroGrads, UpdateParams)]
+#[derive(Default, Clone, Debug, ResetParams, ZeroGrads, WithGrads, UpdateParams)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct GeneralizedMul<T, U> {
     #[module]

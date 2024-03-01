@@ -170,6 +170,26 @@ pub trait ZeroFillStorage<E>: Storage<E> {
     fn try_fill_with_zeros(&self, storage: &mut Self::Vec) -> Result<(), Error>;
 }
 
+/// View or mutate a [Storage::Vec] object.
+pub trait WithStorage<E>: Storage<E> {
+    /// View the values by each element.
+    fn try_element_view<F: FnMut(&E)>(&self, storage: &Self::Vec, f: F) -> Result<(), Error>;
+    /// View the values by a [Vec].
+    fn try_view<F: FnMut(&[E])>(&self, storage: &Self::Vec, f: F) -> Result<(), Error>;
+    /// Mutates the values by each element.
+    fn try_element_map<F: FnMut(E) -> E>(&self, storage: &mut Self::Vec, f: F)
+        -> Result<(), Error>;
+    /// Mutates a clone of the values.
+    ///
+    /// If `Some` is returned, replaces the changed values back into the object.  
+    /// Otherwise if `None` is returned, the changed values are discarded and the object stays intact.
+    fn try_map<F: FnMut(Vec<E>) -> Option<Vec<E>>>(
+        &self,
+        storage: &mut Self::Vec,
+        f: F,
+    ) -> Result<(), Error>;
+}
+
 /// Construct tensors filled with ones.
 pub trait OnesTensor<E>: Storage<E> {
     /// Creates a tensor filled with ones.
@@ -565,5 +585,64 @@ impl<E, S: ConstShape, D: TensorFromVec<E>> TensorFrom<Vec<E>, S, E> for D {
 impl<E, S: Shape, D: TensorFromVec<E>> TensorFrom<(Vec<E>, S), S, E> for D {
     fn try_tensor(&self, (src, shape): (Vec<E>, S)) -> Result<Tensor<S, E, Self>, Error> {
         self.try_tensor_from_vec(src, shape)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{prelude::SumTo, tensor::*, tensor_ops::Backward, tests::*};
+    use core::ops::Mul;
+
+    #[test]
+    fn test_map_grads() {
+        let dev: TestDevice = Default::default();
+        let x1 = dev.tensor([1., 1., 1., 1., 1., 1.]).to_dtype::<TestDtype>();
+        let x2 = dev
+            .tensor([-3., -2., -1., 1., 2., 3.])
+            .to_dtype::<TestDtype>();
+        let loss = x1.leaky_trace().mul(x2).try_sum().unwrap();
+        let mut grads = loss.backward();
+        let grads_x1 = grads.get_mut(&x1);
+
+        let mut acc = 0.;
+        let map_element = |e| {
+            acc += 1.;
+            e + acc
+        };
+        let map_vec = |v: Vec<_>| Some(v.into_iter().map(|e| e * 0.5).collect());
+
+        let (g1, g2, g3);
+        let r1 = vec![-3., -2., -1., 1., 2., 3.];
+        let r2 = vec![-2., 0., 2., 5., 7., 9.];
+        let r3 = vec![-1., 0., 1., 2.5, 3.5, 4.5];
+
+        #[cfg(feature = "cuda")]
+        {
+            g1 = dev.dev.dtoh_sync_copy(grads_x1).unwrap();
+            dev.try_element_map(grads_x1, map_element).unwrap();
+            g2 = dev.dev.dtoh_sync_copy(grads_x1).unwrap();
+            dev.try_map(grads_x1, map_vec).unwrap();
+            g3 = dev.dev.dtoh_sync_copy(grads_x1).unwrap();
+        };
+        #[cfg(feature = "webgpu")]
+        {
+            g1 = todo!();
+            dev.try_element_map(grads_x1, map_element).unwrap();
+            g2 = todo!();
+            dev.try_map(grads_x1, map_vec).unwrap();
+            g3 = todo!();
+        };
+        #[cfg(not(any(feature = "cuda", feature = "webgpu")))]
+        {
+            g1 = grads_x1.data.clone();
+            dev.try_element_map(grads_x1, map_element).unwrap();
+            g2 = grads_x1.data.clone();
+            dev.try_map(grads_x1, map_vec).unwrap();
+            g3 = grads_x1.data.clone();
+        };
+        assert_eq!(g1, r1);
+        assert_eq!(g2, r2);
+        assert_eq!(g3, r3);
     }
 }

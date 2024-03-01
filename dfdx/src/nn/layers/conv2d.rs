@@ -99,7 +99,7 @@ where
 }
 
 /// The module built with [Conv2DConfig]. See [Conv2DConfig] for usage.
-#[derive(Debug, Clone, UpdateParams, ZeroGrads)]
+#[derive(Debug, Clone, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct Conv2D<InChan, OutChan, KernelSize, Stride, Padding, Dilation, Groups, Elem, Dev>
 where

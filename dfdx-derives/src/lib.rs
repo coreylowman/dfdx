@@ -13,8 +13,9 @@ macro_rules! has_attr {
 /// 2. [dfdx::nn_traits::ResetParams]
 /// 3. [dfdx::nn_traits::UpdateParams]
 /// 4. [dfdx::nn_traits::ZeroGrads]
-/// 5. [dfdx::nn_traits::SaveSafeTensors]
-/// 6. [dfdx::nn_traits::LoadSafeTensors]
+/// 5. [dfdx::nn_traits::WithGrads]
+/// 6. [dfdx::nn_traits::SaveSafeTensors]
+/// 7. [dfdx::nn_traits::LoadSafeTensors]
 ///
 /// If your struct contains sub module configs, then you must add the `#[module]` attribute to those items. Any field that is marked with `#[module]` will be expected to implement [dfdx::nn_traits::BuildOnDevice].
 ///
@@ -175,11 +176,11 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                 quote!()
             };
             quote! {
-                #[derive(Clone, Debug, ::dfdx::ResetParams, ::dfdx::UpdateParams, ::dfdx::ZeroGrads, #safetensors_derive)]
+                #[derive(Clone, Debug, ::dfdx::ResetParams, ::dfdx::UpdateParams, ::dfdx::ZeroGrads, ::dfdx::WithGrads, #safetensors_derive)]
                 pub struct #built_name #built_impl #built_where #fields
             }
         } else {
-            // there are no fields to build - we still have to derive ResetParams/UpdateParams/ZeroGrads, but since
+            // there are no fields to build - we still have to derive ResetParams/UpdateParams/ZeroGrads/WithGrads, but since
             // there aren't any fields, they will just be passthrough impls
             let mut build_generics = built_generics.clone();
             if !has_fields_to_build {
@@ -239,6 +240,21 @@ pub fn custom_module(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
                 impl #build_impl ::dfdx::nn_traits::ZeroGrads<Elem, Dev> for #builder_name #built_ty #built_where {
                     fn try_zero_grads(&self, grads: &mut ::dfdx::tensor::Gradients<Elem, Dev>) -> Result<(), ::dfdx::tensor::Error> {
+                        Ok(())
+                    }
+                }
+
+                impl #build_impl ::dfdx::nn_traits::WithGrads<Elem, Dev> for #builder_name #built_ty #built_where {
+                    fn try_grads_element_view<__F: FnMut(&Elem)>(&self, _grads: & ::dfdx::tensor::Gradients<Elem, Dev>, _f: __F) -> Result<(), ::dfdx::tensor::Error> {
+                        Ok(())
+                    }
+                    fn try_grads_view<__F: FnMut(&[Elem])>(&self, _grads: & ::dfdx::tensor::Gradients<Elem, Dev>, _f: __F) -> Result<(), ::dfdx::tensor::Error> {
+                        Ok(())
+                    }
+                    fn try_grads_element_map<__F: FnMut(Elem) -> Elem>(&self, _grads: &mut ::dfdx::tensor::Gradients<Elem, Dev>, _f: __F) -> Result<(), ::dfdx::tensor::Error> {
+                        Ok(())
+                    }
+                    fn try_grads_map<__F: FnMut(Vec<Elem>) -> Option<Vec<Elem>>>(&self, _grads: &mut ::dfdx::tensor::Gradients<Elem, Dev>, _f: __F) -> Result<(), ::dfdx::tensor::Error> {
                         Ok(())
                     }
                 }
@@ -431,7 +447,7 @@ pub fn sequential(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         };
 
         quote! {
-            #[derive(Clone, Debug, ::dfdx::ResetParams, ::dfdx::UpdateParams, ::dfdx::ZeroGrads, #safetensors_derive)]
+            #[derive(Clone, Debug, ::dfdx::ResetParams, ::dfdx::UpdateParams, ::dfdx::ZeroGrads, ::dfdx::WithGrads, #safetensors_derive)]
             pub struct #built_name #built_impl #built_where {
                 #fields
             }
@@ -825,6 +841,113 @@ pub fn zero_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         impl #impl_generics ::dfdx::nn_traits::ZeroGrads<Elem, Dev> for #name #ty_generics #where_clause {
             fn try_zero_grads(&self, grads: &mut ::dfdx::prelude::Gradients<Elem, Dev>) -> Result<(), ::dfdx::tensor::Error> {
                 #zero_grads
+                Ok(())
+            }
+        }
+    })
+}
+
+#[proc_macro_derive(WithGrads, attributes(param, module))]
+pub fn with_grads(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut input = parse_macro_input!(input as DeriveInput);
+
+    let name = input.ident;
+
+    let mut custom_generics = input.generics.clone();
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Elem"),
+    ) {
+        custom_generics
+            .params
+            .push(parse_quote!(Elem: ::dfdx::prelude::Dtype));
+    }
+
+    if !custom_generics.params.iter().any(
+        |param| matches!(param, syn::GenericParam::Type(type_param) if type_param.ident == "Dev"),
+    ) {
+        custom_generics
+            .params
+            .push(parse_quote!(Dev: ::dfdx::prelude::Device<Elem>));
+    }
+
+    let where_clause = input.generics.make_where_clause();
+    let mut grads_element_view = proc_macro2::TokenStream::default();
+    let mut grads_view = proc_macro2::TokenStream::default();
+    let mut grads_element_map = proc_macro2::TokenStream::default();
+    let mut grads_map = proc_macro2::TokenStream::default();
+    match &input.data {
+        Data::Struct(ref obj) => {
+            match obj.fields {
+                Fields::Named(ref fields) => {
+                    for f in fields.named.iter() {
+                        let name = &f.ident;
+                        let ty = &f.ty;
+                        if has_attr!(f, "module") {
+                            where_clause
+                                .predicates
+                                .push(parse_quote!(#ty: ::dfdx::nn_traits::WithGrads<Elem, Dev>));
+                            grads_element_view.extend(quote_spanned!(f.span()=>self.#name.try_grads_element_view(grads, &mut f)?;));
+                            grads_view.extend(
+                            quote_spanned!(f.span()=>self.#name.try_grads_view(grads, &mut f)?;),
+                        );
+                            grads_element_map .extend( quote_spanned!(f.span()=>self.#name.try_grads_element_map(grads, &mut f)?;));
+                            grads_map.extend(
+                                quote_spanned!(f.span()=>self.#name.try_grads_map(grads, &mut f)?;),
+                            );
+                        } else if has_attr!(f, "param") {
+                            grads_element_view .extend( quote_spanned!(f.span()=>self.#name.device().try_element_view(grads.get_ref(&self.#name), &mut f)?;));
+                            grads_view .extend( quote_spanned!(f.span()=>self.#name.device().try_view(grads.get_ref(&self.#name), &mut f)?;));
+                            grads_element_map .extend( quote_spanned!(f.span()=>self.#name.device().try_element_map(grads.get_mut(&self.#name), &mut f)?;));
+                            grads_map .extend( quote_spanned!(f.span()=>self.#name.device().try_map(grads.get_mut(&self.#name), &mut f)?;));
+                        }
+                    }
+                }
+                Fields::Unnamed(ref fields) => {
+                    for (i, f) in fields.unnamed.iter().enumerate() {
+                        let index = Index::from(i);
+                        let ty = &f.ty;
+                        if has_attr!(f, "module") {
+                            where_clause
+                                .predicates
+                                .push(parse_quote!(#ty: ::dfdx::nn_traits::WithGrads<Elem, Dev>));
+                            grads_element_view.extend(quote_spanned!(f.span()=>self.#index.try_grads_element_view(grads, &mut f)?;));
+                            grads_view.extend(quote_spanned!(f.span()=>self.#index.try_grads_view(grads, &mut f)?;));
+                            grads_element_map.extend(quote_spanned!(f.span()=>self.#index.try_grads_element_map(grads, &mut f)?;));
+                            grads_map.extend(quote_spanned!(f.span()=>self.#index.try_grads_map(grads, &mut f)?;));
+                        } else if has_attr!(f, "param") {
+                            grads_element_view.extend(quote_spanned!(f.span()=>self.#index.device().try_element_view(grads.get_ref(&self.#index), &mut f)?));
+                            grads_view.extend(quote_spanned!(f.span()=>self.#index.device().try_view(grads.get_ref(&self.#index), &mut f)?));
+                            grads_element_map.extend(quote_spanned!(f.span()=>self.#index.device().try_element_map(grads.get_mut(&self.#index), &mut f)?));
+                            grads_map.extend(quote_spanned!(f.span()=>self.#index.device().try_map(grads.get_mut(&self.#index), &mut f)?));
+                        }
+                    }
+                }
+                Fields::Unit => {}
+            }
+        }
+        Data::Enum(_) => unimplemented!("WithGrads not implemented for enums."),
+        Data::Union(_) => unimplemented!("WithGrads not implemented for unions."),
+    };
+
+    let (impl_generics, _, _) = custom_generics.split_for_impl();
+    let (_, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    proc_macro::TokenStream::from(quote! {
+        impl #impl_generics ::dfdx::nn_traits::WithGrads<Elem, Dev> for #name #ty_generics #where_clause {
+            fn try_grads_element_view<__F: FnMut(&Elem)>(&self, grads: & ::dfdx::prelude::Gradients<Elem, Dev>, mut f: __F) -> Result<(), ::dfdx::tensor::Error> {
+                #grads_element_view
+                Ok(())
+            }
+            fn try_grads_view<__F: FnMut(&[Elem])>(&self, grads: & ::dfdx::prelude::Gradients<Elem, Dev>, mut f: __F) -> Result<(), ::dfdx::tensor::Error> {
+                #grads_view
+                Ok(())
+            }
+            fn try_grads_element_map<__F: FnMut(Elem) -> Elem>(&self, grads: &mut ::dfdx::prelude::Gradients<Elem, Dev>, mut f: __F) -> Result<(), ::dfdx::tensor::Error> {
+                #grads_element_map
+                Ok(())
+            }
+            fn try_grads_map<__F: FnMut(Vec<Elem>) -> Option<Vec<Elem>>>(&self, grads: &mut ::dfdx::prelude::Gradients<Elem, Dev>, mut f: __F) -> Result<(), ::dfdx::tensor::Error> {
+                #grads_map
                 Ok(())
             }
         }

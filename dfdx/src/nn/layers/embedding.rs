@@ -51,7 +51,7 @@ impl<V: Dim, M: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for EmbeddingCo
 }
 
 /// See [EmbeddingConfig].
-#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct Embedding<Vocab: Dim, Model: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

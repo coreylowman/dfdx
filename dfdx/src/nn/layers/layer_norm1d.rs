@@ -38,7 +38,7 @@ impl<M: Dim, E: Dtype, D: Device<E>> BuildOnDevice<E, D> for LayerNorm1DConfig<M
 }
 
 /// See [LayerNorm1DConfig]
-#[derive(Clone, Debug, UpdateParams, ZeroGrads)]
+#[derive(Clone, Debug, UpdateParams, ZeroGrads, WithGrads)]
 #[cfg_attr(feature = "safetensors", derive(SaveSafeTensors, LoadSafeTensors))]
 pub struct LayerNorm1D<M: Dim, Elem: Dtype, Dev: Device<Elem>> {
     #[param]

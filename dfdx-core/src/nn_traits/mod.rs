@@ -113,6 +113,135 @@ pub trait ZeroGrads<E: Dtype, D: Device<E>> {
     }
 }
 
+/// Something that can view or mutate a [Gradients] object.
+pub trait WithGrads<E: Dtype, D: Device<E>> {
+    /// View the gradient values for each parameter.
+    fn grads_element_view<F: FnMut(&E)>(&self, grads: &Gradients<E, D>, f: F) {
+        self.try_grads_element_view(grads, f).unwrap()
+    }
+    /// View the gradient values for each parameter.
+    fn try_grads_element_view<F: FnMut(&E)>(
+        &self,
+        grads: &Gradients<E, D>,
+        f: F,
+    ) -> Result<(), Error>;
+    /// View the gradient values for each tensor (unique id).
+    fn grads_view<F: FnMut(&[E])>(&self, grads: &Gradients<E, D>, f: F) {
+        self.try_grads_view(grads, f).unwrap()
+    }
+    /// View the gradient values for each tensor (unique id).
+    fn try_grads_view<F: FnMut(&[E])>(&self, grads: &Gradients<E, D>, f: F) -> Result<(), Error>;
+    /// Mutate the gradient values for each parameter.
+    fn grads_element_map<F: FnMut(E) -> E>(&self, grads: &mut Gradients<E, D>, f: F) {
+        self.try_grads_element_map(grads, f).unwrap()
+    }
+    /// Mutate the gradient values for each parameter.
+    fn try_grads_element_map<F: FnMut(E) -> E>(
+        &self,
+        grads: &mut Gradients<E, D>,
+        f: F,
+    ) -> Result<(), crate::tensor::Error>;
+    /// Mutate the gradient values for each tensor (unique id).
+    fn grads_map<F: FnMut(Vec<E>) -> Option<Vec<E>>>(&self, grads: &mut Gradients<E, D>, f: F) {
+        self.try_grads_map(grads, f).unwrap()
+    }
+    /// Mutate the gradient values for each tensor (unique id).
+    fn try_grads_map<F: FnMut(Vec<E>) -> Option<Vec<E>>>(
+        &self,
+        grads: &mut Gradients<E, D>,
+        f: F,
+    ) -> Result<(), crate::tensor::Error>;
+    /// Changes the gradient values for each parameter to be between `min` and `max`.
+    ///
+    /// Note that this may change the "direction" of your gradients.
+    fn grads_clamp(&self, grads: &mut Gradients<E, D>, min: E, max: E)
+    where
+        E: std::cmp::PartialOrd + Clone,
+    {
+        self.try_grads_clamp(grads, min, max).unwrap()
+    }
+    /// Changes the gradient values for each parameter to be between `min` and `max`.
+    ///
+    /// Note that this may change the "direction" of your gradients.
+    fn try_grads_clamp(&self, grads: &mut Gradients<E, D>, min: E, max: E) -> Result<(), Error>
+    where
+        E: std::cmp::PartialOrd + Clone,
+    {
+        self.try_grads_element_map(grads, |e| {
+            if e < min {
+                min
+            } else if e > max {
+                max
+            } else {
+                e
+            }
+        })
+    }
+    /// Changes the gradient values for each parameter to be between `-threshold` and `+threshold`.
+    ///
+    /// Note that this may change the "direction" of your gradients.
+    fn grads_clip_value(&self, grads: &mut Gradients<E, D>, threshold: E)
+    where
+        E: std::cmp::PartialOrd + std::ops::Neg<Output = E> + Clone,
+    {
+        self.try_grads_clip_value(grads, threshold).unwrap()
+    }
+    /// Changes the gradient values for each parameter to be between `-threshold` and `+threshold`.
+    ///
+    /// Note that this may change the "direction" of your gradients.
+    fn try_grads_clip_value(&self, grads: &mut Gradients<E, D>, threshold: E) -> Result<(), Error>
+    where
+        E: std::cmp::PartialOrd + std::ops::Neg<Output = E> + Clone,
+    {
+        self.try_grads_clamp(grads, -threshold, threshold)
+    }
+    /// Accumulates into `acc` the squared value for the gradients.
+    ///
+    /// After the accumulation, taking the sqrt of `acc` results in the gradients norm.
+    fn grads_norm_squared(&self, grads: &Gradients<E, D>, acc: &mut E)
+    where
+        E: num_traits::Zero + std::ops::Mul<Output = E> + num_traits::Float,
+    {
+        self.try_grads_norm_squared(grads, acc).unwrap()
+    }
+    /// Accumulates into `acc` the squared value for the gradients.
+    ///
+    /// After the accumulation, taking the sqrt of `acc` results in the gradients norm.
+    fn try_grads_norm_squared(&self, grads: &Gradients<E, D>, acc: &mut E) -> Result<(), Error>
+    where
+        E: std::ops::Mul<Output = E> + num_traits::Float,
+    {
+        self.try_grads_element_view(grads, |e| *acc += *e * *e)
+    }
+    /// Given a `norm` for all of the gradient values, scales down all gradients so their norm is not higher than `norm_threshold`.
+    ///
+    /// Note that this doesn't change the "direction" of your gradients.
+    fn grads_clip_norm(&self, grads: &mut Gradients<E, D>, norm: E, norm_threshold: E)
+    where
+        E: Clone + std::cmp::PartialOrd + std::ops::Mul<Output = E> + std::ops::Div<Output = E>,
+    {
+        self.try_grads_clip_norm(grads, norm, norm_threshold)
+            .unwrap()
+    }
+    /// Given a `norm` for all of the gradient values, scales down all gradients so their norm is not higher than `norm_threshold`.
+    ///
+    /// Note that this doesn't change the "direction" of your gradients.
+    fn try_grads_clip_norm(
+        &self,
+        grads: &mut Gradients<E, D>,
+        norm: E,
+        norm_threshold: E,
+    ) -> Result<(), Error>
+    where
+        E: Clone + std::cmp::PartialOrd + std::ops::Mul<Output = E> + std::ops::Div<Output = E>,
+    {
+        if norm > norm_threshold {
+            self.try_grads_element_map(grads, |e| norm_threshold * e / norm)?
+        }
+        Ok(())
+    }
+}
+
 #[cfg(feature = "safetensors")]
 /// Something that can be saved to a .safetensors file.
 pub trait SaveSafeTensors {
