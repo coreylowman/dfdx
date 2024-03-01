@@ -92,6 +92,7 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::fast_gelu::FastGeLUKernelOp, E>
     + UnaryKernel<super::super::accurate_gelu::AccurateGeLUKernelOp, E>
     + UnaryKernel<super::super::sigmoid::SigmoidKernelOp, E>
+    + UnaryKernel<super::super::silu::SiLUKernelOp, E>
     + UnaryKernel<super::super::sin::SinKernelOp, E>
     + UnaryKernel<super::super::sqrt::SqrtKernelOp, E>
     + UnaryKernel<super::super::square::SquareKernelOp, E>
@@ -114,25 +115,49 @@ pub trait Device<E: Dtype>:
     + crate::tensor_ops::axpy::AxpyKernel<E>
 
     // conv1d
-    + super::super::conv1d::Conv1DKernel<E>
+    + NonCudnnCuda<E>
+{
+}
+
+#[cfg(feature = "cudnn")]
+pub trait NonCudnnCuda<E: Dtype> {}
+
+#[cfg(not(feature = "cudnn"))]
+pub trait NonCudnnCuda<E: Dtype>:
+    // conv1d
+    super::super::conv1d::Conv1DKernel<E>
 {
 }
 
 #[cfg(feature = "f16")]
-impl Device<f16> for crate::tensor::Cpu {}
-#[cfg(feature = "f16")]
-impl Device<AMP<f16>> for crate::tensor::Cpu {}
+mod f16_ {
+    use super::*;
+    impl Device<f16> for crate::tensor::Cpu {}
+    impl NonCudnnCuda<f16> for crate::tensor::Cpu {}
+    impl Device<AMP<f16>> for crate::tensor::Cpu {}
+    impl NonCudnnCuda<AMP<f16>> for crate::tensor::Cpu {}
+}
 impl Device<f32> for crate::tensor::Cpu {}
+impl NonCudnnCuda<f32> for crate::tensor::Cpu {}
 impl Device<f64> for crate::tensor::Cpu {}
+impl NonCudnnCuda<f64> for crate::tensor::Cpu {}
 
 #[cfg(all(feature = "cuda", feature = "f16"))]
-impl Device<f16> for crate::tensor::Cuda {}
-#[cfg(all(feature = "cuda", feature = "f16"))]
-impl Device<AMP<f16>> for crate::tensor::Cuda {}
+mod cuda_f16 {
+    use super::*;
+    impl Device<f16> for crate::tensor::Cuda {}
+    impl NonCudnnCuda<f16> for crate::tensor::Cuda {}
+    impl Device<AMP<f16>> for crate::tensor::Cuda {}
+    impl NonCudnnCuda<AMP<f16>> for crate::tensor::Cuda {}
+}
 #[cfg(feature = "cuda")]
-impl Device<f32> for crate::tensor::Cuda {}
-#[cfg(feature = "cuda")]
-impl Device<f64> for crate::tensor::Cuda {}
+mod cuda {
+    use super::*;
+    impl Device<f32> for crate::tensor::Cuda {}
+    impl NonCudnnCuda<f32> for crate::tensor::Cuda {}
+    impl Device<f64> for crate::tensor::Cuda {}
+    impl NonCudnnCuda<f64> for crate::tensor::Cuda {}
+}
 
 // TODO: How can we implement this for f16 when WGSL doesn't support f16 yet?
 // #[cfg(all(feature = "webgpu", feature = "f16"))]
@@ -140,7 +165,11 @@ impl Device<f64> for crate::tensor::Cuda {}
 // #[cfg(all(feature = "webgpu", feature = "f16"))]
 // impl Device<AMP<f16>> for crate::tensor::Webgpu {}
 #[cfg(feature = "webgpu")]
-impl Device<f32> for crate::tensor::Webgpu {}
+mod webgpu {
+    use super::*;
+    impl Device<f32> for crate::tensor::Webgpu {}
+    impl NonCudnnCuda<f32> for crate::tensor::Webgpu {}
+}
 
 // TODO: How can we implement this for f64 when WGSL doesn't support f64 yet?
 // #[cfg(feature = "webgpu")]
