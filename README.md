@@ -46,7 +46,7 @@ Enable the `cuda` feature to start using the `Cuda` device! Requires the install
 
 ## API Preview
 
-Check [examples/](examples/) for more details.
+Check [dfdx/examples/](dfdx/examples/) for more details.
 
 1. 👌 Simple Neural Networks API, completely shape checked at compile time.
 
