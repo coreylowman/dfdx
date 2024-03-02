@@ -7,7 +7,7 @@ fn classification_train<
     // The input to our network, since we are training, we need it to implement Trace
     // so we can put gradients into it.
     Inp: Trace<E, D>,
-    // The type of our label, we specify it here so we guaruntee that the dataset
+    // The type of our label, we specify it here so we guarantee that the dataset
     // and loss function both work on this type
     Lbl,
     // Our model just needs to implement these two things! ModuleMut for forward
